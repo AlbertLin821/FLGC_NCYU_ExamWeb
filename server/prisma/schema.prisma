@@ -1,0 +1,180 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============ 老師/管理者 ============
+model Teacher {
+  id           Int              @id @default(autoincrement())
+  email        String           @unique
+  passwordHash String           @map("password_hash")
+  name         String
+  role         String           @default("teacher") // 'admin' | 'teacher'
+  createdAt    DateTime         @default(now()) @map("created_at")
+
+  classes      TeacherClass[]
+  createdExams Exam[]
+  createdClasses Class[]        @relation("ClassCreator")
+  resolvedLogs CheatLog[]
+
+  inviteToken   String?          @map("invite_token")
+  inviteExpires DateTime?        @map("invite_expires")
+  resetPasswordToken   String?   @map("reset_password_token")
+  resetPasswordExpires DateTime? @map("reset_password_expires")
+
+  @@index([role])
+  @@map("teachers")
+}
+
+// ============ 班級 ============
+model Class {
+  id          Int              @id @default(autoincrement())
+  name        String
+  description String?
+  createdBy   Int              @map("created_by")
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  creator     Teacher          @relation("ClassCreator", fields: [createdBy], references: [id])
+  teachers    TeacherClass[]
+  students    Student[]
+  exams       Exam[]
+
+  @@index([createdBy])
+  @@map("classes")
+}
+
+// ============ 老師-班級 多對多 ============
+model TeacherClass {
+  teacherId Int    @map("teacher_id")
+  classId   Int    @map("class_id")
+  role      String @default("member") // 'owner' | 'member'
+
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  class     Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@id([teacherId, classId])
+  @@index([classId])
+  @@map("teacher_classes")
+}
+
+// ============ 學生 ============
+model Student {
+  id            Int       @id @default(autoincrement())
+  studentId     String    @unique @map("student_id")
+  name          String
+  classId       Int       @map("class_id")
+  loginAttempts Int       @default(0) @map("login_attempts")
+  lockedUntil   DateTime? @map("locked_until")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  class         Class         @relation(fields: [classId], references: [id], onDelete: Cascade)
+  sessions      ExamSession[]
+
+  @@index([classId])
+  @@map("students")
+}
+
+// ============ 考卷 ============
+model Exam {
+  id         Int       @id @default(autoincrement())
+  title      String
+  classId    Int       @map("class_id")
+  difficulty String?   // 'easy' | 'medium' | 'hard'
+  timeLimit  Int       @map("time_limit") // 分鐘
+  startTime  DateTime  @map("start_time")
+  endTime    DateTime  @map("end_time")
+  status     String    @default("draft") // 'draft' | 'published' | 'closed'
+  createdBy  Int       @map("created_by")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  class      Class       @relation(fields: [classId], references: [id], onDelete: Cascade)
+  creator    Teacher     @relation(fields: [createdBy], references: [id])
+  questions  Question[]
+  sessions   ExamSession[]
+
+  @@index([classId])
+  @@index([status])
+  @@index([startTime, endTime])
+  @@index([createdBy])
+  @@map("exams")
+}
+
+// ============ 題目 ============
+model Question {
+  id       Int      @id @default(autoincrement())
+  examId   Int      @map("exam_id")
+  type     String   @default("multiple_choice") // 'multiple_choice', 'multiple_selection', 'essay'
+  content  String?  // Question text / prompt
+  options  Json?    // Optional for selection types [{ label: 'A', text: '...' }]
+  answer   String?  // Correct answer string or sample answer
+  word1    String?  // Existing field for sentence building
+  word2    String?  // Existing field for sentence building
+  orderNum Int      @map("order_num")
+  
+  exam     Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  answers  Answer[]
+
+  @@index([examId])
+  @@map("questions")
+}
+
+// ============ 考試作答 Session ============
+model ExamSession {
+  id          Int       @id @default(autoincrement())
+  studentId   Int       @map("student_id")
+  examId      Int       @map("exam_id")
+  status      String    @default("pending") // pending | in_progress | paused | submitted | graded
+  startedAt   DateTime? @map("started_at")
+  submittedAt DateTime? @map("submitted_at")
+
+  student     Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  exam        Exam       @relation(fields: [examId], references: [id], onDelete: Cascade)
+  answers     Answer[]
+  cheatLogs   CheatLog[]
+
+  @@unique([studentId, examId])
+  @@index([status])
+  @@index([studentId])
+  @@index([submittedAt])
+  @@map("exam_sessions")
+}
+
+// ============ 答案 ============
+model Answer {
+  id         Int      @id @default(autoincrement())
+  sessionId  Int      @map("session_id")
+  questionId Int      @map("question_id")
+  content    String?  // Student's answer (sentence or selected option(s))
+  aiScore    Decimal? @map("ai_score") @db.Decimal(5, 2)
+  aiFeedback String?  @map("ai_feedback")
+  aiModel    String?  @map("ai_model")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  session    ExamSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  question   Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, questionId])
+  @@map("answers")
+}
+
+// ============ 防弊紀錄 ============
+model CheatLog {
+  id         Int       @id @default(autoincrement())
+  sessionId  Int       @map("session_id")
+  eventType  String    @map("event_type") // 'tab_switch' | 'window_blur' | 'fullscreen_exit'
+  details    Json?
+  resolvedBy Int?      @map("resolved_by")
+  resolution String?   // 'unlocked' | 'terminated'
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  session    ExamSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  resolver   Teacher?    @relation(fields: [resolvedBy], references: [id])
+
+  @@index([sessionId])
+  @@index([eventType])
+  @@index([resolvedBy])
+  @@map("cheat_logs")
+}
