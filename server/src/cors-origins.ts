@@ -1,6 +1,6 @@
 /**
  * 讀取 CORS_ORIGINS（逗號分隔）。未設定時僅允許本機開發來源。
- * 正式環境請在 .env 設定，例如：CORS_ORIGINS=https://ncyulanguageexam.com
+ * 正式環境請在 .env 設定；www 與 apex 為不同來源，需一併列出時請用逗號分隔。
  */
 const DEFAULT_DEV_ORIGINS = [
   'http://localhost:5173',

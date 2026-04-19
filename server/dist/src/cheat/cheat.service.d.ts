@@ -8,9 +8,9 @@ export declare class CheatService {
         id: number;
         sessionId: number;
         resolution: string | null;
+        resolvedBy: number | null;
         eventType: string;
         details: import("@prisma/client/runtime/client").JsonValue | null;
-        resolvedBy: number | null;
     }>;
     unlockSession(logId: number, teacherId: number): Promise<{
         status: string;
@@ -44,9 +44,9 @@ export declare class CheatService {
         id: number;
         sessionId: number;
         resolution: string | null;
+        resolvedBy: number | null;
         eventType: string;
         details: import("@prisma/client/runtime/client").JsonValue | null;
-        resolvedBy: number | null;
     })[] | {
         items: ({
             session: {
@@ -72,9 +72,9 @@ export declare class CheatService {
             id: number;
             sessionId: number;
             resolution: string | null;
+            resolvedBy: number | null;
             eventType: string;
             details: import("@prisma/client/runtime/client").JsonValue | null;
-            resolvedBy: number | null;
         })[];
         total: number;
         page: number;
@@ -86,8 +86,8 @@ export declare class CheatService {
         id: number;
         sessionId: number;
         resolution: string | null;
+        resolvedBy: number | null;
         eventType: string;
         details: import("@prisma/client/runtime/client").JsonValue | null;
-        resolvedBy: number | null;
     }[]>;
 }

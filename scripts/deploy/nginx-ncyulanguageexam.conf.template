@@ -1,10 +1,21 @@
 # 範本：deploy-debian.sh 會替換 __WEB_ROOT__、__API_PORT__
 # 若已用 certbot，可將 listen 80 區塊改為僅 redirect，或交 certbot 管理。
+#
+# HTTP：將 www 導向主網域（與 VITE_API_URL 常用 apex 一致，避免跨網域 CORS）。
+# 若使用者仍會以 https://www 開站，請在 server/.env 的 CORS_ORIGINS 同時列出 www 與 apex，
+# 並在申請 TLS 後為 443 的 www 加上 return 301 至 apex（見 docs/deploy-debian.md）。
 
 server {
     listen 80;
     listen [::]:80;
-    server_name ncyulanguageexam.com www.ncyulanguageexam.com;
+    server_name www.ncyulanguageexam.com;
+    return 301 https://ncyulanguageexam.com$request_uri;
+}
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ncyulanguageexam.com;
 
     root __WEB_ROOT__;
     index index.html;

@@ -41,6 +41,7 @@ var __importStar = (this && this.__importStar) || (function () {
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var AuthService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
@@ -49,9 +50,10 @@ const bcrypt = __importStar(require("bcryptjs"));
 const crypto = __importStar(require("crypto"));
 const prisma_service_1 = require("../prisma/prisma.service");
 const common_2 = require("@nestjs/common");
-let AuthService = class AuthService {
+let AuthService = AuthService_1 = class AuthService {
     prisma;
     jwtService;
+    logger = new common_1.Logger(AuthService_1.name);
     constructor(prisma, jwtService) {
         this.prisma = prisma;
         this.jwtService = jwtService;
@@ -70,15 +72,22 @@ let AuthService = class AuthService {
     async login(email, password) {
         const teacher = await this.validateTeacher(email, password);
         const payload = { sub: teacher.id, email: teacher.email, role: teacher.role };
-        return {
-            accessToken: this.jwtService.sign(payload),
-            teacher: {
-                id: teacher.id,
-                email: teacher.email,
-                name: teacher.name,
-                role: teacher.role,
-            },
-        };
+        try {
+            const accessToken = this.jwtService.sign(payload);
+            return {
+                accessToken,
+                teacher: {
+                    id: teacher.id,
+                    email: teacher.email,
+                    name: teacher.name,
+                    role: teacher.role,
+                },
+            };
+        }
+        catch (err) {
+            this.logger.error(`JWT 簽章失敗（請檢查 JWT_SECRET、JWT_EXPIRES_IN）：teacherId=${teacher.id}`, err instanceof Error ? err.stack : String(err));
+            throw err;
+        }
     }
     async hashPassword(password) {
         return bcrypt.hash(password, 12);
@@ -151,7 +160,7 @@ let AuthService = class AuthService {
     }
 };
 exports.AuthService = AuthService;
-exports.AuthService = AuthService = __decorate([
+exports.AuthService = AuthService = AuthService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         jwt_1.JwtService])

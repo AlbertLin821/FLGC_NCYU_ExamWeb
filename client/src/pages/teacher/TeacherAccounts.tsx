@@ -18,6 +18,7 @@ function roleLabel(role: string): string {
 
 const TeacherAccounts: React.FC = () => {
   const [teachers, setTeachers] = useState<any[]>([]);
+  const [myId, setMyId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [newTeacher, setNewTeacher] = useState({
     email: '',
@@ -41,6 +42,10 @@ const TeacherAccounts: React.FC = () => {
 
   useEffect(() => {
     loadTeachers();
+    teachersApi
+      .getProfile()
+      .then((res) => setMyId(res.data?.id ?? null))
+      .catch(() => setMyId(null));
   }, []);
 
   if (getTeacherRole() !== 'admin') {
@@ -62,13 +67,34 @@ const TeacherAccounts: React.FC = () => {
 
   const handleResetPassword = async (id: number) => {
     if (!resetPass) return;
+    if (resetPass.trim().length < 8) {
+      alert('密碼至少須 8 個字元');
+      return;
+    }
     try {
       await teachersApi.updatePassword(id, resetPass);
       setResetId(null);
       setResetPass('');
       alert('已更新密碼');
-    } catch {
-      alert('更新失敗');
+    } catch (err: unknown) {
+      const ax = err as { response?: { data?: { message?: string | string[] } } };
+      const msg = ax.response?.data?.message;
+      const text = Array.isArray(msg) ? msg.join('；') : msg || '更新失敗';
+      alert(text);
+    }
+  };
+
+  const handleDeleteTeacher = async (id: number, email: string) => {
+    if (!window.confirm(`確定刪除帳號「${email}」？此動作無法復原。`)) return;
+    try {
+      await teachersApi.delete(id);
+      loadTeachers();
+      alert('已刪除帳號');
+    } catch (err: unknown) {
+      const ax = err as { response?: { data?: { message?: string | string[] } } };
+      const msg = ax.response?.data?.message;
+      const text = Array.isArray(msg) ? msg.join('；') : msg || '刪除失敗';
+      alert(text);
     }
   };
 
@@ -157,28 +183,41 @@ const TeacherAccounts: React.FC = () => {
                       {t.createdAt ? new Date(t.createdAt).toLocaleString('zh-TW') : '—'}
                     </td>
                     <td>
-                      {resetId === t.id ? (
-                        <div className="flex gap-sm items-center flex-wrap">
-                          <input
-                            type="password"
-                            className="form-input"
-                            style={{ width: '140px' }}
-                            placeholder="新密碼"
-                            value={resetPass}
-                            onChange={(e) => setResetPass(e.target.value)}
-                          />
-                          <button type="button" className="btn btn-xs btn-primary" onClick={() => handleResetPassword(t.id)}>
-                            確認
-                          </button>
-                          <button type="button" className="btn btn-xs btn-secondary" onClick={() => setResetId(null)}>
-                            取消
-                          </button>
-                        </div>
-                      ) : (
-                        <button type="button" className="btn btn-xs btn-secondary" onClick={() => setResetId(t.id)}>
-                          重設密碼
-                        </button>
-                      )}
+                      <div className="flex gap-sm items-center flex-wrap">
+                        {resetId === t.id ? (
+                          <>
+                            <input
+                              type="password"
+                              className="form-input"
+                              style={{ width: '140px' }}
+                              placeholder="新密碼"
+                              value={resetPass}
+                              onChange={(e) => setResetPass(e.target.value)}
+                            />
+                            <button type="button" className="btn btn-xs btn-primary" onClick={() => handleResetPassword(t.id)}>
+                              確認
+                            </button>
+                            <button type="button" className="btn btn-xs btn-secondary" onClick={() => setResetId(null)}>
+                              取消
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button type="button" className="btn btn-xs btn-secondary" onClick={() => setResetId(t.id)}>
+                              重設密碼
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-xs btn-danger"
+                              disabled={myId !== null && t.id === myId}
+                              title={myId !== null && t.id === myId ? '無法刪除自己的帳號' : undefined}
+                              onClick={() => handleDeleteTeacher(t.id, t.email)}
+                            >
+                              刪除
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

@@ -37,14 +37,13 @@ export declare class TeachersService {
     }>;
     updatePassword(id: number, newPassword: string): Promise<{
         email: string;
-        passwordHash: string;
         name: string;
         role: string;
         createdAt: Date;
-        inviteToken: string | null;
-        inviteExpires: Date | null;
-        resetPasswordToken: string | null;
-        resetPasswordExpires: Date | null;
+        id: number;
+    }>;
+    deleteTeacher(actorId: number, targetId: number): Promise<{
+        ok: boolean;
         id: number;
     }>;
     inviteTeacher(email: string): Promise<{

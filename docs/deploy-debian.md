@@ -8,7 +8,11 @@
 2. 防火牆：開放 80、443（SSH 另開）。
 3. 於伺服器建立 `server/.env`（勿將含密碼之檔案提交版本庫）：
    - 複製 `server/.env.example` 並填寫 `DATABASE_URL`、`JWT_SECRET`、`REDIS_*` 等。
-   - **必須**設定 `CORS_ORIGINS="https://ncyulanguageexam.com"`（與實際網址一致，逗號可列多個）。
+   - **必須**設定 `CORS_ORIGINS`（與使用者實際在瀏覽器網址列看到的來源一致，逗號可列多個）。
+   - 若同時使用 **無 www** 與 **www**（例如有人從 `https://www.ncyulanguageexam.com` 開站，而 API 建置為 `https://ncyulanguageexam.com`），兩者為**不同來源**，須寫成：  
+     `CORS_ORIGINS="https://ncyulanguageexam.com,https://www.ncyulanguageexam.com"`  
+     修改後請執行：`sudo systemctl restart ncyu-exam-api`。
+   - 較乾淨的做法：在 Nginx 為 **HTTPS** 的 `www` 設 `return 301` 導向主網域（須憑證含 `www`，certbot 可加 `-d www.ncyulanguageexam.com`），讓使用者只從一個主機名稱存取；部署範本已含 **HTTP** 的 `www`→主網域導向。
    - `PORT` 須與 Nginx 範本之反代埠一致（預設 3000）。
 
 ## 自動部署腳本
@@ -40,7 +44,8 @@ sudo bash scripts/deploy/deploy-debian.sh
 sudo CERTBOT_EMAIL=admin@example.edu.tw RUN_CERTBOT=1 bash scripts/deploy/deploy-debian.sh
 ```
 
-或手動：`sudo certbot --nginx -d ncyulanguageexam.com`
+或手動（建議 apex 與 www 一併申請，方便之後做 HTTPS 導向）：  
+`sudo certbot --nginx -d ncyulanguageexam.com -d www.ncyulanguageexam.com`
 
 ## 服務指令
 

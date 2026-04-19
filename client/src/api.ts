@@ -73,6 +73,7 @@ export const teachersApi = {
     api.post('/teachers', data),
   updatePassword: (id: number, password: string) =>
     api.patch(`/teachers/${id}/password`, { password }),
+  delete: (id: number) => api.delete(`/teachers/${id}`),
 };
 
 // Classes

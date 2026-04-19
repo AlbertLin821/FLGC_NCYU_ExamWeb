@@ -78,11 +78,55 @@ let TeachersService = class TeachersService {
         });
     }
     async updatePassword(id, newPassword) {
-        const passwordHash = await bcrypt.hash(newPassword, 12);
+        const trimmed = typeof newPassword === 'string' ? newPassword.trim() : '';
+        if (trimmed.length === 0) {
+            throw new common_1.BadRequestException('密碼不可為空白');
+        }
+        if (trimmed.length < 8) {
+            throw new common_1.BadRequestException('密碼至少須 8 個字元');
+        }
+        const exists = await this.prisma.teacher.findUnique({
+            where: { id },
+            select: { id: true },
+        });
+        if (!exists) {
+            throw new common_1.NotFoundException('找不到此教師帳號');
+        }
+        const passwordHash = await bcrypt.hash(trimmed, 12);
         return this.prisma.teacher.update({
             where: { id },
             data: { passwordHash },
+            select: { id: true, email: true, name: true, role: true, createdAt: true },
         });
+    }
+    async deleteTeacher(actorId, targetId) {
+        if (actorId === targetId) {
+            throw new common_1.BadRequestException('不可刪除目前登入中的帳號');
+        }
+        const target = await this.prisma.teacher.findUnique({ where: { id: targetId } });
+        if (!target) {
+            throw new common_1.NotFoundException('找不到此教師帳號');
+        }
+        if (target.role === 'admin') {
+            const adminCount = await this.prisma.teacher.count({ where: { role: 'admin' } });
+            if (adminCount <= 1) {
+                throw new common_1.ConflictException('系統至少需保留一位管理員');
+            }
+        }
+        const classCount = await this.prisma.class.count({ where: { createdBy: targetId } });
+        if (classCount > 0) {
+            throw new common_1.ConflictException(`此帳號為 ${classCount} 個班級的建立者，請先刪除相關班級或改由其他教師建立後再刪除帳號`);
+        }
+        const examCount = await this.prisma.exam.count({ where: { createdBy: targetId } });
+        if (examCount > 0) {
+            throw new common_1.ConflictException(`此帳號為 ${examCount} 份考卷的建立者，請先刪除或處理相關考卷後再刪除帳號`);
+        }
+        await this.prisma.cheatLog.updateMany({
+            where: { resolvedBy: targetId },
+            data: { resolvedBy: null },
+        });
+        await this.prisma.teacher.delete({ where: { id: targetId } });
+        return { ok: true, id: targetId };
     }
     async inviteTeacher(email) {
         const token = Math.random().toString(36).substring(2, 15);

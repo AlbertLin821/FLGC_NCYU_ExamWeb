@@ -1,4 +1,7 @@
 import { TeachersService } from './teachers.service';
+export declare class UpdatePasswordDto {
+    password: string;
+}
 export declare class CreateTeacherDto {
     email: string;
     password: string;
@@ -29,21 +32,24 @@ export declare class TeachersController {
         createdAt: Date;
         id: number;
     }>;
-    updatePassword(id: string, pass: string): Promise<{
+    updatePassword(id: string, dto: UpdatePasswordDto): Promise<{
         email: string;
-        passwordHash: string;
         name: string;
         role: string;
         createdAt: Date;
-        inviteToken: string | null;
-        inviteExpires: Date | null;
-        resetPasswordToken: string | null;
-        resetPasswordExpires: Date | null;
         id: number;
     }>;
     invite(email: string): Promise<{
         email: string;
         token: string;
         expires: Date;
+    }>;
+    remove(req: {
+        user: {
+            id: number;
+        };
+    }, id: string): Promise<{
+        ok: boolean;
+        id: number;
     }>;
 }

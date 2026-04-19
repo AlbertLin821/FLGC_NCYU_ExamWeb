@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
@@ -7,6 +7,8 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
@@ -29,15 +31,24 @@ export class AuthService {
   async login(email: string, password: string) {
     const teacher = await this.validateTeacher(email, password);
     const payload = { sub: teacher.id, email: teacher.email, role: teacher.role };
-    return {
-      accessToken: this.jwtService.sign(payload),
-      teacher: {
-        id: teacher.id,
-        email: teacher.email,
-        name: teacher.name,
-        role: teacher.role,
-      },
-    };
+    try {
+      const accessToken = this.jwtService.sign(payload);
+      return {
+        accessToken,
+        teacher: {
+          id: teacher.id,
+          email: teacher.email,
+          name: teacher.name,
+          role: teacher.role,
+        },
+      };
+    } catch (err) {
+      this.logger.error(
+        `JWT 簽章失敗（請檢查 JWT_SECRET、JWT_EXPIRES_IN）：teacherId=${teacher.id}`,
+        err instanceof Error ? err.stack : String(err),
+      );
+      throw err;
+    }
   }
 
   async hashPassword(password: string): Promise<string> {
