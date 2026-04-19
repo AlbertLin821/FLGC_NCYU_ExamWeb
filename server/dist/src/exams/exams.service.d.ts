@@ -172,6 +172,19 @@ export declare class ExamsService {
     }>;
     startSession(studentId: number, examId: number): Promise<{
         session: {
+            exam: {
+                createdAt: Date;
+                id: number;
+                createdBy: number;
+                title: string;
+                difficulty: string | null;
+                timeLimit: number;
+                startTime: Date;
+                endTime: Date;
+                status: string;
+                deletedAt: Date | null;
+            };
+        } & {
             id: number;
             studentId: number;
             status: string;
@@ -192,13 +205,14 @@ export declare class ExamsService {
             examId: number;
         }[];
         timeLimit: number;
+        timeRemainingSeconds: number;
     }>;
     submitAnswer(sessionId: number, questionId: number, content: string): Promise<{
         createdAt: Date;
         id: number;
         content: string | null;
-        aiScore: Prisma.Decimal | null;
         sessionId: number;
+        aiScore: Prisma.Decimal | null;
         questionId: number;
         aiFeedback: string | null;
         aiModel: string | null;
@@ -222,8 +236,8 @@ export declare class ExamsService {
             createdAt: Date;
             id: number;
             content: string | null;
-            aiScore: Prisma.Decimal | null;
             sessionId: number;
+            aiScore: Prisma.Decimal | null;
             questionId: number;
             aiFeedback: string | null;
             aiModel: string | null;
@@ -255,8 +269,8 @@ export declare class ExamsService {
                 createdAt: Date;
                 id: number;
                 content: string | null;
-                aiScore: Prisma.Decimal | null;
                 sessionId: number;
+                aiScore: Prisma.Decimal | null;
                 questionId: number;
                 aiFeedback: string | null;
                 aiModel: string | null;

@@ -101,8 +101,8 @@ export declare class StudentsController {
                 createdAt: Date;
                 id: number;
                 content: string | null;
-                aiScore: import("@prisma/client-runtime-utils").Decimal | null;
                 sessionId: number;
+                aiScore: import("@prisma/client-runtime-utils").Decimal | null;
                 questionId: number;
                 aiFeedback: string | null;
                 aiModel: string | null;

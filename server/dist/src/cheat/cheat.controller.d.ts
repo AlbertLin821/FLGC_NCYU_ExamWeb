@@ -22,8 +22,8 @@ export declare class CheatController {
     } & {
         createdAt: Date;
         id: number;
-        resolution: string | null;
         sessionId: number;
+        resolution: string | null;
         eventType: string;
         details: import("@prisma/client/runtime/client").JsonValue | null;
         resolvedBy: number | null;
@@ -48,8 +48,8 @@ export declare class CheatController {
         } & {
             createdAt: Date;
             id: number;
-            resolution: string | null;
             sessionId: number;
+            resolution: string | null;
             eventType: string;
             details: import("@prisma/client/runtime/client").JsonValue | null;
             resolvedBy: number | null;
@@ -62,8 +62,8 @@ export declare class CheatController {
     getSessionLogs(sessionId: number): Promise<{
         createdAt: Date;
         id: number;
-        resolution: string | null;
         sessionId: number;
+        resolution: string | null;
         eventType: string;
         details: import("@prisma/client/runtime/client").JsonValue | null;
         resolvedBy: number | null;

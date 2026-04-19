@@ -57,8 +57,8 @@ const QuestionManagement: React.FC = () => {
     try {
       const res = await questionsApi.getByExam(examId);
       setQuestions(res.data);
-    } catch (err) {
-      console.error(err);
+    } catch (e) {
+      console.error(e);
     } finally {
       setQLoading(false);
     }

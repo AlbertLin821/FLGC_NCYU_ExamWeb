@@ -27,6 +27,14 @@ const ExamRoom: React.FC = () => {
   const [pauseMessage, setPauseMessage] = useState('');
 
   const socketRef = useRef<Socket | null>(null);
+  const hasSubmittedRef = useRef(false);
+  const initExamStartedRef = useRef(false);
+  /** 進入考場後短暫忽略 visibility/blur，避免重新整理或分頁還原時誤判作弊而暫停 */
+  const cheatGuardReadyRef = useRef(false);
+  /** 僅在「曾進入全螢幕後又退出」時通報，避免載入時預設非全螢幕誤判 */
+  const hadFullscreenRef = useRef(false);
+  /** 重新整理／關閉分頁時會觸發 blur，不應記為作弊（否則 reload 後 session 被後端設為 paused） */
+  const pageLeaveRef = useRef(false);
   const student = JSON.parse(localStorage.getItem('student') || '{}');
 
   // Anti-cheat: Fullscreen, Visibility, Blur
@@ -42,16 +50,28 @@ const ExamRoom: React.FC = () => {
   }, [session]);
 
   const handleVisibilityChange = useCallback(() => {
+    if (!cheatGuardReadyRef.current) return;
+    if (pageLeaveRef.current) return;
     if (document.hidden && session && !isPaused) {
       reportCheat('tab_switch');
     }
   }, [session, isPaused, reportCheat]);
 
   const handleBlur = useCallback(() => {
+    if (!cheatGuardReadyRef.current) return;
+    if (pageLeaveRef.current) return;
     if (session && !isPaused) {
       reportCheat('window_blur');
     }
   }, [session, isPaused, reportCheat]);
+
+  useEffect(() => {
+    const onPageHide = () => {
+      pageLeaveRef.current = true;
+    };
+    window.addEventListener('pagehide', onPageHide);
+    return () => window.removeEventListener('pagehide', onPageHide);
+  }, []);
 
   useEffect(() => {
     // Anti-cheat: Fullscreen & Disable shortcuts
@@ -90,18 +110,30 @@ const ExamRoom: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    initExamStartedRef.current = false;
+  }, [examId]);
+
+  useEffect(() => {
     if (!student.id) {
       navigate('/student/login');
       return;
     }
+    if (initExamStartedRef.current) {
+      return;
+    }
+    initExamStartedRef.current = true;
 
     const initExam = async () => {
       try {
         const response = await examsApi.start(Number(examId), student.id);
-        const { session, questions, timeLimit } = response.data;
+        const { session, questions, timeLimit, timeRemainingSeconds } = response.data;
         setQuestions(questions);
         setSession(session);
-        setTimeLeft(timeLimit * 60);
+        const initialSeconds =
+          typeof timeRemainingSeconds === 'number'
+            ? timeRemainingSeconds
+            : timeLimit * 60;
+        setTimeLeft(initialSeconds);
 
         // Resume if already in progress
         if (session.status === 'paused') {
@@ -161,10 +193,26 @@ const ExamRoom: React.FC = () => {
   }, [examId, student.id, navigate]);
 
   const handleFullscreenChange = useCallback(() => {
-    if (!document.fullscreenElement && session && !isPaused) {
+    const nowFs = !!document.fullscreenElement;
+    const wasFs = hadFullscreenRef.current;
+    hadFullscreenRef.current = nowFs;
+    if (!cheatGuardReadyRef.current) return;
+    if (wasFs && !nowFs && session && !isPaused) {
       reportCheat('exit_fullscreen');
     }
   }, [session, isPaused, reportCheat]);
+
+  useEffect(() => {
+    if (!session) {
+      cheatGuardReadyRef.current = false;
+      return;
+    }
+    cheatGuardReadyRef.current = false;
+    const t = window.setTimeout(() => {
+      cheatGuardReadyRef.current = true;
+    }, 2500);
+    return () => window.clearTimeout(t);
+  }, [session]);
 
   useEffect(() => {
     if (!session || isPaused) return;
@@ -180,15 +228,32 @@ const ExamRoom: React.FC = () => {
     };
   }, [session, isPaused, handleVisibilityChange, handleBlur, handleFullscreenChange]);
 
-  // Timer
-  useEffect(() => {
-    if (timeLeft > 0 && !isPaused && !loading) {
-      const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
-      return () => clearTimeout(timer);
-    } else if (timeLeft === 0 && session && !loading) {
-      handleSubmitExam();
+  const handleSubmitExam = useCallback(async () => {
+    if (!session?.id || hasSubmittedRef.current) return;
+    hasSubmittedRef.current = true;
+    setSubmitting(true);
+    try {
+      await examsApi.submit(session.id);
+      navigate('/student/result');
+    } catch {
+      hasSubmittedRef.current = false;
+      alert('交卷失敗，請聯繫監考老師');
+    } finally {
+      setSubmitting(false);
     }
+  }, [session, navigate]);
+
+  // Timer：每秒遞減（與後端 timeRemainingSeconds 對齊後，仍以本地倒數顯示；重新進入頁面會再向後端取剩餘時間）
+  useEffect(() => {
+    if (timeLeft <= 0 || isPaused || loading || !session) return;
+    const timer = setTimeout(() => setTimeLeft((t) => Math.max(0, t - 1)), 1000);
+    return () => clearTimeout(timer);
   }, [timeLeft, isPaused, loading, session]);
+
+  useEffect(() => {
+    if (timeLeft !== 0 || !session || loading || isPaused || hasSubmittedRef.current) return;
+    void handleSubmitExam();
+  }, [timeLeft, session, loading, isPaused, handleSubmitExam]);
 
   const handleNext = async () => {
     if (!userAnswer.trim()) {
@@ -203,9 +268,9 @@ const ExamRoom: React.FC = () => {
         setCurrentIdx(currentIdx + 1);
         setUserAnswer('');
       } else {
-        handleSubmitExam();
+        await handleSubmitExam();
       }
-    } catch (err) {
+    } catch {
       alert('儲存答案失敗，請檢查網路');
     } finally {
       setSubmitting(false);
@@ -221,15 +286,6 @@ const ExamRoom: React.FC = () => {
       setUserAnswer(updated.sort().join(','));
     } else {
       setUserAnswer(val);
-    }
-  };
-
-  const handleSubmitExam = async () => {
-    try {
-      await examsApi.submit(session.id);
-      navigate('/student/result');
-    } catch (err) {
-      alert('交卷失敗，請聯繫監考老師');
     }
   };
 

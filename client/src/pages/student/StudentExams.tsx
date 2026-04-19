@@ -33,7 +33,7 @@ const StudentExams: React.FC = () => {
       try {
         const response = await studentsApi.getExams(student.id);
         setExams(response.data);
-      } catch (err) {
+      } catch {
         setError('無法取得考卷列表，請檢查網路連線或稍後再試。');
       } finally {
         setLoading(false);

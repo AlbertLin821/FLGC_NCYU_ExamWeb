@@ -16,6 +16,7 @@ exports.ExamsService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
 const scoring_service_1 = require("../scoring/scoring.service");
+const exam_time_util_1 = require("./exam-time.util");
 let ExamsService = class ExamsService {
     prisma;
     scoringService;
@@ -163,21 +164,72 @@ let ExamsService = class ExamsService {
             throw new common_1.BadRequestException('已完成此考試');
         }
         if (existingSession && (existingSession.status === 'in_progress' || existingSession.status === 'paused')) {
-            return { session: existingSession, questions: exam.questions, timeLimit: exam.timeLimit };
+            const session = await this.prisma.examSession.findUniqueOrThrow({
+                where: { id: existingSession.id },
+                include: { exam: true },
+            });
+            const timeRemainingSeconds = (0, exam_time_util_1.computeTimeRemainingSeconds)(session.startedAt, exam.timeLimit, now);
+            return {
+                session,
+                questions: exam.questions,
+                timeLimit: exam.timeLimit,
+                timeRemainingSeconds,
+            };
         }
-        const session = await this.prisma.examSession.upsert({
-            where: { studentId_examId: { studentId, examId } },
-            update: { status: 'in_progress', startedAt: new Date() },
-            create: {
-                studentId,
-                examId,
-                status: 'in_progress',
-                startedAt: new Date(),
-            },
-        });
-        return { session, questions: exam.questions, timeLimit: exam.timeLimit };
+        try {
+            const session = await this.prisma.examSession.upsert({
+                where: { studentId_examId: { studentId, examId } },
+                update: { status: 'in_progress', startedAt: new Date() },
+                create: {
+                    studentId,
+                    examId,
+                    status: 'in_progress',
+                    startedAt: new Date(),
+                },
+                include: { exam: true },
+            });
+            const timeRemainingSeconds = (0, exam_time_util_1.computeTimeRemainingSeconds)(session.startedAt, exam.timeLimit, now);
+            return {
+                session,
+                questions: exam.questions,
+                timeLimit: exam.timeLimit,
+                timeRemainingSeconds,
+            };
+        }
+        catch (e) {
+            if (e && typeof e === 'object' && 'code' in e && e.code === 'P2002') {
+                const session = await this.prisma.examSession.findUniqueOrThrow({
+                    where: { studentId_examId: { studentId, examId } },
+                    include: { exam: true },
+                });
+                if (session.status === 'submitted') {
+                    throw new common_1.BadRequestException('已完成此考試');
+                }
+                const timeRemainingSeconds = (0, exam_time_util_1.computeTimeRemainingSeconds)(session.startedAt, exam.timeLimit, now);
+                return {
+                    session,
+                    questions: exam.questions,
+                    timeLimit: exam.timeLimit,
+                    timeRemainingSeconds,
+                };
+            }
+            throw e;
+        }
     }
     async submitAnswer(sessionId, questionId, content) {
+        const session = await this.prisma.examSession.findUnique({
+            where: { id: sessionId },
+            include: { exam: true },
+        });
+        if (!session)
+            throw new common_1.NotFoundException('考試工作階段不存在');
+        if (session.status !== 'in_progress') {
+            throw new common_1.BadRequestException('目前狀態無法作答');
+        }
+        const remaining = (0, exam_time_util_1.computeTimeRemainingSeconds)(session.startedAt, session.exam.timeLimit, new Date());
+        if (remaining <= 0) {
+            throw new common_1.BadRequestException('作答時間已結束');
+        }
         return this.prisma.answer.upsert({
             where: { sessionId_questionId: { sessionId, questionId } },
             update: { content },
@@ -185,10 +237,26 @@ let ExamsService = class ExamsService {
         });
     }
     async submitExam(sessionId) {
-        const session = await this.prisma.examSession.update({
+        const existing = await this.prisma.examSession.findUnique({
             where: { id: sessionId },
+            include: { exam: true },
+        });
+        if (!existing)
+            throw new common_1.NotFoundException('考試工作階段不存在');
+        if (existing.status === 'submitted') {
+            throw new common_1.BadRequestException('已交卷');
+        }
+        if (existing.status !== 'in_progress') {
+            throw new common_1.BadRequestException('目前狀態無法交卷');
+        }
+        const result = await this.prisma.examSession.updateMany({
+            where: { id: sessionId, status: 'in_progress' },
             data: { status: 'submitted', submittedAt: new Date() },
         });
+        if (result.count === 0) {
+            throw new common_1.BadRequestException('已交卷');
+        }
+        const session = await this.prisma.examSession.findUniqueOrThrow({ where: { id: sessionId } });
         this.scoringService.scoreSession(sessionId).catch(err => {
             console.error(`Auto scoring failed for session ${sessionId}:`, err);
         });

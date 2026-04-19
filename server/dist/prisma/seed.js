@@ -83,6 +83,7 @@ async function main() {
                     data: [
                         { studentId: '411200001', name: '王小明' },
                         { studentId: '411200002', name: '李小華' },
+                        { studentId: '411200003', name: '張測試' },
                     ],
                     skipDuplicates: true
                 }
@@ -107,18 +108,36 @@ async function main() {
             questions: {
                 createMany: {
                     data: [
-                        { word1: 'apple', word2: 'red', orderNum: 1 },
-                        { word1: 'book', word2: 'read', orderNum: 2 },
-                        { word1: 'school', word2: 'happy', orderNum: 3 },
-                    ]
-                }
-            }
+                        {
+                            type: 'essay',
+                            content: '請使用單字 "apple" 與 "red" 造一句英文。',
+                            word1: 'apple',
+                            word2: 'red',
+                            orderNum: 1,
+                        },
+                        {
+                            type: 'essay',
+                            content: '請使用單字 "book" 與 "read" 造一句英文。',
+                            word1: 'book',
+                            word2: 'read',
+                            orderNum: 2,
+                        },
+                        {
+                            type: 'essay',
+                            content: '請使用單字 "school" 與 "happy" 造一句英文。',
+                            word1: 'school',
+                            word2: 'happy',
+                            orderNum: 3,
+                        },
+                    ],
+                },
+            },
         }
     });
     console.log('Seeding complete.');
     console.log(`- Teacher login: admin@nchu.edu.tw / admin123`);
     console.log(`- Default Admin: albertlin94821@gmail.com / Tt12345678`);
-    console.log(`- Student IDs: 411200001 (王小明), 411200002 (李小華)`);
+    console.log(`- Student IDs: 411200001 (王小明), 411200002 (李小華), 411200003 (張測試)`);
 }
 main()
     .catch((e) => {

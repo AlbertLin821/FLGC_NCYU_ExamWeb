@@ -99,7 +99,7 @@ const ClassManagement: React.FC = () => {
       setNewClass({ name: '', description: '' });
       setEditingClassId(null);
       fetchClasses();
-    } catch (err) { alert('操作失敗'); }
+    } catch { alert('操作失敗'); }
   };
 
   const deleteClass = async (id: number) => {
@@ -107,7 +107,7 @@ const ClassManagement: React.FC = () => {
     try {
       await classesApi.delete(id);
       fetchClasses();
-    } catch (err) { alert('刪除失敗'); }
+    } catch { alert('刪除失敗'); }
   };
 
   // Student Actions
@@ -121,7 +121,7 @@ const ClassManagement: React.FC = () => {
       }
       setShowStudentModal(false);
       fetchStudents(selectedClass.id);
-    } catch (err) { alert('儲存失敗'); }
+    } catch { alert('儲存失敗'); }
   };
 
   const deleteStudent = async (id: number) => {
@@ -129,7 +129,7 @@ const ClassManagement: React.FC = () => {
     try {
       await studentsApi.delete(id);
       fetchStudents(selectedClass.id);
-    } catch (err) { alert('刪除失敗'); }
+    } catch { alert('刪除失敗'); }
   };
 
   const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -164,7 +164,7 @@ const ClassManagement: React.FC = () => {
       setShowImport(false);
       setImportText('');
       fetchStudents(selectedClass.id);
-    } catch (err) { alert('匯入失敗'); }
+    } catch { alert('匯入失敗'); }
   };
 
   const getExamStatusEmoji = (sessions: any[]) => {

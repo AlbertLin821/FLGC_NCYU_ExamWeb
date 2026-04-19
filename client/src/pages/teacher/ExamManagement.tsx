@@ -138,7 +138,7 @@ const ExamManagement: React.FC = () => {
       }
       setShowModal(false);
       fetchExams();
-    } catch (err) { alert(editingExamId ? '更新失敗' : '建立失敗'); }
+    } catch { alert(editingExamId ? '更新失敗' : '建立失敗'); }
   };
 
   const handleDelete = async (id: number) => {
@@ -146,7 +146,7 @@ const ExamManagement: React.FC = () => {
     try {
       await examsApi.delete(id);
       fetchExams();
-    } catch (err) { alert('刪除失敗'); }
+    } catch { alert('刪除失敗'); }
   };
 
   return (

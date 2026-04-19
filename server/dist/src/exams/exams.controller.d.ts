@@ -174,6 +174,19 @@ export declare class ExamsController {
     }>;
     startExam(examId: number, studentId: number): Promise<{
         session: {
+            exam: {
+                createdAt: Date;
+                id: number;
+                createdBy: number;
+                title: string;
+                difficulty: string | null;
+                timeLimit: number;
+                startTime: Date;
+                endTime: Date;
+                status: string;
+                deletedAt: Date | null;
+            };
+        } & {
             id: number;
             studentId: number;
             status: string;
@@ -194,13 +207,14 @@ export declare class ExamsController {
             examId: number;
         }[];
         timeLimit: number;
+        timeRemainingSeconds: number;
     }>;
     submitAnswer(sessionId: number, dto: SubmitAnswerDto): Promise<{
         createdAt: Date;
         id: number;
         content: string | null;
-        aiScore: import("@prisma/client-runtime-utils").Decimal | null;
         sessionId: number;
+        aiScore: import("@prisma/client-runtime-utils").Decimal | null;
         questionId: number;
         aiFeedback: string | null;
         aiModel: string | null;
@@ -224,8 +238,8 @@ export declare class ExamsController {
             createdAt: Date;
             id: number;
             content: string | null;
-            aiScore: import("@prisma/client-runtime-utils").Decimal | null;
             sessionId: number;
+            aiScore: import("@prisma/client-runtime-utils").Decimal | null;
             questionId: number;
             aiFeedback: string | null;
             aiModel: string | null;
@@ -257,8 +271,8 @@ export declare class ExamsController {
                 createdAt: Date;
                 id: number;
                 content: string | null;
-                aiScore: import("@prisma/client-runtime-utils").Decimal | null;
                 sessionId: number;
+                aiScore: import("@prisma/client-runtime-utils").Decimal | null;
                 questionId: number;
                 aiFeedback: string | null;
                 aiModel: string | null;

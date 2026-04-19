@@ -45,7 +45,7 @@ const AntiCheatMonitor: React.FC = () => {
         socketRef.current?.emit('cheat:terminate', { logId, teacherId: JSON.parse(localStorage.getItem('teacher') || '{}').id });
       }
       setAlerts(prev => prev.filter(a => a.id !== logId));
-    } catch (err) { alert('操作失敗'); }
+    } catch { alert('操作失敗'); }
   };
 
   return (

@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, NotFoundException, Inject, forwardRef 
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScoringService } from '../scoring/scoring.service';
+import { computeTimeRemainingSeconds } from './exam-time.util';
 
 @Injectable()
 export class ExamsService {
@@ -180,24 +181,74 @@ export class ExamsService {
     }
 
     if (existingSession && (existingSession.status === 'in_progress' || existingSession.status === 'paused')) {
-      return { session: existingSession, questions: exam.questions, timeLimit: exam.timeLimit };
+      const session = await this.prisma.examSession.findUniqueOrThrow({
+        where: { id: existingSession.id },
+        include: { exam: true },
+      });
+      const timeRemainingSeconds = computeTimeRemainingSeconds(session.startedAt, exam.timeLimit, now);
+      return {
+        session,
+        questions: exam.questions,
+        timeLimit: exam.timeLimit,
+        timeRemainingSeconds,
+      };
     }
 
-    const session = await this.prisma.examSession.upsert({
-      where: { studentId_examId: { studentId, examId } },
-      update: { status: 'in_progress', startedAt: new Date() },
-      create: {
-        studentId,
-        examId,
-        status: 'in_progress',
-        startedAt: new Date(),
-      },
-    });
+    try {
+      const session = await this.prisma.examSession.upsert({
+        where: { studentId_examId: { studentId, examId } },
+        update: { status: 'in_progress', startedAt: new Date() },
+        create: {
+          studentId,
+          examId,
+          status: 'in_progress',
+          startedAt: new Date(),
+        },
+        include: { exam: true },
+      });
 
-    return { session, questions: exam.questions, timeLimit: exam.timeLimit };
+      const timeRemainingSeconds = computeTimeRemainingSeconds(session.startedAt, exam.timeLimit, now);
+      return {
+        session,
+        questions: exam.questions,
+        timeLimit: exam.timeLimit,
+        timeRemainingSeconds,
+      };
+    } catch (e: unknown) {
+      // 並行請求（例如 React Strict Mode 雙次掛載）可能同時 create，第二筆撞 unique
+      if (e && typeof e === 'object' && 'code' in e && (e as { code: string }).code === 'P2002') {
+        const session = await this.prisma.examSession.findUniqueOrThrow({
+          where: { studentId_examId: { studentId, examId } },
+          include: { exam: true },
+        });
+        if (session.status === 'submitted') {
+          throw new BadRequestException('已完成此考試');
+        }
+        const timeRemainingSeconds = computeTimeRemainingSeconds(session.startedAt, exam.timeLimit, now);
+        return {
+          session,
+          questions: exam.questions,
+          timeLimit: exam.timeLimit,
+          timeRemainingSeconds,
+        };
+      }
+      throw e;
+    }
   }
 
   async submitAnswer(sessionId: number, questionId: number, content: string) {
+    const session = await this.prisma.examSession.findUnique({
+      where: { id: sessionId },
+      include: { exam: true },
+    });
+    if (!session) throw new NotFoundException('考試工作階段不存在');
+    if (session.status !== 'in_progress') {
+      throw new BadRequestException('目前狀態無法作答');
+    }
+    const remaining = computeTimeRemainingSeconds(session.startedAt, session.exam.timeLimit, new Date());
+    if (remaining <= 0) {
+      throw new BadRequestException('作答時間已結束');
+    }
     return this.prisma.answer.upsert({
       where: { sessionId_questionId: { sessionId, questionId } },
       update: { content },
@@ -206,10 +257,27 @@ export class ExamsService {
   }
 
   async submitExam(sessionId: number) {
-    const session = await this.prisma.examSession.update({
+    const existing = await this.prisma.examSession.findUnique({
       where: { id: sessionId },
+      include: { exam: true },
+    });
+    if (!existing) throw new NotFoundException('考試工作階段不存在');
+    if (existing.status === 'submitted') {
+      throw new BadRequestException('已交卷');
+    }
+    if (existing.status !== 'in_progress') {
+      throw new BadRequestException('目前狀態無法交卷');
+    }
+
+    const result = await this.prisma.examSession.updateMany({
+      where: { id: sessionId, status: 'in_progress' },
       data: { status: 'submitted', submittedAt: new Date() },
     });
+    if (result.count === 0) {
+      throw new BadRequestException('已交卷');
+    }
+
+    const session = await this.prisma.examSession.findUniqueOrThrow({ where: { id: sessionId } });
 
     // Auto trigger scoring in background
     this.scoringService.scoreSession(sessionId).catch(err => {

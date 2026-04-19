@@ -8,15 +8,23 @@ describe('AppController', () => {
   beforeEach(async () => {
     const app: TestingModule = await Test.createTestingModule({
       controllers: [AppController],
-      providers: [AppService],
+      providers: [
+        {
+          provide: AppService,
+          useValue: {
+            getHello: () => 'NCHU Online English Exam API',
+            getDashboardStats: jest.fn(),
+          },
+        },
+      ],
     }).compile();
 
     appController = app.get<AppController>(AppController);
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+    it('should return API title string', () => {
+      expect(appController.getHello()).toBe('NCHU Online English Exam API');
     });
   });
 });

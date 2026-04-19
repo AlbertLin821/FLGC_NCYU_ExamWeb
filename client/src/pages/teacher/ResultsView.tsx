@@ -38,7 +38,7 @@ const ResultsView: React.FC = () => {
         const res = await examsApi.getResults(selectedClassId);
         setResults(res.data);
       }
-    } catch (err) {
+    } catch {
       alert('評分失敗');
     }
   };

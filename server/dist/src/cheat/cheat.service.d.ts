@@ -6,8 +6,8 @@ export declare class CheatService {
     logCheatEvent(sessionId: number, eventType: string, details?: any): Promise<{
         createdAt: Date;
         id: number;
-        resolution: string | null;
         sessionId: number;
+        resolution: string | null;
         eventType: string;
         details: import("@prisma/client/runtime/client").JsonValue | null;
         resolvedBy: number | null;
@@ -40,8 +40,8 @@ export declare class CheatService {
     } & {
         createdAt: Date;
         id: number;
-        resolution: string | null;
         sessionId: number;
+        resolution: string | null;
         eventType: string;
         details: import("@prisma/client/runtime/client").JsonValue | null;
         resolvedBy: number | null;
@@ -66,8 +66,8 @@ export declare class CheatService {
         } & {
             createdAt: Date;
             id: number;
-            resolution: string | null;
             sessionId: number;
+            resolution: string | null;
             eventType: string;
             details: import("@prisma/client/runtime/client").JsonValue | null;
             resolvedBy: number | null;
@@ -80,8 +80,8 @@ export declare class CheatService {
     getLogsBySession(sessionId: number): Promise<{
         createdAt: Date;
         id: number;
-        resolution: string | null;
         sessionId: number;
+        resolution: string | null;
         eventType: string;
         details: import("@prisma/client/runtime/client").JsonValue | null;
         resolvedBy: number | null;
