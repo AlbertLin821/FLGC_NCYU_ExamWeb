@@ -1,6 +1,6 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
 import { AppService } from './app.service';
-import { JwtAuthGuard } from './auth/guards';
+import { JwtAuthGuard, RolesGuard, Roles } from './auth/guards';
 
 @Controller()
 export class AppController {
@@ -12,7 +12,8 @@ export class AppController {
   }
 
   @Get('api/dashboard/stats')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('teacher', 'admin')
   async getStats() {
     return this.appService.getDashboardStats();
   }

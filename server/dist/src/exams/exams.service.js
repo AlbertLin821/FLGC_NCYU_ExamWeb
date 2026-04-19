@@ -17,6 +17,7 @@ const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
 const scoring_service_1 = require("../scoring/scoring.service");
 const exam_time_util_1 = require("./exam-time.util");
+const sessionReviewFlags_1 = require("./sessionReviewFlags");
 let ExamsService = class ExamsService {
     prisma;
     scoringService;
@@ -276,7 +277,8 @@ let ExamsService = class ExamsService {
         };
         const orderBy = { submittedAt: 'desc' };
         if (page === undefined && limit === undefined) {
-            return this.prisma.examSession.findMany({ where, include, orderBy });
+            const rows = await this.prisma.examSession.findMany({ where, include, orderBy });
+            return (0, sessionReviewFlags_1.mapSessionsWithReviewFlags)(rows);
         }
         const p = page || 1;
         const l = limit || 20;
@@ -291,7 +293,13 @@ let ExamsService = class ExamsService {
             }),
             this.prisma.examSession.count({ where }),
         ]);
-        return { items, total, page: p, limit: l, totalPages: Math.ceil(total / l) };
+        return {
+            items: (0, sessionReviewFlags_1.mapSessionsWithReviewFlags)(items),
+            total,
+            page: p,
+            limit: l,
+            totalPages: Math.ceil(total / l),
+        };
     }
 };
 exports.ExamsService = ExamsService;

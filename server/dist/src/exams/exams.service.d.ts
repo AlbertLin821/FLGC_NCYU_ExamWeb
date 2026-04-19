@@ -257,6 +257,8 @@ export declare class ExamsService {
         examId: number;
         startedAt: Date | null;
         submittedAt: Date | null;
+    } & {
+        hasPendingReview: boolean;
     })[] | {
         items: ({
             answers: ({
@@ -290,6 +292,8 @@ export declare class ExamsService {
             examId: number;
             startedAt: Date | null;
             submittedAt: Date | null;
+        } & {
+            hasPendingReview: boolean;
         })[];
         total: number;
         page: number;

@@ -2,7 +2,7 @@ import {
   Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Request, ParseIntPipe, Query,
 } from '@nestjs/common';
 import { ClassesService } from './classes.service';
-import { JwtAuthGuard } from '../auth/guards';
+import { JwtAuthGuard, RolesGuard, Roles } from '../auth/guards';
 import { IsNotEmpty, IsString, IsOptional, IsInt } from 'class-validator';
 
 export class CreateClassDto {
@@ -15,7 +15,8 @@ export class AddTeacherDto {
 }
 
 @Controller('api/classes')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('teacher', 'admin')
 export class ClassesController {
   constructor(private classesService: ClassesService) {}
 

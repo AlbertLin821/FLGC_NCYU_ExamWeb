@@ -1,9 +1,10 @@
 import { Controller, Post, Param, UseGuards, ParseIntPipe } from '@nestjs/common';
 import { ScoringService } from './scoring.service';
-import { JwtAuthGuard } from '../auth/guards';
+import { JwtAuthGuard, RolesGuard, Roles } from '../auth/guards';
 
 @Controller('api/scoring')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('teacher', 'admin')
 export class ScoringController {
   constructor(private scoringService: ScoringService) {}
 

@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { CheckCircle } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
-import { cheatApi } from '../../api';
+import { cheatApi, getServerOrigin } from '../../api';
+import { cheatSocketStatusMessage, useCheatSocketStatus } from '../../hooks/useCheatSocketStatus';
 
 const AntiCheatMonitor: React.FC = () => {
   const [alerts, setAlerts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const socketRef = useRef<Socket | null>(null);
+  const [monitorSocket, setMonitorSocket] = useState<Socket | null>(null);
+  const wsStatus = useCheatSocketStatus(monitorSocket);
 
   const fetchAlerts = async () => {
     try {
@@ -20,9 +23,9 @@ const AntiCheatMonitor: React.FC = () => {
     fetchAlerts();
 
     // WS Connection
-    const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-    const socket = io(`${API_BASE}/cheat`, { transports: ['websocket'] });
+    const socket = io(`${getServerOrigin()}/cheat`, { transports: ['websocket'] });
     socketRef.current = socket;
+    setMonitorSocket(socket);
 
     socket.on('connect', () => socket.emit('teacher:join'));
 
@@ -31,7 +34,10 @@ const AntiCheatMonitor: React.FC = () => {
       fetchAlerts();
     });
 
-    return () => { socket.disconnect(); };
+    return () => {
+      socket.disconnect();
+      setMonitorSocket(null);
+    };
   }, []);
 
   const handleResolve = async (logId: number, type: 'unlock' | 'terminate') => {
@@ -50,6 +56,13 @@ const AntiCheatMonitor: React.FC = () => {
 
   return (
     <div>
+      <div
+        role="status"
+        data-testid="monitor-ws-status"
+        className={`text-sm mb-md ${wsStatus === 'connected' ? 'text-secondary' : 'alert alert-warning'}`}
+      >
+        {cheatSocketStatusMessage(wsStatus, 'monitor')}
+      </div>
       <div className="mb-lg">
         <h3>防弊即時監控</h3>
         <p className="text-secondary text-sm">此處將顯示學生在考試中發生的異常操作（跳窗、切換分頁等）</p>

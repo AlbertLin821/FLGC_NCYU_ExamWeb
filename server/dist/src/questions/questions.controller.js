@@ -223,7 +223,8 @@ __decorate([
 ], QuestionsController.prototype, "delete", null);
 exports.QuestionsController = QuestionsController = __decorate([
     (0, common_1.Controller)('api/questions'),
-    (0, common_1.UseGuards)(guards_1.JwtAuthGuard),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
+    (0, guards_1.Roles)('teacher', 'admin'),
     __metadata("design:paramtypes", [questions_service_1.QuestionsService])
 ], QuestionsController);
 //# sourceMappingURL=questions.controller.js.map

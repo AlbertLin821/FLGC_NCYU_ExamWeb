@@ -3,7 +3,7 @@ import {
   UseGuards, ParseIntPipe,
 } from '@nestjs/common';
 import { QuestionsService } from './questions.service';
-import { JwtAuthGuard } from '../auth/guards';
+import { JwtAuthGuard, RolesGuard, Roles } from '../auth/guards';
 import {
   IsNotEmpty,
   IsString,
@@ -56,7 +56,8 @@ export class ReorderDto {
 }
 
 @Controller('api/questions')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('teacher', 'admin')
 export class QuestionsController {
   constructor(private questionsService: QuestionsService) {}
 

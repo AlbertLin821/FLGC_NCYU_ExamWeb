@@ -4,21 +4,14 @@ export declare class ScoringController {
     constructor(scoringService: ScoringService);
     scoreSession(sessionId: number): Promise<({
         answerId: number;
-        skipped: boolean;
-        score?: undefined;
-        feedback?: undefined;
-        error?: undefined;
-    } | {
-        answerId: number;
         score: number;
         feedback: string;
-        skipped?: undefined;
-        error?: undefined;
     } | {
         answerId: number;
-        error: any;
-        skipped?: undefined;
-        score?: undefined;
-        feedback?: undefined;
+        skipped: true;
+    } | {
+        answerId: number;
+        pendingReview: true;
+        kind: string;
     })[]>;
 }

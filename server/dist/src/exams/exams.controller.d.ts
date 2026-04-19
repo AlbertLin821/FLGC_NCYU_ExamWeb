@@ -80,6 +80,81 @@ export declare class ExamsController {
         limit: number;
         totalPages: number;
     }>;
+    getResults(classId: number, examId?: string, page?: string, limit?: string): Promise<({
+        answers: ({
+            question: {
+                word1: string | null;
+                word2: string | null;
+                maxPoints: number;
+            };
+        } & {
+            createdAt: Date;
+            id: number;
+            content: string | null;
+            sessionId: number;
+            aiScore: import("@prisma/client-runtime-utils").Decimal | null;
+            questionId: number;
+            aiFeedback: string | null;
+            aiModel: string | null;
+        })[];
+        exam: {
+            title: string;
+        };
+        student: {
+            name: string;
+            id: number;
+            studentId: string;
+        };
+    } & {
+        id: number;
+        studentId: number;
+        status: string;
+        examId: number;
+        startedAt: Date | null;
+        submittedAt: Date | null;
+    } & {
+        hasPendingReview: boolean;
+    })[] | {
+        items: ({
+            answers: ({
+                question: {
+                    word1: string | null;
+                    word2: string | null;
+                    maxPoints: number;
+                };
+            } & {
+                createdAt: Date;
+                id: number;
+                content: string | null;
+                sessionId: number;
+                aiScore: import("@prisma/client-runtime-utils").Decimal | null;
+                questionId: number;
+                aiFeedback: string | null;
+                aiModel: string | null;
+            })[];
+            exam: {
+                title: string;
+            };
+            student: {
+                name: string;
+                id: number;
+                studentId: string;
+            };
+        } & {
+            id: number;
+            studentId: number;
+            status: string;
+            examId: number;
+            startedAt: Date | null;
+            submittedAt: Date | null;
+        } & {
+            hasPendingReview: boolean;
+        })[];
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    }>;
     findOne(id: number): Promise<({
         examClasses: ({
             class: {
@@ -226,76 +301,5 @@ export declare class ExamsController {
         examId: number;
         startedAt: Date | null;
         submittedAt: Date | null;
-    }>;
-    getResults(classId: number, examId?: string, page?: string, limit?: string): Promise<({
-        answers: ({
-            question: {
-                word1: string | null;
-                word2: string | null;
-                maxPoints: number;
-            };
-        } & {
-            createdAt: Date;
-            id: number;
-            content: string | null;
-            sessionId: number;
-            aiScore: import("@prisma/client-runtime-utils").Decimal | null;
-            questionId: number;
-            aiFeedback: string | null;
-            aiModel: string | null;
-        })[];
-        exam: {
-            title: string;
-        };
-        student: {
-            name: string;
-            id: number;
-            studentId: string;
-        };
-    } & {
-        id: number;
-        studentId: number;
-        status: string;
-        examId: number;
-        startedAt: Date | null;
-        submittedAt: Date | null;
-    })[] | {
-        items: ({
-            answers: ({
-                question: {
-                    word1: string | null;
-                    word2: string | null;
-                    maxPoints: number;
-                };
-            } & {
-                createdAt: Date;
-                id: number;
-                content: string | null;
-                sessionId: number;
-                aiScore: import("@prisma/client-runtime-utils").Decimal | null;
-                questionId: number;
-                aiFeedback: string | null;
-                aiModel: string | null;
-            })[];
-            exam: {
-                title: string;
-            };
-            student: {
-                name: string;
-                id: number;
-                studentId: string;
-            };
-        } & {
-            id: number;
-            studentId: number;
-            status: string;
-            examId: number;
-            startedAt: Date | null;
-            submittedAt: Date | null;
-        })[];
-        total: number;
-        page: number;
-        limit: number;
-        totalPages: number;
     }>;
 }

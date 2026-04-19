@@ -68,7 +68,8 @@ __decorate([
 ], CheatController.prototype, "terminate", null);
 exports.CheatController = CheatController = __decorate([
     (0, common_1.Controller)('api/cheat'),
-    (0, common_1.UseGuards)(guards_1.JwtAuthGuard),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
+    (0, guards_1.Roles)('teacher', 'admin'),
     __metadata("design:paramtypes", [cheat_service_1.CheatService])
 ], CheatController);
 //# sourceMappingURL=cheat.controller.js.map

@@ -30,6 +30,16 @@ const ResultsView: React.FC = () => {
 
   const calculateTotal = (answers: any[]) => sessionScorePercent(answers);
 
+  const statusLabel = (row: any) => {
+    if (row.hasPendingReview) {
+      return { text: '已評分（待複閱）', className: 'badge-warning' };
+    }
+    if (row.status === 'graded') {
+      return { text: '已評分', className: 'badge-success' };
+    }
+    return { text: '待評分', className: 'badge-warning' };
+  };
+
   const handleTriggerScoring = async (sessionId: number) => {
     try {
       await scoringApi.scoreSession(sessionId);
@@ -98,8 +108,8 @@ const ResultsView: React.FC = () => {
                   <td><b>{r.student.name}</b></td>
                   <td>{r.exam.title}</td>
                   <td>
-                    <span className={`badge ${r.status === 'graded' ? 'badge-success' : 'badge-warning'}`}>
-                      {r.status === 'graded' ? '已評分' : '待評分'}
+                    <span className={`badge ${statusLabel(r).className}`}>
+                      {statusLabel(r).text}
                     </span>
                   </td>
                   <td><b>{calculateTotal(r.answers)}</b></td>

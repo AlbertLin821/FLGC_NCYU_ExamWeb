@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScoringService } from '../scoring/scoring.service';
 import { computeTimeRemainingSeconds } from './exam-time.util';
+import { mapSessionsWithReviewFlags } from './sessionReviewFlags';
 
 @Injectable()
 export class ExamsService {
@@ -302,7 +303,8 @@ export class ExamsService {
     const orderBy: any = { submittedAt: 'desc' };
 
     if (page === undefined && limit === undefined) {
-      return this.prisma.examSession.findMany({ where, include, orderBy });
+      const rows = await this.prisma.examSession.findMany({ where, include, orderBy });
+      return mapSessionsWithReviewFlags(rows);
     }
 
     const p = page || 1;
@@ -320,6 +322,12 @@ export class ExamsService {
       this.prisma.examSession.count({ where }),
     ]);
 
-    return { items, total, page: p, limit: l, totalPages: Math.ceil(total / l) };
+    return {
+      items: mapSessionsWithReviewFlags(items),
+      total,
+      page: p,
+      limit: l,
+      totalPages: Math.ceil(total / l),
+    };
   }
 }

@@ -5,6 +5,7 @@ interface ScoringResult {
     feedback: string;
     model: string;
 }
+export declare function classifyAiScoringError(err: unknown): 'rate_limit' | 'provider' | 'other';
 export declare class ScoringService {
     private prisma;
     private config;
@@ -16,24 +17,18 @@ export declare class ScoringService {
     scoreWithOpenAI(prompt: string): Promise<ScoringResult>;
     scoreWithGemini(prompt: string): Promise<ScoringResult>;
     scoreAI(prompt: string): Promise<ScoringResult>;
+    private markEssayPendingReview;
     scoreSession(sessionId: number): Promise<({
-        answerId: number;
-        skipped: boolean;
-        score?: undefined;
-        feedback?: undefined;
-        error?: undefined;
-    } | {
         answerId: number;
         score: number;
         feedback: string;
-        skipped?: undefined;
-        error?: undefined;
     } | {
         answerId: number;
-        error: any;
-        skipped?: undefined;
-        score?: undefined;
-        feedback?: undefined;
+        skipped: true;
+    } | {
+        answerId: number;
+        pendingReview: true;
+        kind: string;
     })[]>;
 }
 export {};

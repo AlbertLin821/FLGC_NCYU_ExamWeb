@@ -96,6 +96,16 @@ const TeacherDashboard: React.FC = () => {
     if (!token) navigate('/teacher/login');
   }, [token, navigate]);
 
+  if (!token) {
+    return (
+      <Layout>
+        <div className="flex justify-center items-center" style={{ minHeight: '400px' }}>
+          <div className="spinner" role="status" aria-label="載入中" />
+        </div>
+      </Layout>
+    );
+  }
+
   const menuItems = [
     { path: '/teacher/overview', label: '儀表板', icon: <LayoutDashboard size={18} /> },
     { path: '/teacher/classes', label: '班級與學生', icon: <Users size={18} /> },

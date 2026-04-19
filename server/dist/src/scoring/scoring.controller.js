@@ -35,7 +35,8 @@ __decorate([
 ], ScoringController.prototype, "scoreSession", null);
 exports.ScoringController = ScoringController = __decorate([
     (0, common_1.Controller)('api/scoring'),
-    (0, common_1.UseGuards)(guards_1.JwtAuthGuard),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
+    (0, guards_1.Roles)('teacher', 'admin'),
     __metadata("design:paramtypes", [scoring_service_1.ScoringService])
 ], ScoringController);
 //# sourceMappingURL=scoring.controller.js.map

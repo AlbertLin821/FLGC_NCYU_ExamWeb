@@ -135,7 +135,8 @@ __decorate([
 ], ClassesController.prototype, "removeTeacher", null);
 exports.ClassesController = ClassesController = __decorate([
     (0, common_1.Controller)('api/classes'),
-    (0, common_1.UseGuards)(guards_1.JwtAuthGuard),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
+    (0, guards_1.Roles)('teacher', 'admin'),
     __metadata("design:paramtypes", [classes_service_1.ClassesService])
 ], ClassesController);
 //# sourceMappingURL=classes.controller.js.map

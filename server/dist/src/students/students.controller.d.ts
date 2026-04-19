@@ -82,6 +82,16 @@ export declare class StudentsController {
         limit: number;
         totalPages: number;
     }>;
+    getStudentExams(id: number): Promise<{
+        id: number;
+        title: string;
+        difficulty: string | null;
+        timeLimit: number;
+        questionCount: number;
+        startTime: Date;
+        endTime: Date;
+        sessionStatus: string;
+    }[]>;
     findOne(id: number): Promise<({
         sessions: ({
             answers: ({
@@ -136,16 +146,6 @@ export declare class StudentsController {
         lockedUntil: Date | null;
         classId: number;
     }) | null>;
-    getStudentExams(id: number): Promise<{
-        id: number;
-        title: string;
-        difficulty: string | null;
-        timeLimit: number;
-        questionCount: number;
-        startTime: Date;
-        endTime: Date;
-        sessionStatus: string;
-    }[]>;
     bulkImport(dto: BulkImportDto): Promise<{
         created: number;
         updated: number;

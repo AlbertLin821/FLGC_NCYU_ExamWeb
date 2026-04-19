@@ -71,6 +71,7 @@ __decorate([
 ], TeachersController.prototype, "findAll", null);
 __decorate([
     (0, common_1.Get)('me'),
+    (0, guards_1.Roles)('teacher', 'admin'),
     __param(0, (0, common_1.Request)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
@@ -78,6 +79,7 @@ __decorate([
 ], TeachersController.prototype, "getProfile", null);
 __decorate([
     (0, common_1.Patch)(':id/password'),
+    (0, guards_1.Roles)('admin'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)('password')),
     __metadata("design:type", Function),
@@ -86,7 +88,7 @@ __decorate([
 ], TeachersController.prototype, "updatePassword", null);
 __decorate([
     (0, common_1.Post)('invite'),
-    (0, common_1.UseGuards)(guards_1.JwtAuthGuard),
+    (0, guards_1.Roles)('teacher', 'admin'),
     __param(0, (0, common_1.Body)('email')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),

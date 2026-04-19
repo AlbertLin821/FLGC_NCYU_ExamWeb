@@ -2,10 +2,11 @@ import {
   Controller, Get, Post, Param, Body, UseGuards, Request, ParseIntPipe, Query,
 } from '@nestjs/common';
 import { CheatService } from './cheat.service';
-import { JwtAuthGuard } from '../auth/guards';
+import { JwtAuthGuard, RolesGuard, Roles } from '../auth/guards';
 
 @Controller('api/cheat')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('teacher', 'admin')
 export class CheatController {
   constructor(private cheatService: CheatService) {}
 

@@ -1,9 +1,23 @@
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+/**
+ * REST 使用 `${origin}/api`，Socket.IO 使用 `${origin}/cheat`。
+ * `.env` 可能寫成 `http://localhost:3000` 或誤帶 `/api` 後綴，需正規化避免 `/api/api`。
+ */
+export function normalizeServerOrigin(raw: string | undefined): string {
+  const trimmed = String(raw ?? 'http://localhost:3000')
+    .trim()
+    .replace(/\/$/, '');
+  const withoutApi = trimmed.replace(/\/api\/?$/, '');
+  return withoutApi || 'http://localhost:3000';
+}
+
+export function getServerOrigin(): string {
+  return normalizeServerOrigin(import.meta.env.VITE_API_URL);
+}
 
 const api = axios.create({
-  baseURL: `${API_BASE}/api`,
+  baseURL: `${getServerOrigin()}/api`,
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -19,11 +33,16 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) {
+    const status = err.response?.status;
+    if (status === 403 && window.location.pathname.startsWith('/teacher')) {
+      window.location.href = '/teacher/login?reason=forbidden';
+      return Promise.reject(err);
+    }
+    if (status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('teacher');
       if (window.location.pathname.startsWith('/teacher')) {
-        window.location.href = '/teacher/login';
+        window.location.href = '/teacher/login?reason=session';
       }
     }
     return Promise.reject(err);
@@ -44,7 +63,7 @@ export const authApi = {
 
 // Teachers
 export const teachersApi = {
-  getProfile: () => api.get('/teachers/profile'),
+  getProfile: () => api.get('/teachers/me'),
   getAll: () => api.get('/teachers'),
   invite: (email: string) => api.post('/teachers/invite', { email }),
 };

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import { authApi } from '../../api';
 
@@ -9,6 +9,14 @@ const TeacherLogin: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const reason = searchParams.get('reason');
+  let reasonNotice = '';
+  if (reason === 'session') {
+    reasonNotice = '登入已過期或無效，請重新登入。';
+  } else if (reason === 'forbidden') {
+    reasonNotice = '目前帳號權限不足，請使用具教師或管理員身分之帳號登入。';
+  }
 
   React.useEffect(() => {
     if (localStorage.getItem('token')) navigate('/teacher/dashboard');
@@ -39,6 +47,12 @@ const TeacherLogin: React.FC = () => {
             <h2 className="mb-xs">老師/管理端登入</h2>
             <p className="text-sm text-secondary">請輸入您的教育帳號與密碼</p>
           </div>
+
+          {reasonNotice ? (
+            <div className="alert alert-warning mb-md" role="status">
+              {reasonNotice}
+            </div>
+          ) : null}
 
           <form onSubmit={handleLogin}>
             <div className="form-group">

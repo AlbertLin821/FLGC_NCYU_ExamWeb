@@ -1,3 +1,12 @@
+# 前端（Client）
+
+專案總覽、環境變數、啟動與測試指令請見：
+
+- [專案根目錄 README](../README.md)
+- [啟動指南](../docs/startup_guide.md)
+
+---
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.

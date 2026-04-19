@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
-import { examsApi } from '../../api';
+import { examsApi, getServerOrigin } from '../../api';
+import { cheatSocketStatusMessage, useCheatSocketStatus } from '../../hooks/useCheatSocketStatus';
 
 interface Question {
   id: number;
@@ -27,6 +28,8 @@ const ExamRoom: React.FC = () => {
   const [pauseMessage, setPauseMessage] = useState('');
 
   const socketRef = useRef<Socket | null>(null);
+  const [examSocket, setExamSocket] = useState<Socket | null>(null);
+  const wsStatus = useCheatSocketStatus(examSocket);
   const hasSubmittedRef = useRef(false);
   const initExamStartedRef = useRef(false);
   /** 進入考場後短暫忽略 visibility/blur，避免重新整理或分頁還原時誤判作弊而暫停 */
@@ -141,21 +144,17 @@ const ExamRoom: React.FC = () => {
           setPauseMessage('測驗暫停中，請帶老師處理');
         }
 
-        // Setup WebSocket
-        const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-        console.log('Connecting to socket at:', `${API_BASE}/cheat`);
-        const socket = io(`${API_BASE}/cheat`, { 
+        // Setup WebSocket（namespace /cheat 掛在 HTTP origin，非 /api 底下）
+        const origin = getServerOrigin();
+        const socket = io(`${origin}/cheat`, { 
           withCredentials: true,
           reconnectionAttempts: 5,
         });
         socketRef.current = socket;
+        setExamSocket(socket);
 
-        socket.on('connect', () => {
-          console.log('Socket connected:', socket.id);
-        });
-
-        socket.on('connect_error', (err) => {
-          console.error('Socket connection error:', err);
+        socket.on('connect_error', () => {
+          /* 狀態由 useCheatSocketStatus 顯示於 UI */
         });
 
         socket.on(`session:${session.id}:resume`, (data) => {
@@ -174,7 +173,9 @@ const ExamRoom: React.FC = () => {
         });
 
       } catch (err: any) {
-        console.error('initExam error:', err);
+        if (err?.response?.status !== 404) {
+          console.error('initExam error:', err);
+        }
         alert(err.response?.data?.message || '進入考場失敗');
         navigate('/student/exams');
       } finally {
@@ -186,9 +187,9 @@ const ExamRoom: React.FC = () => {
 
     return () => {
       if (socketRef.current) {
-        console.log('Disconnecting socket');
         socketRef.current.disconnect();
       }
+      setExamSocket(null);
     };
   }, [examId, student.id, navigate]);
 
@@ -234,6 +235,14 @@ const ExamRoom: React.FC = () => {
     setSubmitting(true);
     try {
       await examsApi.submit(session.id);
+      try {
+        sessionStorage.setItem(
+          'examSubmitMeta',
+          JSON.stringify({ submittedAt: Date.now(), grading: 'async' }),
+        );
+      } catch {
+        /* ignore storage errors */
+      }
       navigate('/student/result');
     } catch {
       hasSubmittedRef.current = false;
@@ -316,6 +325,15 @@ const ExamRoom: React.FC = () => {
 
   return (
     <div className="page bg-alt">
+      <div className="container" style={{ paddingTop: '0.5rem' }}>
+        <div
+          role="status"
+          data-testid="exam-ws-status"
+          className={`text-sm ${wsStatus === 'connected' ? 'text-secondary' : 'alert alert-warning'}`}
+        >
+          {cheatSocketStatusMessage(wsStatus, 'exam')}
+        </div>
+      </div>
       <div className="header" style={{ position: 'relative' }}>
         <div className="container header-inner">
           <div className="flex items-center gap-lg">

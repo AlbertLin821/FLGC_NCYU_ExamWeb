@@ -1,3 +1,12 @@
+## 本專案後端（NCHU Exam）
+
+專案總覽、環境變數、啟動與測試（含 `npm run test:e2e`）請見：
+
+- [專案根目錄 README](../README.md)
+- [啟動指南](../docs/startup_guide.md)
+
+---
+
 <p align="center">
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>

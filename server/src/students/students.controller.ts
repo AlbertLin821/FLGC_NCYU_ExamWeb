@@ -3,7 +3,7 @@ import {
   UseGuards, ParseIntPipe,
 } from '@nestjs/common';
 import { StudentsService } from './students.service';
-import { JwtAuthGuard } from '../auth/guards';
+import { JwtAuthGuard, RolesGuard, Roles } from '../auth/guards';
 import { IsNotEmpty, IsString, IsInt, IsArray, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -33,7 +33,8 @@ export class StudentsController {
   constructor(private studentsService: StudentsService) {}
 
   @Get()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('teacher', 'admin')
   findByClass(
     @Query('classId', ParseIntPipe) classId: number,
     @Query('page') page?: string,
@@ -46,37 +47,43 @@ export class StudentsController {
     );
   }
 
-  @Get(':id')
-  @UseGuards(JwtAuthGuard)
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.studentsService.findById(id);
-  }
-
+  /** 須置於 :id 之前，否則 :id 會先匹配 */
   @Get(':id/exams')
   getStudentExams(@Param('id', ParseIntPipe) id: number) {
     return this.studentsService.getStudentExams(id);
   }
 
+  @Get(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('teacher', 'admin')
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.studentsService.findById(id);
+  }
+
   @Post('import')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('teacher', 'admin')
   bulkImport(@Body() dto: BulkImportDto) {
     return this.studentsService.bulkImport(dto.students, dto.classId);
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('teacher', 'admin')
   create(@Body() dto: CreateStudentDto) {
     return this.studentsService.create(dto);
   }
 
   @Put(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('teacher', 'admin')
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: Partial<CreateStudentDto>) {
     return this.studentsService.update(id, dto);
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('teacher', 'admin')
   delete(@Param('id', ParseIntPipe) id: number) {
     return this.studentsService.delete(id);
   }

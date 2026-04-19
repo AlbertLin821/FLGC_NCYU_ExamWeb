@@ -37,6 +37,8 @@ function warnIfSupabasePoolerConfigLooksWrong(connectionString: string | undefin
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+  private readonly pool: pg.Pool;
+
   constructor() {
     const conn = process.env.DB_URL || process.env.DATABASE_URL;
     warnIfSupabasePoolerConfigLooksWrong(conn);
@@ -45,12 +47,17 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     super({
       adapter: adapter,
     });
+    this.pool = pool;
   }
   async onModuleInit() {
     await this.$connect();
   }
 
   async onModuleDestroy() {
-    await this.$disconnect();
+    try {
+      await this.$disconnect();
+    } finally {
+      await this.pool.end();
+    }
   }
 }

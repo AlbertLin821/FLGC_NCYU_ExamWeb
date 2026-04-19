@@ -32,17 +32,19 @@ export class TeachersController {
   }
 
   @Get('me')
+  @Roles('teacher', 'admin')
   getProfile(@Request() req: any) {
     return this.teachersService.findById(req.user.id);
   }
 
   @Patch(':id/password')
+  @Roles('admin')
   updatePassword(@Param('id') id: string, @Body('password') pass: string) {
     return this.teachersService.updatePassword(+id, pass);
   }
 
   @Post('invite')
-  @UseGuards(JwtAuthGuard)
+  @Roles('teacher', 'admin')
   invite(@Body('email') email: string) {
     return this.teachersService.inviteTeacher(email);
   }
