@@ -129,9 +129,8 @@ const TeacherDashboard: React.FC = () => {
 
   return (
     <Layout>
-      <div className="flex gap-lg" style={{ minHeight: '600px' }}>
-        {/* Sidebar */}
-        <aside style={{ width: '220px', flexShrink: 0 }}>
+      <div className="teacher-layout">
+        <aside className="teacher-layout__nav">
           <div className="flex flex-col gap-sm">
             {menuItems.map((item) => (
               <Link
@@ -153,8 +152,7 @@ const TeacherDashboard: React.FC = () => {
           </div>
         </aside>
 
-        {/* Main Area */}
-        <div style={{ flex: 1 }}>
+        <div className="teacher-layout__main">
           <Routes>
             <Route path="overview" element={<DashboardOverview />} />
             <Route path="dashboard" element={<DashboardOverview />} />

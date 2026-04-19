@@ -24,55 +24,55 @@ export declare class ExamsController {
     private examsService;
     constructor(examsService: ExamsService);
     findAll(classId?: string, page?: string, limit?: string): Promise<({
-        _count: {
-            questions: number;
-            sessions: number;
-        };
         examClasses: ({
             class: {
-                id: number;
                 name: string;
+                id: number;
             };
         } & {
-            examId: number;
             classId: number;
+            examId: number;
         })[];
+        _count: {
+            sessions: number;
+            questions: number;
+        };
     } & {
-        id: number;
         createdAt: Date;
-        status: string;
+        id: number;
+        createdBy: number;
         title: string;
         difficulty: string | null;
         timeLimit: number;
         startTime: Date;
         endTime: Date;
-        createdBy: number;
+        status: string;
         deletedAt: Date | null;
     })[] | {
         items: ({
-            _count: {
-                questions: number;
-                sessions: number;
-            };
             examClasses: ({
                 class: {
-                    id: number;
                     name: string;
+                    id: number;
                 };
             } & {
-                examId: number;
                 classId: number;
+                examId: number;
             })[];
+            _count: {
+                sessions: number;
+                questions: number;
+            };
         } & {
-            id: number;
             createdAt: Date;
-            status: string;
+            id: number;
+            createdBy: number;
             title: string;
             difficulty: string | null;
             timeLimit: number;
             startTime: Date;
             endTime: Date;
-            createdBy: number;
+            status: string;
             deletedAt: Date | null;
         })[];
         total: number;
@@ -81,9 +81,6 @@ export declare class ExamsController {
         totalPages: number;
     }>;
     getResults(classId: number, examId?: string, page?: string, limit?: string): Promise<({
-        exam: {
-            title: string;
-        };
         answers: ({
             question: {
                 id: number;
@@ -93,25 +90,28 @@ export declare class ExamsController {
                 maxPoints: number;
             };
         } & {
-            id: number;
-            sessionId: number;
-            questionId: number;
-            content: string | null;
-            aiScore: import("@prisma/client-runtime-utils").Decimal | null;
-            aiFeedback: string | null;
-            aiModel: string | null;
             createdAt: Date;
-        })[];
-        student: {
             id: number;
+            content: string | null;
+            sessionId: number;
+            aiModel: string | null;
+            aiScore: import("@prisma/client-runtime-utils").Decimal | null;
+            questionId: number;
+            aiFeedback: string | null;
+        })[];
+        exam: {
+            title: string;
+        };
+        student: {
             name: string;
+            id: number;
             studentId: string;
         };
     } & {
         id: number;
-        examId: number;
         studentId: number;
         status: string;
+        examId: number;
         startedAt: Date | null;
         submittedAt: Date | null;
         overallFeedbackEn: string | null;
@@ -120,9 +120,6 @@ export declare class ExamsController {
         hasPendingReview: boolean;
     })[] | {
         items: ({
-            exam: {
-                title: string;
-            };
             answers: ({
                 question: {
                     id: number;
@@ -132,25 +129,28 @@ export declare class ExamsController {
                     maxPoints: number;
                 };
             } & {
-                id: number;
-                sessionId: number;
-                questionId: number;
-                content: string | null;
-                aiScore: import("@prisma/client-runtime-utils").Decimal | null;
-                aiFeedback: string | null;
-                aiModel: string | null;
                 createdAt: Date;
-            })[];
-            student: {
                 id: number;
+                content: string | null;
+                sessionId: number;
+                aiModel: string | null;
+                aiScore: import("@prisma/client-runtime-utils").Decimal | null;
+                questionId: number;
+                aiFeedback: string | null;
+            })[];
+            exam: {
+                title: string;
+            };
+            student: {
                 name: string;
+                id: number;
                 studentId: string;
             };
         } & {
             id: number;
-            examId: number;
             studentId: number;
             status: string;
+            examId: number;
             startedAt: Date | null;
             submittedAt: Date | null;
             overallFeedbackEn: string | null;
@@ -166,114 +166,114 @@ export declare class ExamsController {
     findOne(id: number): Promise<({
         examClasses: ({
             class: {
-                id: number;
                 name: string;
+                id: number;
             };
         } & {
-            examId: number;
             classId: number;
+            examId: number;
         })[];
         questions: {
             id: number;
-            content: string | null;
-            answer: string | null;
-            examId: number;
             type: string;
+            content: string | null;
             options: import("@prisma/client/runtime/client").JsonValue | null;
+            answer: string | null;
             word1: string | null;
             word2: string | null;
             orderNum: number;
             maxPoints: number;
+            examId: number;
         }[];
     } & {
-        id: number;
         createdAt: Date;
-        status: string;
+        id: number;
+        createdBy: number;
         title: string;
         difficulty: string | null;
         timeLimit: number;
         startTime: Date;
         endTime: Date;
-        createdBy: number;
+        status: string;
         deletedAt: Date | null;
     }) | null>;
     create(dto: CreateExamDto, req: any): Promise<{
         examClasses: ({
             class: {
-                id: number;
                 name: string;
+                id: number;
             };
         } & {
-            examId: number;
             classId: number;
+            examId: number;
         })[];
     } & {
-        id: number;
         createdAt: Date;
-        status: string;
+        id: number;
+        createdBy: number;
         title: string;
         difficulty: string | null;
         timeLimit: number;
         startTime: Date;
         endTime: Date;
-        createdBy: number;
+        status: string;
         deletedAt: Date | null;
     }>;
     update(id: number, dto: UpdateExamDto): Promise<{
-        id: number;
         createdAt: Date;
-        status: string;
+        id: number;
+        createdBy: number;
         title: string;
         difficulty: string | null;
         timeLimit: number;
         startTime: Date;
         endTime: Date;
-        createdBy: number;
+        status: string;
         deletedAt: Date | null;
     }>;
     delete(id: number): Promise<{
-        id: number;
         createdAt: Date;
-        status: string;
+        id: number;
+        createdBy: number;
         title: string;
         difficulty: string | null;
         timeLimit: number;
         startTime: Date;
         endTime: Date;
-        createdBy: number;
+        status: string;
         deletedAt: Date | null;
     }>;
     publish(id: number): Promise<{
-        id: number;
         createdAt: Date;
-        status: string;
+        id: number;
+        createdBy: number;
         title: string;
         difficulty: string | null;
         timeLimit: number;
         startTime: Date;
         endTime: Date;
-        createdBy: number;
+        status: string;
         deletedAt: Date | null;
     }>;
     startExam(examId: number, studentId: number): Promise<{
         session: {
             exam: {
-                id: number;
                 createdAt: Date;
-                status: string;
+                id: number;
+                createdBy: number;
                 title: string;
                 difficulty: string | null;
                 timeLimit: number;
                 startTime: Date;
                 endTime: Date;
-                createdBy: number;
+                status: string;
                 deletedAt: Date | null;
             };
         } & {
             id: number;
-            examId: number;
             studentId: number;
             status: string;
+            examId: number;
             startedAt: Date | null;
             submittedAt: Date | null;
             overallFeedbackEn: string | null;
@@ -281,34 +281,34 @@ export declare class ExamsController {
         };
         questions: {
             id: number;
-            content: string | null;
-            answer: string | null;
-            examId: number;
             type: string;
+            content: string | null;
             options: import("@prisma/client/runtime/client").JsonValue | null;
+            answer: string | null;
             word1: string | null;
             word2: string | null;
             orderNum: number;
             maxPoints: number;
+            examId: number;
         }[];
         timeLimit: number;
         timeRemainingSeconds: number;
     }>;
     submitAnswer(sessionId: number, dto: SubmitAnswerDto): Promise<{
-        id: number;
-        sessionId: number;
-        questionId: number;
-        content: string | null;
-        aiScore: import("@prisma/client-runtime-utils").Decimal | null;
-        aiFeedback: string | null;
-        aiModel: string | null;
         createdAt: Date;
+        id: number;
+        content: string | null;
+        sessionId: number;
+        aiModel: string | null;
+        aiScore: import("@prisma/client-runtime-utils").Decimal | null;
+        questionId: number;
+        aiFeedback: string | null;
     }>;
     submitExam(sessionId: number): Promise<{
         id: number;
-        examId: number;
         studentId: number;
         status: string;
+        examId: number;
         startedAt: Date | null;
         submittedAt: Date | null;
         overallFeedbackEn: string | null;

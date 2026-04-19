@@ -9,30 +9,36 @@ const HomePage: React.FC = () => {
 
   return (
     <Layout>
-      <div className="text-center mt-3xl mb-3xl">
-        <h1 className="mb-md" style={{ fontSize: '2.5rem', fontWeight: 800 }}>
+      <div className="text-center mt-3xl mb-3xl px-sm">
+        <h1 className="mb-md home-hero-title">
           國立嘉義大學<br />
           <span style={{ color: 'var(--color-primary)' }}>線上英文考試平台</span>
         </h1>
-        <p className="text-secondary mb-2xl" style={{ fontSize: '1.2rem', maxWidth: '600px', margin: '0 auto 2rem' }}>
+        <p
+          className="text-secondary mb-2xl mx-auto"
+          style={{ fontSize: 'clamp(1rem, 3vw, 1.2rem)', maxWidth: '36rem' }}
+        >
           選擇身分類別進入平台。
         </p>
-        <div className="flex justify-center gap-lg">
-          <Link to="/student/login" className="card text-center" style={{ width: '280px', padding: '3rem 2rem' }}>
+        <div className="home-role-cards">
+          <Link to="/student/login" className="card text-center home-role-card">
             <div className="mb-lg flex justify-center text-primary">
-              <GraduationCap size={64} />
+              <GraduationCap size={56} className="home-role-icon" />
             </div>
             <h3 className="mb-sm">學生</h3>
             <p className="text-sm text-secondary mb-lg">進行英文前後測驗、查看可考考卷</p>
             <span className="btn btn-primary w-full">進入考試</span>
           </Link>
-          <Link to={teacher ? "/teacher/overview" : "/teacher/login"} className="card text-center" style={{ width: '280px', padding: '3rem 2rem' }}>
-            <div className="mb-lg flex justify-center text-secondary-color">
-              <Users size={64} />
+          <Link
+            to={teacher ? '/teacher/overview' : '/teacher/login'}
+            className="card text-center home-role-card"
+          >
+            <div className="mb-lg flex justify-center text-secondary">
+              <Users size={56} className="home-role-icon" />
             </div>
             <h3 className="mb-sm">老師</h3>
             <p className="text-sm text-secondary mb-lg">考卷管理、成績結算、班級統計</p>
-            <span className="btn btn-secondary w-full">{teacher ? "進入管理端" : "管理登入"}</span>
+            <span className="btn btn-secondary w-full">{teacher ? '進入管理端' : '管理登入'}</span>
           </Link>
         </div>
       </div>

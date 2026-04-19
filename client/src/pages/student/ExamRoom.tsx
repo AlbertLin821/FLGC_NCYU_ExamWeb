@@ -341,16 +341,18 @@ const ExamRoom: React.FC = () => {
         </div>
       </div>
       <div className="header" style={{ position: 'relative' }}>
-        <div className="container header-inner">
-          <div className="flex items-center gap-lg">
+        <div className="container header-inner exam-room-bar">
+          <div className="flex items-center gap-lg min-w-0">
             <span className="badge badge-primary">正在測驗</span>
             {session ? (
-              <span style={{ fontWeight: 600 }}>{session.exam?.title || '載入中...'}</span>
+              <span className="min-w-0" style={{ fontWeight: 600, lineHeight: 1.35 }}>
+                {session.exam?.title || '載入中...'}
+              </span>
             ) : (
               <span style={{ fontWeight: 600 }}>載入中...</span>
             )}
           </div>
-          <div className="flex items-center gap-xl">
+          <div className="flex flex-wrap items-center gap-md shrink-0">
             <div className={`text-lg font-bold ${timeLeft < 60 ? 'text-danger' : ''}`}>
               剩餘時間: {formatTime(timeLeft)}
             </div>
@@ -361,8 +363,8 @@ const ExamRoom: React.FC = () => {
         </div>
       </div>
 
-      <div className="container content py-3xl">
-        <div className="card mx-auto" style={{ maxWidth: '800px' }}>
+      <div className="container content py-xl" style={{ paddingBottom: 'max(var(--space-xl), env(safe-area-inset-bottom, 0px))' }}>
+        <div className="card mx-auto w-full" style={{ maxWidth: '800px' }}>
           <div className="mb-2xl">
             <h3 className="mb-lg">第 {currentIdx + 1} 題</h3>
             
@@ -407,13 +409,13 @@ const ExamRoom: React.FC = () => {
             )}
           </div>
 
-          <div className="flex justify-between items-center">
-            <div className="text-xs text-secondary">
+          <div className="flex flex-col-reverse gap-md sm:flex-row sm:flex-wrap justify-between items-stretch sm:items-center">
+            <div className="text-xs text-secondary self-center sm:self-auto text-center sm:text-left">
               * 系統會自動儲存您的作答進度
             </div>
             <button
-              className="btn btn-primary btn-lg"
-              style={{ minWidth: '150px' }}
+              className="btn btn-primary btn-lg w-full sm:w-auto shrink-0"
+              style={{ minWidth: 'min(100%, 10rem)' }}
               onClick={handleNext}
               disabled={submitting}
             >

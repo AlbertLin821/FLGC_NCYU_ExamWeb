@@ -14,7 +14,7 @@ const Header: React.FC = () => {
 
   return (
     <header className="header">
-      <div className="container header-inner">
+      <div className="container header-inner header-inner--responsive">
         <Link to="/" className="header-logo">
           <div className="logo-icon">NCYU</div>
           <span>線上英文考試平台</span>

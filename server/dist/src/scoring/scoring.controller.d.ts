@@ -42,24 +42,24 @@ export declare class ScoringController {
     }): Promise<{
         question: {
             id: number;
-            content: string | null;
-            answer: string | null;
-            examId: number;
             type: string;
+            content: string | null;
             options: import("@prisma/client/runtime/client").JsonValue | null;
+            answer: string | null;
             word1: string | null;
             word2: string | null;
             orderNum: number;
             maxPoints: number;
+            examId: number;
         };
     } & {
-        id: number;
-        sessionId: number;
-        questionId: number;
-        content: string | null;
-        aiScore: import("@prisma/client-runtime-utils").Decimal | null;
-        aiFeedback: string | null;
-        aiModel: string | null;
         createdAt: Date;
+        id: number;
+        content: string | null;
+        sessionId: number;
+        aiModel: string | null;
+        aiScore: import("@prisma/client-runtime-utils").Decimal | null;
+        questionId: number;
+        aiFeedback: string | null;
     }>;
 }
