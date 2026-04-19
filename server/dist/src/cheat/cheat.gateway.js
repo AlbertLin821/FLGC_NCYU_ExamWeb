@@ -18,6 +18,7 @@ const websockets_1 = require("@nestjs/websockets");
 const socket_io_1 = require("socket.io");
 const common_1 = require("@nestjs/common");
 const cheat_service_1 = require("./cheat.service");
+const cors_origins_1 = require("../cors-origins");
 let CheatGateway = CheatGateway_1 = class CheatGateway {
     cheatService;
     server;
@@ -101,8 +102,8 @@ __decorate([
 exports.CheatGateway = CheatGateway = CheatGateway_1 = __decorate([
     (0, websockets_1.WebSocketGateway)({
         cors: {
-            origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:80'],
-            credentials: true
+            origin: (0, cors_origins_1.getCorsOrigins)(),
+            credentials: true,
         },
         namespace: '/cheat',
     }),

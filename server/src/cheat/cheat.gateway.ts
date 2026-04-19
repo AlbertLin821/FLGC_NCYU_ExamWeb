@@ -10,11 +10,12 @@ import {
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { CheatService } from './cheat.service';
+import { getCorsOrigins } from '../cors-origins';
 
 @WebSocketGateway({
-  cors: { 
-    origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:80'],
-    credentials: true 
+  cors: {
+    origin: getCorsOrigins(),
+    credentials: true,
   },
   namespace: '/cheat',
 })

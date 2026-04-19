@@ -1,0 +1,18 @@
+[Unit]
+Description=Ncyu Language Center Exam API (NestJS)
+After=network.target
+
+[Service]
+Type=simple
+User=__SERVICE_USER__
+Group=__SERVICE_USER__
+WorkingDirectory=__APP_ROOT__/server
+EnvironmentFile=-__APP_ROOT__/server/.env
+ExecStart=/usr/bin/node dist/main.js
+Restart=on-failure
+RestartSec=5
+AmbientCapabilities=
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
