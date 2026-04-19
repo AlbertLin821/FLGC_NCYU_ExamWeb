@@ -186,7 +186,12 @@ export class ExamsService {
         where: { id: existingSession.id },
         include: { exam: true },
       });
-      const timeRemainingSeconds = computeTimeRemainingSeconds(session.startedAt, exam.timeLimit, now);
+      const timeRemainingSeconds = computeTimeRemainingSeconds(
+        session.startedAt,
+        exam.timeLimit,
+        now,
+        exam.endTime,
+      );
       return {
         session,
         questions: exam.questions,
@@ -208,7 +213,12 @@ export class ExamsService {
         include: { exam: true },
       });
 
-      const timeRemainingSeconds = computeTimeRemainingSeconds(session.startedAt, exam.timeLimit, now);
+      const timeRemainingSeconds = computeTimeRemainingSeconds(
+        session.startedAt,
+        exam.timeLimit,
+        now,
+        exam.endTime,
+      );
       return {
         session,
         questions: exam.questions,
@@ -225,7 +235,12 @@ export class ExamsService {
         if (session.status === 'submitted') {
           throw new BadRequestException('已完成此考試');
         }
-        const timeRemainingSeconds = computeTimeRemainingSeconds(session.startedAt, exam.timeLimit, now);
+        const timeRemainingSeconds = computeTimeRemainingSeconds(
+          session.startedAt,
+          exam.timeLimit,
+          now,
+          exam.endTime,
+        );
         return {
           session,
           questions: exam.questions,
@@ -246,7 +261,12 @@ export class ExamsService {
     if (session.status !== 'in_progress') {
       throw new BadRequestException('目前狀態無法作答');
     }
-    const remaining = computeTimeRemainingSeconds(session.startedAt, session.exam.timeLimit, new Date());
+    const remaining = computeTimeRemainingSeconds(
+      session.startedAt,
+      session.exam.timeLimit,
+      new Date(),
+      session.exam.endTime,
+    );
     if (remaining <= 0) {
       throw new BadRequestException('作答時間已結束');
     }
@@ -280,9 +300,9 @@ export class ExamsService {
 
     const session = await this.prisma.examSession.findUniqueOrThrow({ where: { id: sessionId } });
 
-    // Auto trigger scoring in background
-    this.scoringService.scoreSession(sessionId).catch(err => {
-      console.error(`Auto scoring failed for session ${sessionId}:`, err);
+    // 僅客觀題計分；問答题留待教師集體批閱
+    this.scoringService.scoreObjectiveOnly(sessionId).catch((err) => {
+      console.error(`Objective scoring failed for session ${sessionId}:`, err);
     });
 
     return session;
@@ -297,7 +317,11 @@ export class ExamsService {
       student: { select: { id: true, studentId: true, name: true } },
       exam: { select: { title: true } },
       answers: {
-        include: { question: { select: { word1: true, word2: true, maxPoints: true } } },
+        include: {
+          question: {
+            select: { id: true, orderNum: true, word1: true, word2: true, maxPoints: true },
+          },
+        },
       },
     };
     const orderBy: any = { submittedAt: 'desc' };

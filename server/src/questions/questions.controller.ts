@@ -57,21 +57,23 @@ export class ReorderDto {
 
 @Controller('api/questions')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('teacher', 'admin')
 export class QuestionsController {
   constructor(private questionsService: QuestionsService) {}
 
   @Get('exam/:examId')
+  @Roles('teacher', 'admin', 'viewer')
   findByExam(@Param('examId', ParseIntPipe) examId: number) {
     return this.questionsService.findByExam(examId);
   }
 
   @Post('exam/:examId')
+  @Roles('teacher', 'admin')
   create(@Param('examId', ParseIntPipe) examId: number, @Body() dto: CreateQuestionBody) {
     return this.questionsService.create({ examId, ...dto });
   }
 
   @Post('exam/:examId/bulk')
+  @Roles('teacher', 'admin')
   bulkCreate(
     @Param('examId', ParseIntPipe) examId: number,
     @Body() dto: BulkCreateDto,
@@ -80,16 +82,19 @@ export class QuestionsController {
   }
 
   @Put('reorder')
+  @Roles('teacher', 'admin')
   reorder(@Body() dto: ReorderDto) {
     return this.questionsService.reorder(dto.questions);
   }
 
   @Put(':id')
+  @Roles('teacher', 'admin')
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateQuestionBody) {
     return this.questionsService.update(id, dto);
   }
 
   @Delete(':id')
+  @Roles('teacher', 'admin')
   delete(@Param('id', ParseIntPipe) id: number) {
     return this.questionsService.delete(id);
   }

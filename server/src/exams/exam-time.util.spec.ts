@@ -16,4 +16,19 @@ describe('computeTimeRemainingSeconds', () => {
     const now = new Date('2026-01-01T13:00:01Z');
     expect(computeTimeRemainingSeconds(started, 60, now)).toBe(0);
   });
+
+  it('距離考卷截止較短時，剩餘時間以截止為準（與作答時限取 min）', () => {
+    const started = new Date('2026-01-01T12:00:00Z');
+    const examEnd = new Date('2026-01-01T13:00:00Z');
+    const now = new Date('2026-01-01T12:50:00Z');
+    // 作答時限 120 分：依開始時間尚餘 70 分鐘
+    // 考卷 13:00 截止：尚餘 10 分鐘
+    expect(computeTimeRemainingSeconds(started, 120, now, examEnd)).toBe(10 * 60);
+  });
+
+  it('未傳 examEndTime 時維持僅依作答時限（向後相容）', () => {
+    const started = new Date('2026-01-01T12:00:00Z');
+    const now = new Date('2026-01-01T12:50:00Z');
+    expect(computeTimeRemainingSeconds(started, 120, now)).toBe(70 * 60);
+  });
 });

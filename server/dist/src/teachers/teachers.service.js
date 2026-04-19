@@ -74,6 +74,7 @@ let TeachersService = class TeachersService {
                 passwordHash,
                 role: data.role || 'teacher',
             },
+            select: { id: true, email: true, name: true, role: true, createdAt: true },
         });
     }
     async updatePassword(id, newPassword) {

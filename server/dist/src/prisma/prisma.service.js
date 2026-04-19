@@ -75,6 +75,7 @@ function warnIfSupabasePoolerConfigLooksWrong(connectionString) {
     }
 }
 let PrismaService = class PrismaService extends client_1.PrismaClient {
+    pool;
     constructor() {
         const conn = process.env.DB_URL || process.env.DATABASE_URL;
         warnIfSupabasePoolerConfigLooksWrong(conn);
@@ -83,12 +84,18 @@ let PrismaService = class PrismaService extends client_1.PrismaClient {
         super({
             adapter: adapter,
         });
+        this.pool = pool;
     }
     async onModuleInit() {
         await this.$connect();
     }
     async onModuleDestroy() {
-        await this.$disconnect();
+        try {
+            await this.$disconnect();
+        }
+        finally {
+            await this.pool.end();
+        }
     }
 };
 exports.PrismaService = PrismaService;

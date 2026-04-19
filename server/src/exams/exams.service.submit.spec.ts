@@ -6,7 +6,7 @@ import { ScoringService } from '../scoring/scoring.service';
 
 describe('ExamsService submit flows', () => {
   let service: ExamsService;
-  const mockScoreSession = jest.fn().mockResolvedValue([]);
+  const mockScoreObjectiveOnly = jest.fn().mockResolvedValue([]);
   const mockPrisma = {
     examSession: {
       findUnique: jest.fn(),
@@ -26,7 +26,7 @@ describe('ExamsService submit flows', () => {
         { provide: PrismaService, useValue: mockPrisma },
         {
           provide: ScoringService,
-          useValue: { scoreSession: mockScoreSession },
+          useValue: { scoreObjectiveOnly: mockScoreObjectiveOnly },
         },
       ],
     }).compile();
@@ -43,14 +43,14 @@ describe('ExamsService submit flows', () => {
 
     await expect(service.submitExam(1)).rejects.toBeInstanceOf(BadRequestException);
     await expect(service.submitExam(1)).rejects.toMatchObject({ message: '已交卷' });
-    expect(mockScoreSession).not.toHaveBeenCalled();
+    expect(mockScoreObjectiveOnly).not.toHaveBeenCalled();
   });
 
   it('submitExam rejects when session missing', async () => {
     mockPrisma.examSession.findUnique.mockResolvedValue(null);
 
     await expect(service.submitExam(999)).rejects.toBeInstanceOf(NotFoundException);
-    expect(mockScoreSession).not.toHaveBeenCalled();
+    expect(mockScoreObjectiveOnly).not.toHaveBeenCalled();
   });
 
   it('submitExam triggers background scoring without awaiting failure', async () => {
@@ -61,13 +61,13 @@ describe('ExamsService submit flows', () => {
     });
     mockPrisma.examSession.updateMany.mockResolvedValue({ count: 1 });
     mockPrisma.examSession.findUniqueOrThrow.mockResolvedValue({ id: 2, status: 'submitted' });
-    mockScoreSession.mockRejectedValue(new Error('scoring boom'));
+    mockScoreObjectiveOnly.mockRejectedValue(new Error('scoring boom'));
 
     const result = await service.submitExam(2);
 
     expect(result.status).toBe('submitted');
     await new Promise((r) => setImmediate(r));
-    expect(mockScoreSession).toHaveBeenCalledWith(2);
+    expect(mockScoreObjectiveOnly).toHaveBeenCalledWith(2);
   });
 
   it('submitAnswer 於時間歸零後拒絕作答', async () => {

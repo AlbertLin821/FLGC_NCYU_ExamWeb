@@ -1,4 +1,4 @@
-# 專案部署指南 (NCHU Online English Exam Platform)
+# 專案部署指南 (NCYU Online English Exam Platform)
 
 本指南旨在協助您將專案部署至線上環境，並確保資料庫連線正確。
 
@@ -11,7 +11,7 @@
   - 確保 `DIRECT_URL` 使用 **Session Mode** (Port 5432)。
   - *注意：如果您的網路不支持 IPv6，請務必使用帶有 `pooler.supabase.com` 的主機名。*
 - [ ] **同步 Schema**: 執行 `npx prisma db push` 將本地的資料庫結構推送到 Supabase。
-- [ ] **寫入初始資料 (Seed)**: 執行 `npx prisma db seed`。這非常重要，因為它會建立預設的老師管理員帳號 (`admin@nchu.edu.tw` / `admin123`)。
+- [ ] **寫入初始資料 (Seed)**: 執行 `npx prisma db seed`。這非常重要，因為它會建立示範帳號（見 `docs/startup_guide.md`，例如 `system@ncyu.edu.tw` / `SystemDemo123!`）。
 - [ ] **RLS 設定**: 如果在控制台開啟了 RLS，請確保您的伺服器使用的是 `postgres` 帳號連線（Prisma 預設行為），這樣可以繞過 RLS 直接操作資料。
 
 ## 2. 環境變數設定
@@ -51,5 +51,5 @@
 
 ### 手動驗證
 1. **資料庫連線**: 啟動 Server 後，觀察 Log 是否有 Prisma 連線成功的訊息。
-2. **登入測試**: 使用 `admin@nchu.edu.tw` / `admin123` 登入管理後台，確保能讀取到 Seed 資料。
+2. **登入測試**: 使用種子帳號（如 `system@ncyu.edu.tw` / `SystemDemo123!`）登入管理後台，確保能讀取到 Seed 資料。
 3. **API 串接**: 確認前端頁面能正確抓取後端資料，且考卷即時狀態同步 (Socket.io) 運作正常。

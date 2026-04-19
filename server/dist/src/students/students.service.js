@@ -17,13 +17,47 @@ let StudentsService = class StudentsService {
     constructor(prisma) {
         this.prisma = prisma;
     }
+    async findAllPaginated(page, limit) {
+        const p = page || 1;
+        const l = limit || 20;
+        const skip = (p - 1) * l;
+        const where = {};
+        const orderBy = { id: 'asc' };
+        const [items, total] = await Promise.all([
+            this.prisma.student.findMany({
+                where,
+                include: {
+                    class: { select: { id: true, name: true } },
+                },
+                orderBy,
+                skip,
+                take: l,
+            }),
+            this.prisma.student.count({ where }),
+        ]);
+        return {
+            items,
+            total,
+            page: p,
+            limit: l,
+            totalPages: Math.ceil(total / l),
+        };
+    }
     async findByClass(classId, page, limit) {
         const where = { classId };
         const include = {
             sessions: {
                 orderBy: { id: 'desc' },
-                take: 1,
-                include: { exam: true },
+                include: {
+                    exam: true,
+                    answers: {
+                        include: {
+                            question: {
+                                select: { id: true, orderNum: true, maxPoints: true },
+                            },
+                        },
+                    },
+                },
             },
         };
         const orderBy = { studentId: 'asc' };

@@ -1,4 +1,4 @@
-# NCHU Online English Exam Platform
+# NCYU Online English Exam Platform
 
 線上英文測驗平台（學生端考試、教師端出題與成績、防弊監控、AI 輔助評分）。
 

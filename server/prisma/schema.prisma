@@ -12,7 +12,7 @@ model Teacher {
   email        String           @unique
   passwordHash String           @map("password_hash")
   name         String
-  role         String           @default("teacher") // 'admin' | 'teacher'
+  role         String           @default("teacher") // 'admin' | 'teacher' | 'viewer'
   createdAt    DateTime         @default(now()) @map("created_at")
 
   classes      TeacherClass[]
@@ -142,6 +142,8 @@ model ExamSession {
   status      String    @default("pending") // pending | in_progress | paused | submitted | graded
   startedAt   DateTime? @map("started_at")
   submittedAt DateTime? @map("submitted_at")
+  overallFeedbackEn String? @map("overall_feedback_en") @db.Text
+  overallFeedbackZh String? @map("overall_feedback_zh") @db.Text
 
   student     Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
   exam        Exam       @relation(fields: [examId], references: [id], onDelete: Cascade)

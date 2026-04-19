@@ -2,8 +2,44 @@ import { PrismaService } from '../prisma/prisma.service';
 export declare class StudentsService {
     private prisma;
     constructor(prisma: PrismaService);
+    findAllPaginated(page?: number, limit?: number): Promise<{
+        items: ({
+            class: {
+                name: string;
+                id: number;
+            };
+        } & {
+            name: string;
+            createdAt: Date;
+            id: number;
+            studentId: string;
+            loginAttempts: number;
+            lockedUntil: Date | null;
+            classId: number;
+        })[];
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    }>;
     findByClass(classId: number, page?: number, limit?: number): Promise<({
         sessions: ({
+            answers: ({
+                question: {
+                    id: number;
+                    orderNum: number;
+                    maxPoints: number;
+                };
+            } & {
+                createdAt: Date;
+                id: number;
+                content: string | null;
+                sessionId: number;
+                aiModel: string | null;
+                aiScore: import("@prisma/client-runtime-utils").Decimal | null;
+                questionId: number;
+                aiFeedback: string | null;
+            })[];
             exam: {
                 createdAt: Date;
                 id: number;
@@ -23,6 +59,8 @@ export declare class StudentsService {
             examId: number;
             startedAt: Date | null;
             submittedAt: Date | null;
+            overallFeedbackEn: string | null;
+            overallFeedbackZh: string | null;
         })[];
     } & {
         name: string;
@@ -35,6 +73,22 @@ export declare class StudentsService {
     })[] | {
         items: ({
             sessions: ({
+                answers: ({
+                    question: {
+                        id: number;
+                        orderNum: number;
+                        maxPoints: number;
+                    };
+                } & {
+                    createdAt: Date;
+                    id: number;
+                    content: string | null;
+                    sessionId: number;
+                    aiModel: string | null;
+                    aiScore: import("@prisma/client-runtime-utils").Decimal | null;
+                    questionId: number;
+                    aiFeedback: string | null;
+                })[];
                 exam: {
                     createdAt: Date;
                     id: number;
@@ -54,6 +108,8 @@ export declare class StudentsService {
                 examId: number;
                 startedAt: Date | null;
                 submittedAt: Date | null;
+                overallFeedbackEn: string | null;
+                overallFeedbackZh: string | null;
             })[];
         } & {
             name: string;
@@ -89,10 +145,10 @@ export declare class StudentsService {
                 id: number;
                 content: string | null;
                 sessionId: number;
+                aiModel: string | null;
                 aiScore: import("@prisma/client-runtime-utils").Decimal | null;
                 questionId: number;
                 aiFeedback: string | null;
-                aiModel: string | null;
             })[];
             exam: {
                 createdAt: Date;
@@ -113,6 +169,8 @@ export declare class StudentsService {
             examId: number;
             startedAt: Date | null;
             submittedAt: Date | null;
+            overallFeedbackEn: string | null;
+            overallFeedbackZh: string | null;
         })[];
     } & {
         name: string;

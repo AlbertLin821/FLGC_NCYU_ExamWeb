@@ -1,4 +1,4 @@
-## 本專案後端（NCHU Exam）
+## 本專案後端（NCYU Exam）
 
 專案總覽、環境變數、啟動與測試（含 `npm run test:e2e`）請見：
 

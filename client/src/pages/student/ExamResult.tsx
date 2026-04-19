@@ -29,9 +29,9 @@ const ExamResult: React.FC = () => {
             測驗已提交成功
           </h2>
           {showGradingNote ? (
-            <div className="alert alert-warning text-left mb-lg" role="status">
-              答卷已送出。系統會在背景進行 AI 評分；若雲端配額不足或服務異常，該題可能改為「待人工複閱」，不影響交卷成功。最終成績以老師公布為準。
-            </div>
+            <p className="mb-lg text-lg" role="status">
+              答卷已送出
+            </p>
           ) : null}
           <p className="text-secondary mb-xl">請靜候老師公布最後成績；如有疑問請洽監考老師。</p>
           <div className="flex gap-md justify-center">

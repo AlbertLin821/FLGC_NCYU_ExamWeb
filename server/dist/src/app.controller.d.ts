@@ -7,6 +7,8 @@ export declare class AppController {
         activeExams: number;
         pendingAlerts: number;
         totalSubmissions: number;
+        sessionsAwaitingScore: number;
+        sessionsPendingReview: number;
         recentLogs: {
             id: number;
             type: string;

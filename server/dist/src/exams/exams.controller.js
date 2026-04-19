@@ -158,7 +158,7 @@ exports.ExamsController = ExamsController;
 __decorate([
     (0, common_1.Get)(),
     (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
-    (0, guards_1.Roles)('teacher', 'admin'),
+    (0, guards_1.Roles)('teacher', 'admin', 'viewer'),
     __param(0, (0, common_1.Query)('classId')),
     __param(1, (0, common_1.Query)('page')),
     __param(2, (0, common_1.Query)('limit')),
@@ -169,7 +169,7 @@ __decorate([
 __decorate([
     (0, common_1.Get)('results/:classId'),
     (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
-    (0, guards_1.Roles)('teacher', 'admin'),
+    (0, guards_1.Roles)('teacher', 'admin', 'viewer'),
     __param(0, (0, common_1.Param)('classId', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Query)('examId')),
     __param(2, (0, common_1.Query)('page')),
@@ -181,7 +181,7 @@ __decorate([
 __decorate([
     (0, common_1.Get)(':id'),
     (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
-    (0, guards_1.Roles)('teacher', 'admin'),
+    (0, guards_1.Roles)('teacher', 'admin', 'viewer'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Number]),

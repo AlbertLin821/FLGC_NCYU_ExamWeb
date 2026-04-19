@@ -48,11 +48,14 @@ let TeachersController = class TeachersController {
     constructor(teachersService) {
         this.teachersService = teachersService;
     }
+    getProfile(req) {
+        return this.teachersService.findById(req.user.id);
+    }
     findAll() {
         return this.teachersService.findAll();
     }
-    getProfile(req) {
-        return this.teachersService.findById(req.user.id);
+    create(dto) {
+        return this.teachersService.create(dto);
     }
     updatePassword(id, pass) {
         return this.teachersService.updatePassword(+id, pass);
@@ -63,6 +66,14 @@ let TeachersController = class TeachersController {
 };
 exports.TeachersController = TeachersController;
 __decorate([
+    (0, common_1.Get)('me'),
+    (0, guards_1.Roles)('teacher', 'admin', 'viewer'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], TeachersController.prototype, "getProfile", null);
+__decorate([
     (0, common_1.Get)(),
     (0, guards_1.Roles)('admin'),
     __metadata("design:type", Function),
@@ -70,13 +81,13 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], TeachersController.prototype, "findAll", null);
 __decorate([
-    (0, common_1.Get)('me'),
-    (0, guards_1.Roles)('teacher', 'admin'),
-    __param(0, (0, common_1.Request)()),
+    (0, common_1.Post)(),
+    (0, guards_1.Roles)('admin'),
+    __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [CreateTeacherDto]),
     __metadata("design:returntype", void 0)
-], TeachersController.prototype, "getProfile", null);
+], TeachersController.prototype, "create", null);
 __decorate([
     (0, common_1.Patch)(':id/password'),
     (0, guards_1.Roles)('admin'),
@@ -88,7 +99,7 @@ __decorate([
 ], TeachersController.prototype, "updatePassword", null);
 __decorate([
     (0, common_1.Post)('invite'),
-    (0, guards_1.Roles)('teacher', 'admin'),
+    (0, guards_1.Roles)('admin'),
     __param(0, (0, common_1.Body)('email')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),

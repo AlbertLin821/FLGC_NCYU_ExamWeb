@@ -1,15 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { examsApi, classesApi, scoringApi } from '../../api';
+import { getTeacherRole } from '../../utils/teacherRole';
 import * as XLSX from 'xlsx';
-import { sessionScorePercent } from '../../utils/sessionScore';
+import { earnedPointsOnQuestion, sessionScorePercent } from '../../utils/sessionScore';
 
 const ResultsView: React.FC = () => {
+  const isViewer = getTeacherRole() === 'viewer';
   const navigate = useNavigate();
   const [results, setResults] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
+  const [exams, setExams] = useState<any[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
+  /** null = 不篩考卷（該班級全部） */
+  const [selectedExamId, setSelectedExamId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  const [batchGrading, setBatchGrading] = useState(false);
 
   useEffect(() => {
     classesApi.getAll().then(res => {
@@ -19,14 +25,23 @@ const ResultsView: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (selectedClassId) {
-      setLoading(true);
-      examsApi.getResults(selectedClassId).then(res => {
+    if (!selectedClassId) return;
+    examsApi.getAll(selectedClassId).then((res) => {
+      setExams(Array.isArray(res.data) ? res.data : []);
+    });
+  }, [selectedClassId]);
+
+  useEffect(() => {
+    if (!selectedClassId) return;
+    setLoading(true);
+    examsApi
+      .getResults(selectedClassId, selectedExamId ?? undefined)
+      .then((res) => {
         setResults(res.data);
         setLoading(false);
-      });
-    }
-  }, [selectedClassId]);
+      })
+      .catch(() => setLoading(false));
+  }, [selectedClassId, selectedExamId]);
 
   const calculateTotal = (answers: any[]) => sessionScorePercent(answers);
 
@@ -43,9 +58,9 @@ const ResultsView: React.FC = () => {
   const handleTriggerScoring = async (sessionId: number) => {
     try {
       await scoringApi.scoreSession(sessionId);
-      alert('已送出評分請求');
+      alert('已重新計算該場次之客觀題（選擇題／多選）');
       if (selectedClassId) {
-        const res = await examsApi.getResults(selectedClassId);
+        const res = await examsApi.getResults(selectedClassId, selectedExamId ?? undefined);
         setResults(res.data);
       }
     } catch {
@@ -53,37 +68,133 @@ const ResultsView: React.FC = () => {
     }
   };
 
+  const handleBatchEssayGrade = async () => {
+    if (!selectedClassId || !selectedExamId) {
+      alert('請先選擇班級與單一考卷');
+      return;
+    }
+    if (!window.confirm('將對此班、此考卷所有「已交卷」學生逐人執行問答题集體 AI 批閱，可能耗時較久。確定繼續？')) {
+      return;
+    }
+    setBatchGrading(true);
+    try {
+      const res = await scoringApi.batchEssayGrade(selectedExamId, selectedClassId);
+      const d = res.data as {
+        processed?: number;
+        skipped?: number;
+        failed?: { sessionId: number; reason: string }[];
+        message?: string;
+      };
+      const failed = d.failed?.length ? `\n失敗筆數：${d.failed.length}` : '';
+      alert(
+        `${d.message ?? '批次完成'}\n已處理：${d.processed ?? 0}、略過：${d.skipped ?? 0}${failed}`,
+      );
+      const r = await examsApi.getResults(selectedClassId, selectedExamId);
+      setResults(r.data);
+    } catch {
+      alert('集體批閱失敗');
+    } finally {
+      setBatchGrading(false);
+    }
+  };
+
   const handleExport = () => {
     if (results.length === 0) return;
-    const data = results.map(r => ({
-      '學號': r.student.studentId,
-      '姓名': r.student.name,
-      '考試項目': r.exam.title,
-      '加權得分': calculateTotal(r.answers),
-    }));
+    const sortedAnswers = (answers: any[]) =>
+      [...(answers || [])].sort(
+        (a, b) => (a.question?.orderNum ?? 0) - (b.question?.orderNum ?? 0),
+      );
+    const maxQ = Math.max(
+      ...results.map((r) => sortedAnswers(r.answers).length),
+      0,
+    );
+    const data = results.map((r) => {
+      const sorted = sortedAnswers(r.answers);
+      const row: Record<string, string | number> = {
+        學號: r.student.studentId,
+        姓名: r.student.name,
+        考試項目: r.exam.title,
+      };
+      for (let i = 0; i < maxQ; i++) {
+        const a = sorted[i];
+        const key = `題${i + 1}`;
+        row[key] = a
+          ? earnedPointsOnQuestion(a.aiScore, a.question?.maxPoints)
+          : '';
+      }
+      row['加權總分'] = calculateTotal(r.answers);
+      return row;
+    });
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "成績報表");
+    XLSX.utils.book_append_sheet(wb, ws, '成績報表');
     XLSX.writeFile(wb, `成績報表_${new Date().toLocaleDateString()}.xlsx`);
   };
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-lg">
+      <div className="flex justify-between items-center mb-lg flex-wrap gap-md">
         <h3>成績後台</h3>
-        <button className="btn btn-secondary" onClick={handleExport} disabled={results.length === 0}>匯出 Excel</button>
+        <div className="flex flex-wrap gap-sm">
+          {!isViewer && (
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={
+                batchGrading ||
+                !selectedClassId ||
+                selectedExamId === null ||
+                loading
+              }
+              onClick={handleBatchEssayGrade}
+            >
+              {batchGrading ? '集體批閱中…' : '集體 AI 批閱問答题'}
+            </button>
+          )}
+          <button className="btn btn-secondary" onClick={handleExport} disabled={results.length === 0}>
+            匯出 Excel
+          </button>
+        </div>
       </div>
 
-      <div className="mb-lg">
-        <label className="form-label">選擇班級</label>
-        <select
-          className="form-input"
-          style={{ width: '200px' }}
-          value={selectedClassId || ''}
-          onChange={(e) => setSelectedClassId(Number(e.target.value))}
-        >
-          {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
+      <div className="mb-lg flex flex-wrap gap-lg items-end">
+        <div>
+          <label className="form-label">選擇班級</label>
+          <select
+            className="form-input"
+            style={{ minWidth: '200px' }}
+            value={selectedClassId || ''}
+            onChange={(e) => {
+              setSelectedClassId(Number(e.target.value));
+              setSelectedExamId(null);
+            }}
+          >
+            {classes.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="form-label">選擇考卷</label>
+          <select
+            className="form-input"
+            style={{ minWidth: '240px' }}
+            value={selectedExamId === null ? '' : String(selectedExamId)}
+            onChange={(e) => {
+              const v = e.target.value;
+              setSelectedExamId(v === '' ? null : Number(v));
+            }}
+          >
+            <option value="">全部考卷</option>
+            {exams.map((ex) => (
+              <option key={ex.id} value={ex.id}>
+                {ex.title}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="table-container card">
@@ -124,11 +235,15 @@ const ResultsView: React.FC = () => {
                           }
                         }}
                       >查看細節</button>
-                      {r.status === 'submitted' && (
+                      {r.status === 'submitted' && !isViewer && (
                         <button
-                          className="btn btn-xs btn-primary"
+                          type="button"
+                          className="btn btn-xs btn-secondary"
+                          title="僅重算選擇題與多選，不含問答题 AI"
                           onClick={() => handleTriggerScoring(r.id)}
-                        >手動評分</button>
+                        >
+                          重算客觀題
+                        </button>
                       )}
                     </div>
                   </td>

@@ -13,7 +13,7 @@ export class AppController {
 
   @Get('api/dashboard/stats')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('teacher', 'admin')
+  @Roles('teacher', 'admin', 'viewer')
   async getStats() {
     return this.appService.getDashboardStats();
   }

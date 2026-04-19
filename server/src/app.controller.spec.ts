@@ -12,7 +12,7 @@ describe('AppController', () => {
         {
           provide: AppService,
           useValue: {
-            getHello: () => 'NCHU Online English Exam API',
+            getHello: () => 'NCYU Online English Exam API',
             getDashboardStats: jest.fn(),
           },
         },
@@ -24,7 +24,7 @@ describe('AppController', () => {
 
   describe('root', () => {
     it('should return API title string', () => {
-      expect(appController.getHello()).toBe('NCHU Online English Exam API');
+      expect(appController.getHello()).toBe('NCYU Online English Exam API');
     });
   });
 });

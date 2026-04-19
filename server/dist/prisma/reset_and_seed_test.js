@@ -57,16 +57,16 @@ async function main() {
         data: {
             resetPasswordToken: null,
             resetPasswordExpires: null,
-        }
+        },
     });
     console.log('Seeding test data...');
-    const hashedPassword = await bcrypt.hash('admin123', 10);
+    const hashedPassword = await bcrypt.hash('SystemDemo123!', 12);
     const admin = await prisma.teacher.upsert({
-        where: { email: 'admin@nchu.edu.tw' },
+        where: { email: 'system@ncyu.edu.tw' },
         update: { passwordHash: hashedPassword },
         create: {
-            email: 'admin@nchu.edu.tw',
-            name: '語言中心管理員',
+            email: 'system@ncyu.edu.tw',
+            name: 'E2E 系統管理',
             passwordHash: hashedPassword,
             role: 'admin',
         },
@@ -77,15 +77,15 @@ async function main() {
             description: '用於全面功能測試',
             createdBy: admin.id,
             teachers: {
-                create: { teacherId: admin.id, role: 'owner' }
+                create: { teacherId: admin.id, role: 'owner' },
             },
             students: {
                 create: [
                     { studentId: 'TEST001', name: '測試生甲' },
                     { studentId: 'TEST002', name: '測試生乙' },
-                ]
-            }
-        }
+                ],
+            },
+        },
     });
     const exam = await prisma.exam.create({
         data: {
@@ -106,20 +106,20 @@ async function main() {
                         content: 'What is the capital of France?',
                         options: ['London', 'Paris', 'Berlin', 'Madrid'],
                         answer: 'B',
-                        orderNum: 1
+                        orderNum: 1,
                     },
                     {
                         type: 'essay',
                         content: 'Please describe your favorite hobby in English.',
-                        orderNum: 2
-                    }
-                ]
-            }
-        }
+                        orderNum: 2,
+                    },
+                ],
+            },
+        },
     });
-    console.log('✅ Test environment ready!');
-    console.log(`- Teacher: admin@nchu.edu.tw / admin123`);
-    console.log(`- Student ID: TEST001 (測試生甲)`);
+    console.log('Test environment ready.');
+    console.log('- 教師／管理員：system@ncyu.edu.tw / SystemDemo123!');
+    console.log('- Student ID: TEST001 (測試生甲)');
     console.log(`- Exam ID: ${exam.id} ("${exam.title}")`);
 }
 main()

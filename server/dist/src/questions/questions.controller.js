@@ -178,6 +178,7 @@ let QuestionsController = class QuestionsController {
 exports.QuestionsController = QuestionsController;
 __decorate([
     (0, common_1.Get)('exam/:examId'),
+    (0, guards_1.Roles)('teacher', 'admin', 'viewer'),
     __param(0, (0, common_1.Param)('examId', common_1.ParseIntPipe)),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Number]),
@@ -185,6 +186,7 @@ __decorate([
 ], QuestionsController.prototype, "findByExam", null);
 __decorate([
     (0, common_1.Post)('exam/:examId'),
+    (0, guards_1.Roles)('teacher', 'admin'),
     __param(0, (0, common_1.Param)('examId', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -193,6 +195,7 @@ __decorate([
 ], QuestionsController.prototype, "create", null);
 __decorate([
     (0, common_1.Post)('exam/:examId/bulk'),
+    (0, guards_1.Roles)('teacher', 'admin'),
     __param(0, (0, common_1.Param)('examId', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -201,6 +204,7 @@ __decorate([
 ], QuestionsController.prototype, "bulkCreate", null);
 __decorate([
     (0, common_1.Put)('reorder'),
+    (0, guards_1.Roles)('teacher', 'admin'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [ReorderDto]),
@@ -208,6 +212,7 @@ __decorate([
 ], QuestionsController.prototype, "reorder", null);
 __decorate([
     (0, common_1.Put)(':id'),
+    (0, guards_1.Roles)('teacher', 'admin'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -216,6 +221,7 @@ __decorate([
 ], QuestionsController.prototype, "update", null);
 __decorate([
     (0, common_1.Delete)(':id'),
+    (0, guards_1.Roles)('teacher', 'admin'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Number]),
@@ -224,7 +230,6 @@ __decorate([
 exports.QuestionsController = QuestionsController = __decorate([
     (0, common_1.Controller)('api/questions'),
     (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
-    (0, guards_1.Roles)('teacher', 'admin'),
     __metadata("design:paramtypes", [questions_service_1.QuestionsService])
 ], QuestionsController);
 //# sourceMappingURL=questions.controller.js.map

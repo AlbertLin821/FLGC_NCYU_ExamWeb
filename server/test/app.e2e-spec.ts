@@ -24,6 +24,6 @@ describe('AppController (e2e)', () => {
     return request(app.getHttpServer())
       .get('/')
       .expect(200)
-      .expect('NCHU Online English Exam API');
+      .expect('NCYU Online English Exam API');
   });
 });

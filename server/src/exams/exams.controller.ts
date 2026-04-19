@@ -42,7 +42,7 @@ export class ExamsController {
   // === Teacher endpoints（須為教師／管理員 JWT）===
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('teacher', 'admin')
+  @Roles('teacher', 'admin', 'viewer')
   findAll(
     @Query('classId') classId?: string,
     @Query('page') page?: string,
@@ -58,7 +58,7 @@ export class ExamsController {
   /** 須置於 :id 之前，避免 results 被當成數字 id */
   @Get('results/:classId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('teacher', 'admin')
+  @Roles('teacher', 'admin', 'viewer')
   getResults(
     @Param('classId', ParseIntPipe) classId: number,
     @Query('examId') examId?: string,
@@ -75,7 +75,7 @@ export class ExamsController {
 
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('teacher', 'admin')
+  @Roles('teacher', 'admin', 'viewer')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.examsService.findById(id);
   }

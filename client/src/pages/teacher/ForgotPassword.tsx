@@ -45,7 +45,7 @@ const ForgotPassword: React.FC = () => {
                 <input
                   type="email"
                   className="form-input"
-                  placeholder="example@nchu.edu.tw"
+                  placeholder="example@ncyu.edu.tw"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -83,9 +83,9 @@ const ForgotPassword: React.FC = () => {
             </div>
           )}
 
-          <footer className="mt-xl text-center">
+          <div className="mt-xl text-center">
             <Link to="/teacher/login" className="text-xs text-secondary">想起來了？返回登入</Link>
-          </footer>
+          </div>
         </div>
       </div>
     </Layout>

@@ -1,10 +1,43 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { classesApi, studentsApi } from '../../api';
 import * as XLSX from 'xlsx';
-import { 
-  FileSpreadsheet, 
-  Type 
-} from 'lucide-react';
+import { FileSpreadsheet, Type, ClipboardList } from 'lucide-react';
+import { sessionScorePercent } from '../../utils/sessionScore';
+
+/** 單一考試場次之狀態說明（不含總分，總分另欄呈現） */
+function sessionStatusLine(session: any): string {
+  const ex = session.exam;
+  const title = ex?.title ?? '考卷';
+  const now = new Date();
+  if (!ex) return `${title}（${session.status}）`;
+  const end = new Date(ex.endTime);
+  const start = new Date(ex.startTime);
+
+  switch (session.status) {
+    case 'graded':
+      return `${title}：已評分`;
+    case 'submitted':
+      return `${title}：已繳卷（待評分）`;
+    case 'in_progress':
+      return now > end ? `${title}：逾期未交` : `${title}：作答中`;
+    case 'paused':
+      return `${title}：暫停中`;
+    case 'pending':
+    default:
+      if (now < start) return `${title}：尚未開考`;
+      if (now > end) return `${title}：未應考（已截止）`;
+      return `${title}：可進入應考`;
+  }
+}
+
+function gradedWeightedSummary(sessions: any[] | undefined): string {
+  if (!sessions?.length) return '—';
+  const parts = sessions
+    .filter((s) => s.status === 'graded')
+    .map((s) => `${s.exam?.title ?? '考卷'} ${sessionScorePercent(s.answers)} 分`);
+  return parts.length ? parts.join('；') : '—';
+}
 
 /** 至少四位純數字視為學號，用於同一行多組「學號 姓名」掃描；非純數字學號（如 TEST001）仍用每行「第一欄 其餘」 */
 const NUMERIC_STUDENT_ID = /^\d{4,}$/;
@@ -46,6 +79,7 @@ function parseBulkStudentImportText(text: string): { studentId: string; name: st
 }
 
 const ClassManagement: React.FC = () => {
+  const navigate = useNavigate();
   const [classes, setClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showClassModal, setShowClassModal] = useState(false);
@@ -167,22 +201,6 @@ const ClassManagement: React.FC = () => {
     } catch { alert('匯入失敗'); }
   };
 
-  const getExamStatusEmoji = (sessions: any[]) => {
-    if (!sessions || sessions.length === 0) return '未測驗';
-    const s = sessions[0];
-    const exam = s.exam;
-    const now = new Date();
-    const isOverdue = exam && new Date(exam.endTime) < now;
-
-    if (s.status === 'graded') return `已評分 (${s.score}分)`;
-    if (s.status === 'submitted') return '已繳卷';
-    if (s.status === 'in_progress') {
-      return isOverdue ? '逾期未交' : '測驗中';
-    }
-    if (s.status === 'paused') return '暫停中';
-    return s.status;
-  };
-
   if (selectedClass) {
     return (
       <div className="fade-in">
@@ -213,8 +231,8 @@ const ClassManagement: React.FC = () => {
                   <tr>
                     <th>學號</th>
                     <th>姓名</th>
-                    <th>考試狀態</th>
-                    <th>卷別 (考卷標題)</th>
+                    <th>各場次狀況</th>
+                    <th>加權得分</th>
                     <th>操作</th>
                   </tr>
                 </thead>
@@ -223,12 +241,32 @@ const ClassManagement: React.FC = () => {
                     <tr key={s.id}>
                       <td><b>{s.studentId}</b></td>
                       <td>{s.name}</td>
-                      <td>{getExamStatusEmoji(s.sessions)}</td>
-                      <td>{s.sessions?.[0]?.exam?.title || '-'}</td>
+                      <td style={{ minWidth: '220px', maxWidth: '360px' }}>
+                        {s.sessions?.length ? (
+                          <ul style={{ margin: 0, paddingLeft: '1.15rem', fontSize: '0.875rem', lineHeight: 1.5 }}>
+                            {s.sessions.map((sess: any) => (
+                              <li key={sess.id}>{sessionStatusLine(sess)}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <span className="text-secondary">尚未有考試紀錄</span>
+                        )}
+                      </td>
+                      <td className="text-sm" style={{ whiteSpace: 'normal', maxWidth: '280px' }}>
+                        {gradedWeightedSummary(s.sessions)}
+                      </td>
                       <td>
-                        <div className="flex gap-sm">
-                          <button className="btn btn-xs btn-secondary" onClick={() => { setEditingStudent(s); setShowStudentModal(true); }}>編輯</button>
-                          <button className="btn btn-xs btn-danger" onClick={() => deleteStudent(s.id)}>刪除</button>
+                        <div className="flex gap-sm flex-wrap">
+                          <button
+                            type="button"
+                            className="btn btn-xs btn-primary flex items-center gap-xs"
+                            onClick={() => navigate(`/teacher/result/${s.id}`)}
+                            title="檢視該生各卷與題目成績"
+                          >
+                            <ClipboardList size={14} /> 成績與題目
+                          </button>
+                          <button type="button" className="btn btn-xs btn-secondary" onClick={() => { setEditingStudent(s); setShowStudentModal(true); }}>編輯</button>
+                          <button type="button" className="btn btn-xs btn-danger" onClick={() => deleteStudent(s.id)}>刪除</button>
                         </div>
                       </td>
                     </tr>

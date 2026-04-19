@@ -234,6 +234,10 @@ const ExamRoom: React.FC = () => {
     hasSubmittedRef.current = true;
     setSubmitting(true);
     try {
+      const q = questions[currentIdx];
+      if (q) {
+        await examsApi.submitAnswer(session.id, q.id, userAnswer);
+      }
       await examsApi.submit(session.id);
       try {
         sessionStorage.setItem(
@@ -250,7 +254,7 @@ const ExamRoom: React.FC = () => {
     } finally {
       setSubmitting(false);
     }
-  }, [session, navigate]);
+  }, [session, questions, currentIdx, userAnswer, navigate]);
 
   // Timer：每秒遞減（與後端 timeRemainingSeconds 對齊後，仍以本地倒數顯示；重新進入頁面會再向後端取剩餘時間）
   useEffect(() => {
@@ -265,14 +269,16 @@ const ExamRoom: React.FC = () => {
   }, [timeLeft, session, loading, isPaused, handleSubmitExam]);
 
   const handleNext = async () => {
-    if (!userAnswer.trim()) {
-      alert('請先填寫答案');
+    const q = questions[currentIdx];
+    const isEssay = q?.type === 'essay';
+    if (!isEssay && !userAnswer.trim()) {
+      alert('請先選擇或填寫答案');
       return;
     }
 
     setSubmitting(true);
     try {
-      await examsApi.submitAnswer(session.id, questions[currentIdx].id, userAnswer);
+      await examsApi.submitAnswer(session.id, q.id, userAnswer);
       if (currentIdx < questions.length - 1) {
         setCurrentIdx(currentIdx + 1);
         setUserAnswer('');
@@ -393,7 +399,7 @@ const ExamRoom: React.FC = () => {
               <textarea
                 className="form-input"
                 style={{ fontSize: '1.2rem', minHeight: '150px' }}
-                placeholder="在這邊輸入您的答案..."
+                placeholder="在這邊輸入您的答案（問答题可留白，按下一題即視為不作答）"
                 value={userAnswer}
                 onChange={(e) => setUserAnswer(e.target.value)}
                 disabled={submitting}

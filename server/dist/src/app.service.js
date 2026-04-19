@@ -18,7 +18,7 @@ let AppService = class AppService {
         this.prisma = prisma;
     }
     getHello() {
-        return 'NCHU Online English Exam API';
+        return 'NCYU Online English Exam API';
     }
     async getDashboardStats() {
         const now = new Date();
@@ -41,6 +41,14 @@ let AppService = class AppService {
                 submittedAt: { gte: oneWeekAgo },
             },
         });
+        const sessionsAwaitingScore = await this.prisma.examSession.count({
+            where: { status: 'submitted' },
+        });
+        const sessionsPendingReview = await this.prisma.examSession.count({
+            where: {
+                answers: { some: { aiModel: 'pending_review' } },
+            },
+        });
         const recentLogs = [
             { id: 1, type: 'info', message: '系統運行正常', time: new Date() },
         ];
@@ -48,6 +56,8 @@ let AppService = class AppService {
             activeExams,
             pendingAlerts,
             totalSubmissions,
+            sessionsAwaitingScore,
+            sessionsPendingReview,
             recentLogs,
         };
     }

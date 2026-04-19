@@ -24,6 +24,16 @@ let ScoringController = class ScoringController {
     scoreSession(sessionId) {
         return this.scoringService.scoreSession(sessionId);
     }
+    batchEssayGrade(examId, body) {
+        const classId = Number(body?.classId);
+        if (!Number.isInteger(classId) || classId <= 0) {
+            throw new common_1.BadRequestException('classId 必填且須為正整數');
+        }
+        return this.scoringService.batchGradeEssaysForExamAndClass(examId, classId);
+    }
+    manualGradeAnswer(answerId, body) {
+        return this.scoringService.manualGradeAnswer(answerId, body.aiScore, body.aiFeedback);
+    }
 };
 exports.ScoringController = ScoringController;
 __decorate([
@@ -33,6 +43,22 @@ __decorate([
     __metadata("design:paramtypes", [Number]),
     __metadata("design:returntype", void 0)
 ], ScoringController.prototype, "scoreSession", null);
+__decorate([
+    (0, common_1.Post)('exams/:examId/batch-essay-grade'),
+    __param(0, (0, common_1.Param)('examId', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Object]),
+    __metadata("design:returntype", void 0)
+], ScoringController.prototype, "batchEssayGrade", null);
+__decorate([
+    (0, common_1.Patch)('answers/:answerId'),
+    __param(0, (0, common_1.Param)('answerId', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Object]),
+    __metadata("design:returntype", void 0)
+], ScoringController.prototype, "manualGradeAnswer", null);
 exports.ScoringController = ScoringController = __decorate([
     (0, common_1.Controller)('api/scoring'),
     (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),

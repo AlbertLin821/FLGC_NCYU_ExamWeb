@@ -39,10 +39,14 @@ api.interceptors.response.use(
       return Promise.reject(err);
     }
     if (status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('teacher');
-      if (window.location.pathname.startsWith('/teacher')) {
-        window.location.href = '/teacher/login?reason=session';
+      const reqUrl = String(err.config?.url ?? '');
+      // POST /api/auth/login 的 401 為帳號或密碼錯誤，不可當成 Token 失效，否則會誤導向並顯示「登入已過期或無效」
+      if (!reqUrl.includes('auth/login')) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('teacher');
+        if (window.location.pathname.startsWith('/teacher')) {
+          window.location.href = '/teacher/login?reason=session';
+        }
       }
     }
     return Promise.reject(err);
@@ -65,7 +69,10 @@ export const authApi = {
 export const teachersApi = {
   getProfile: () => api.get('/teachers/me'),
   getAll: () => api.get('/teachers'),
-  invite: (email: string) => api.post('/teachers/invite', { email }),
+  create: (data: { email: string; password: string; name: string; role?: string }) =>
+    api.post('/teachers', data),
+  updatePassword: (id: number, password: string) =>
+    api.patch(`/teachers/${id}/password`, { password }),
 };
 
 // Classes
@@ -82,6 +89,9 @@ export const classesApi = {
 
 // Students
 export const studentsApi = {
+  /** 管理員：未帶 classId 時為全校列表（分頁） */
+  getAll: (page?: number, limit?: number) =>
+    api.get('/students', { params: { page, limit } }),
   getByClass: (classId: number) => api.get(`/students`, { params: { classId } }),
   getById: (id: number) => api.get(`/students/${id}`),
   getExams: (id: number) => api.get(`/students/${id}/exams`),
@@ -124,6 +134,10 @@ export const questionsApi = {
 // Scoring
 export const scoringApi = {
   scoreSession: (sessionId: number) => api.post(`/scoring/session/${sessionId}`),
+  batchEssayGrade: (examId: number, classId: number) =>
+    api.post(`/scoring/exams/${examId}/batch-essay-grade`, { classId }),
+  manualGradeAnswer: (answerId: number, body: { aiScore: number; aiFeedback?: string }) =>
+    api.patch(`/scoring/answers/${answerId}`, body),
 };
 
 // Cheat

@@ -24,55 +24,55 @@ export declare class ExamsController {
     private examsService;
     constructor(examsService: ExamsService);
     findAll(classId?: string, page?: string, limit?: string): Promise<({
+        _count: {
+            questions: number;
+            sessions: number;
+        };
         examClasses: ({
             class: {
-                name: string;
                 id: number;
+                name: string;
             };
         } & {
-            classId: number;
             examId: number;
+            classId: number;
         })[];
-        _count: {
-            sessions: number;
-            questions: number;
-        };
     } & {
-        createdAt: Date;
         id: number;
-        createdBy: number;
+        createdAt: Date;
+        status: string;
         title: string;
         difficulty: string | null;
         timeLimit: number;
         startTime: Date;
         endTime: Date;
-        status: string;
+        createdBy: number;
         deletedAt: Date | null;
     })[] | {
         items: ({
+            _count: {
+                questions: number;
+                sessions: number;
+            };
             examClasses: ({
                 class: {
-                    name: string;
                     id: number;
+                    name: string;
                 };
             } & {
-                classId: number;
                 examId: number;
+                classId: number;
             })[];
-            _count: {
-                sessions: number;
-                questions: number;
-            };
         } & {
-            createdAt: Date;
             id: number;
-            createdBy: number;
+            createdAt: Date;
+            status: string;
             title: string;
             difficulty: string | null;
             timeLimit: number;
             startTime: Date;
             endTime: Date;
-            status: string;
+            createdBy: number;
             deletedAt: Date | null;
         })[];
         total: number;
@@ -81,72 +81,80 @@ export declare class ExamsController {
         totalPages: number;
     }>;
     getResults(classId: number, examId?: string, page?: string, limit?: string): Promise<({
-        answers: ({
-            question: {
-                word1: string | null;
-                word2: string | null;
-                maxPoints: number;
-            };
-        } & {
-            createdAt: Date;
-            id: number;
-            content: string | null;
-            sessionId: number;
-            aiScore: import("@prisma/client-runtime-utils").Decimal | null;
-            questionId: number;
-            aiFeedback: string | null;
-            aiModel: string | null;
-        })[];
         exam: {
             title: string;
         };
-        student: {
-            name: string;
+        answers: ({
+            question: {
+                id: number;
+                word1: string | null;
+                word2: string | null;
+                orderNum: number;
+                maxPoints: number;
+            };
+        } & {
             id: number;
+            sessionId: number;
+            questionId: number;
+            content: string | null;
+            aiScore: import("@prisma/client-runtime-utils").Decimal | null;
+            aiFeedback: string | null;
+            aiModel: string | null;
+            createdAt: Date;
+        })[];
+        student: {
+            id: number;
+            name: string;
             studentId: string;
         };
     } & {
         id: number;
+        examId: number;
         studentId: number;
         status: string;
-        examId: number;
         startedAt: Date | null;
         submittedAt: Date | null;
+        overallFeedbackEn: string | null;
+        overallFeedbackZh: string | null;
     } & {
         hasPendingReview: boolean;
     })[] | {
         items: ({
-            answers: ({
-                question: {
-                    word1: string | null;
-                    word2: string | null;
-                    maxPoints: number;
-                };
-            } & {
-                createdAt: Date;
-                id: number;
-                content: string | null;
-                sessionId: number;
-                aiScore: import("@prisma/client-runtime-utils").Decimal | null;
-                questionId: number;
-                aiFeedback: string | null;
-                aiModel: string | null;
-            })[];
             exam: {
                 title: string;
             };
-            student: {
-                name: string;
+            answers: ({
+                question: {
+                    id: number;
+                    word1: string | null;
+                    word2: string | null;
+                    orderNum: number;
+                    maxPoints: number;
+                };
+            } & {
                 id: number;
+                sessionId: number;
+                questionId: number;
+                content: string | null;
+                aiScore: import("@prisma/client-runtime-utils").Decimal | null;
+                aiFeedback: string | null;
+                aiModel: string | null;
+                createdAt: Date;
+            })[];
+            student: {
+                id: number;
+                name: string;
                 studentId: string;
             };
         } & {
             id: number;
+            examId: number;
             studentId: number;
             status: string;
-            examId: number;
             startedAt: Date | null;
             submittedAt: Date | null;
+            overallFeedbackEn: string | null;
+            overallFeedbackZh: string | null;
         } & {
             hasPendingReview: boolean;
         })[];
@@ -158,148 +166,152 @@ export declare class ExamsController {
     findOne(id: number): Promise<({
         examClasses: ({
             class: {
-                name: string;
                 id: number;
+                name: string;
             };
         } & {
-            classId: number;
             examId: number;
+            classId: number;
         })[];
         questions: {
             id: number;
-            type: string;
             content: string | null;
-            options: import("@prisma/client/runtime/client").JsonValue | null;
             answer: string | null;
+            examId: number;
+            type: string;
+            options: import("@prisma/client/runtime/client").JsonValue | null;
             word1: string | null;
             word2: string | null;
             orderNum: number;
             maxPoints: number;
-            examId: number;
         }[];
     } & {
-        createdAt: Date;
         id: number;
-        createdBy: number;
+        createdAt: Date;
+        status: string;
         title: string;
         difficulty: string | null;
         timeLimit: number;
         startTime: Date;
         endTime: Date;
-        status: string;
+        createdBy: number;
         deletedAt: Date | null;
     }) | null>;
     create(dto: CreateExamDto, req: any): Promise<{
         examClasses: ({
             class: {
-                name: string;
                 id: number;
+                name: string;
             };
         } & {
-            classId: number;
             examId: number;
+            classId: number;
         })[];
     } & {
-        createdAt: Date;
         id: number;
-        createdBy: number;
+        createdAt: Date;
+        status: string;
         title: string;
         difficulty: string | null;
         timeLimit: number;
         startTime: Date;
         endTime: Date;
-        status: string;
+        createdBy: number;
         deletedAt: Date | null;
     }>;
     update(id: number, dto: UpdateExamDto): Promise<{
-        createdAt: Date;
         id: number;
-        createdBy: number;
+        createdAt: Date;
+        status: string;
         title: string;
         difficulty: string | null;
         timeLimit: number;
         startTime: Date;
         endTime: Date;
-        status: string;
+        createdBy: number;
         deletedAt: Date | null;
     }>;
     delete(id: number): Promise<{
-        createdAt: Date;
         id: number;
-        createdBy: number;
+        createdAt: Date;
+        status: string;
         title: string;
         difficulty: string | null;
         timeLimit: number;
         startTime: Date;
         endTime: Date;
-        status: string;
+        createdBy: number;
         deletedAt: Date | null;
     }>;
     publish(id: number): Promise<{
-        createdAt: Date;
         id: number;
-        createdBy: number;
+        createdAt: Date;
+        status: string;
         title: string;
         difficulty: string | null;
         timeLimit: number;
         startTime: Date;
         endTime: Date;
-        status: string;
+        createdBy: number;
         deletedAt: Date | null;
     }>;
     startExam(examId: number, studentId: number): Promise<{
         session: {
             exam: {
-                createdAt: Date;
                 id: number;
-                createdBy: number;
+                createdAt: Date;
+                status: string;
                 title: string;
                 difficulty: string | null;
                 timeLimit: number;
                 startTime: Date;
                 endTime: Date;
-                status: string;
+                createdBy: number;
                 deletedAt: Date | null;
             };
         } & {
             id: number;
+            examId: number;
             studentId: number;
             status: string;
-            examId: number;
             startedAt: Date | null;
             submittedAt: Date | null;
+            overallFeedbackEn: string | null;
+            overallFeedbackZh: string | null;
         };
         questions: {
             id: number;
-            type: string;
             content: string | null;
-            options: import("@prisma/client/runtime/client").JsonValue | null;
             answer: string | null;
+            examId: number;
+            type: string;
+            options: import("@prisma/client/runtime/client").JsonValue | null;
             word1: string | null;
             word2: string | null;
             orderNum: number;
             maxPoints: number;
-            examId: number;
         }[];
         timeLimit: number;
         timeRemainingSeconds: number;
     }>;
     submitAnswer(sessionId: number, dto: SubmitAnswerDto): Promise<{
-        createdAt: Date;
         id: number;
-        content: string | null;
         sessionId: number;
-        aiScore: import("@prisma/client-runtime-utils").Decimal | null;
         questionId: number;
+        content: string | null;
+        aiScore: import("@prisma/client-runtime-utils").Decimal | null;
         aiFeedback: string | null;
         aiModel: string | null;
+        createdAt: Date;
     }>;
     submitExam(sessionId: number): Promise<{
         id: number;
+        examId: number;
         studentId: number;
         status: string;
-        examId: number;
         startedAt: Date | null;
         submittedAt: Date | null;
+        overallFeedbackEn: string | null;
+        overallFeedbackZh: string | null;
     }>;
 }

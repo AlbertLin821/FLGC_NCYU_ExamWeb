@@ -8,13 +8,6 @@ export declare class CreateTeacherDto {
 export declare class TeachersController {
     private teachersService;
     constructor(teachersService: TeachersService);
-    findAll(): Promise<{
-        email: string;
-        name: string;
-        role: string;
-        createdAt: Date;
-        id: number;
-    }[]>;
     getProfile(req: any): Promise<{
         email: string;
         name: string;
@@ -22,6 +15,20 @@ export declare class TeachersController {
         createdAt: Date;
         id: number;
     } | null>;
+    findAll(): Promise<{
+        email: string;
+        name: string;
+        role: string;
+        createdAt: Date;
+        id: number;
+    }[]>;
+    create(dto: CreateTeacherDto): Promise<{
+        email: string;
+        name: string;
+        role: string;
+        createdAt: Date;
+        id: number;
+    }>;
     updatePassword(id: string, pass: string): Promise<{
         email: string;
         passwordHash: string;

@@ -1,6 +1,17 @@
 import {
-  Controller, Get, Post, Put, Delete, Param, Body, Query,
-  UseGuards, ParseIntPipe,
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Param,
+  Body,
+  Query,
+  UseGuards,
+  ParseIntPipe,
+  Request,
+  ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { StudentsService } from './students.service';
 import { JwtAuthGuard, RolesGuard, Roles } from '../auth/guards';
@@ -34,17 +45,26 @@ export class StudentsController {
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('teacher', 'admin')
-  findByClass(
-    @Query('classId', ParseIntPipe) classId: number,
+  @Roles('teacher', 'admin', 'viewer')
+  list(
+    @Request() req: { user: { role: string } },
+    @Query('classId') classIdStr: string | undefined,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
-    return this.studentsService.findByClass(
-      classId,
-      page ? parseInt(page) : undefined,
-      limit ? parseInt(limit) : undefined,
-    );
+    const p = page ? parseInt(page, 10) : undefined;
+    const l = limit ? parseInt(limit, 10) : undefined;
+    if (classIdStr === undefined || classIdStr === '') {
+      if (req.user.role !== 'admin') {
+        throw new ForbiddenException('僅管理員可查詢全校學生');
+      }
+      return this.studentsService.findAllPaginated(p, l);
+    }
+    const classId = parseInt(classIdStr, 10);
+    if (Number.isNaN(classId)) {
+      throw new BadRequestException('classId 無效');
+    }
+    return this.studentsService.findByClass(classId, p, l);
   }
 
   /** 須置於 :id 之前，否則 :id 會先匹配 */
@@ -55,7 +75,7 @@ export class StudentsController {
 
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('teacher', 'admin')
+  @Roles('teacher', 'admin', 'viewer')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.studentsService.findById(id);
   }

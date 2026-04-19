@@ -1,6 +1,6 @@
 /* ==========================================
-   NCHU Exam Platform — Design System
-   極簡風格 (inspired by NCHU Language Center)
+   NCYU Exam Platform — Design System
+   極簡風格 (inspired by NCYU Language Center)
    ========================================== */
 
 /* --- CSS Custom Properties --- */
@@ -23,8 +23,6 @@
   --color-bg-alt: #f8f9fa;
   --color-bg-card: #ffffff;
   --color-border: #ced4da;
-  --color-footer: #212529;
-  --color-footer-text: #adb5bd;
 
   /* Typography */
   --font-family: 'Noto Sans TC', 'Microsoft JhengHei', 'Inter', -apple-system, sans-serif;
@@ -182,33 +180,6 @@ a:hover {
 .header-nav a.active {
   color: var(--color-primary);
   border-bottom-color: var(--color-primary);
-}
-
-/* --- Footer --- */
-.footer {
-  background: var(--color-footer);
-  color: var(--color-footer-text);
-  padding: var(--space-2xl) 0 var(--space-lg);
-}
-
-.footer-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-2xl);
-  margin-bottom: var(--space-xl);
-}
-
-.footer h4 {
-  color: white;
-  margin-bottom: var(--space-md);
-  font-size: var(--font-size-base);
-}
-
-.footer-copyright {
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding-top: var(--space-md);
-  text-align: center;
-  font-size: var(--font-size-xs);
 }
 
 /* --- Cards --- */
@@ -507,6 +478,5 @@ a.btn svg {
 /* --- Responsive --- */
 @media (max-width: 768px) {
   .container { padding: 0 var(--space-md); }
-  .footer-grid { grid-template-columns: 1fr; }
   .header-nav { gap: var(--space-md); }
 }

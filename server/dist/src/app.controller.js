@@ -35,7 +35,7 @@ __decorate([
 __decorate([
     (0, common_1.Get)('api/dashboard/stats'),
     (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
-    (0, guards_1.Roles)('teacher', 'admin'),
+    (0, guards_1.Roles)('teacher', 'admin', 'viewer'),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)

@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { TeachersService } from './teachers.service';
 import { JwtAuthGuard, RolesGuard, Roles } from '../auth/guards';
 import { IsEmail, IsNotEmpty, IsString, IsOptional } from 'class-validator';
@@ -25,16 +34,22 @@ export class CreateTeacherDto {
 export class TeachersController {
   constructor(private teachersService: TeachersService) {}
 
+  @Get('me')
+  @Roles('teacher', 'admin', 'viewer')
+  getProfile(@Request() req: any) {
+    return this.teachersService.findById(req.user.id);
+  }
+
   @Get()
   @Roles('admin')
   findAll() {
     return this.teachersService.findAll();
   }
 
-  @Get('me')
-  @Roles('teacher', 'admin')
-  getProfile(@Request() req: any) {
-    return this.teachersService.findById(req.user.id);
+  @Post()
+  @Roles('admin')
+  create(@Body() dto: CreateTeacherDto) {
+    return this.teachersService.create(dto);
   }
 
   @Patch(':id/password')
@@ -44,7 +59,7 @@ export class TeachersController {
   }
 
   @Post('invite')
-  @Roles('teacher', 'admin')
+  @Roles('admin')
   invite(@Body('email') email: string) {
     return this.teachersService.inviteTeacher(email);
   }

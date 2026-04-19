@@ -7,4 +7,11 @@ describe('examTimer（與後端一致）', () => {
     const now = new Date('2026-04-19T10:07:30.000Z');
     expect(computeTimeRemainingSeconds(started, 30, now)).toBe(22 * 60 + 30);
   });
+
+  it('與考卷截止時間取較小剩餘秒數', () => {
+    const started = new Date('2026-04-19T10:00:00.000Z');
+    const examEnd = new Date('2026-04-19T10:30:00.000Z');
+    const now = new Date('2026-04-19T10:25:00.000Z');
+    expect(computeTimeRemainingSeconds(started, 60, now, examEnd)).toBe(5 * 60);
+  });
 });

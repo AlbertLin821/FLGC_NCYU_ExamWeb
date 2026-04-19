@@ -169,7 +169,7 @@ let ExamsService = class ExamsService {
                 where: { id: existingSession.id },
                 include: { exam: true },
             });
-            const timeRemainingSeconds = (0, exam_time_util_1.computeTimeRemainingSeconds)(session.startedAt, exam.timeLimit, now);
+            const timeRemainingSeconds = (0, exam_time_util_1.computeTimeRemainingSeconds)(session.startedAt, exam.timeLimit, now, exam.endTime);
             return {
                 session,
                 questions: exam.questions,
@@ -189,7 +189,7 @@ let ExamsService = class ExamsService {
                 },
                 include: { exam: true },
             });
-            const timeRemainingSeconds = (0, exam_time_util_1.computeTimeRemainingSeconds)(session.startedAt, exam.timeLimit, now);
+            const timeRemainingSeconds = (0, exam_time_util_1.computeTimeRemainingSeconds)(session.startedAt, exam.timeLimit, now, exam.endTime);
             return {
                 session,
                 questions: exam.questions,
@@ -206,7 +206,7 @@ let ExamsService = class ExamsService {
                 if (session.status === 'submitted') {
                     throw new common_1.BadRequestException('已完成此考試');
                 }
-                const timeRemainingSeconds = (0, exam_time_util_1.computeTimeRemainingSeconds)(session.startedAt, exam.timeLimit, now);
+                const timeRemainingSeconds = (0, exam_time_util_1.computeTimeRemainingSeconds)(session.startedAt, exam.timeLimit, now, exam.endTime);
                 return {
                     session,
                     questions: exam.questions,
@@ -227,7 +227,7 @@ let ExamsService = class ExamsService {
         if (session.status !== 'in_progress') {
             throw new common_1.BadRequestException('目前狀態無法作答');
         }
-        const remaining = (0, exam_time_util_1.computeTimeRemainingSeconds)(session.startedAt, session.exam.timeLimit, new Date());
+        const remaining = (0, exam_time_util_1.computeTimeRemainingSeconds)(session.startedAt, session.exam.timeLimit, new Date(), session.exam.endTime);
         if (remaining <= 0) {
             throw new common_1.BadRequestException('作答時間已結束');
         }
@@ -258,8 +258,8 @@ let ExamsService = class ExamsService {
             throw new common_1.BadRequestException('已交卷');
         }
         const session = await this.prisma.examSession.findUniqueOrThrow({ where: { id: sessionId } });
-        this.scoringService.scoreSession(sessionId).catch(err => {
-            console.error(`Auto scoring failed for session ${sessionId}:`, err);
+        this.scoringService.scoreObjectiveOnly(sessionId).catch((err) => {
+            console.error(`Objective scoring failed for session ${sessionId}:`, err);
         });
         return session;
     }
@@ -272,7 +272,11 @@ let ExamsService = class ExamsService {
             student: { select: { id: true, studentId: true, name: true } },
             exam: { select: { title: true } },
             answers: {
-                include: { question: { select: { word1: true, word2: true, maxPoints: true } } },
+                include: {
+                    question: {
+                        select: { id: true, orderNum: true, word1: true, word2: true, maxPoints: true },
+                    },
+                },
             },
         };
         const orderBy = { submittedAt: 'desc' };

@@ -4,8 +4,8 @@ test('Teacher login and dashboard flow', async ({ page }) => {
   await page.goto('/teacher/login');
   
   // Fill in teacher login details from seed data
-  await page.fill('input[type="email"]', 'admin@nchu.edu.tw');
-  await page.fill('input[type="password"]', 'admin123');
+  await page.fill('input[type="email"]', 'system@ncyu.edu.tw');
+  await page.fill('input[type="password"]', 'SystemDemo123!');
   await page.click('button[type="submit"]');
 
   // Verify successful login and redirect to dashboard

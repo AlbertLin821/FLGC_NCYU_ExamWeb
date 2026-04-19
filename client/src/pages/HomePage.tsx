@@ -11,7 +11,7 @@ const HomePage: React.FC = () => {
     <Layout>
       <div className="text-center mt-3xl mb-3xl">
         <h1 className="mb-md" style={{ fontSize: '2.5rem', fontWeight: 800 }}>
-          國立中興大學<br />
+          國立嘉義大學<br />
           <span style={{ color: 'var(--color-primary)' }}>線上英文考試平台</span>
         </h1>
         <p className="text-secondary mb-2xl" style={{ fontSize: '1.2rem', maxWidth: '600px', margin: '0 auto 2rem' }}>

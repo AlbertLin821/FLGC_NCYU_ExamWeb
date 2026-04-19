@@ -73,6 +73,7 @@ let ClassesController = class ClassesController {
 exports.ClassesController = ClassesController;
 __decorate([
     (0, common_1.Get)(),
+    (0, guards_1.Roles)('teacher', 'admin', 'viewer'),
     __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.Query)('page')),
     __param(2, (0, common_1.Query)('limit')),
@@ -82,6 +83,7 @@ __decorate([
 ], ClassesController.prototype, "findAll", null);
 __decorate([
     (0, common_1.Get)(':id'),
+    (0, guards_1.Roles)('teacher', 'admin', 'viewer'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Number]),
@@ -89,6 +91,7 @@ __decorate([
 ], ClassesController.prototype, "findOne", null);
 __decorate([
     (0, common_1.Get)(':id/stats'),
+    (0, guards_1.Roles)('teacher', 'admin', 'viewer'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Number]),
@@ -96,6 +99,7 @@ __decorate([
 ], ClassesController.prototype, "getStats", null);
 __decorate([
     (0, common_1.Post)(),
+    (0, guards_1.Roles)('teacher', 'admin'),
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
@@ -104,6 +108,7 @@ __decorate([
 ], ClassesController.prototype, "create", null);
 __decorate([
     (0, common_1.Put)(':id'),
+    (0, guards_1.Roles)('teacher', 'admin'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -112,6 +117,7 @@ __decorate([
 ], ClassesController.prototype, "update", null);
 __decorate([
     (0, common_1.Delete)(':id'),
+    (0, guards_1.Roles)('teacher', 'admin'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Number]),
@@ -119,6 +125,7 @@ __decorate([
 ], ClassesController.prototype, "delete", null);
 __decorate([
     (0, common_1.Post)(':id/teachers'),
+    (0, guards_1.Roles)('teacher', 'admin'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -127,6 +134,7 @@ __decorate([
 ], ClassesController.prototype, "addTeacher", null);
 __decorate([
     (0, common_1.Delete)(':id/teachers/:teacherId'),
+    (0, guards_1.Roles)('teacher', 'admin'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Param)('teacherId', common_1.ParseIntPipe)),
     __metadata("design:type", Function),
@@ -136,7 +144,6 @@ __decorate([
 exports.ClassesController = ClassesController = __decorate([
     (0, common_1.Controller)('api/classes'),
     (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
-    (0, guards_1.Roles)('teacher', 'admin'),
     __metadata("design:paramtypes", [classes_service_1.ClassesService])
 ], ClassesController);
 //# sourceMappingURL=classes.controller.js.map

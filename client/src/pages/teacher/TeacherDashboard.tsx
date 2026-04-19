@@ -7,14 +7,19 @@ import QuestionManagement from './QuestionManagement';
 import ResultsView from './ResultsView';
 import AntiCheatMonitor from './AntiCheatMonitor';
 import StudentResultDetail from './StudentResultDetail';
-import { 
-  LayoutDashboard, 
-  Users, 
+import SystemManagement from './SystemManagement';
+import TeacherAccounts from './TeacherAccounts';
+import {
+  LayoutDashboard,
+  Users,
+  UserCog,
   ClipboardList,
-  Trophy, 
-  ShieldAlert 
+  Trophy,
+  ShieldAlert,
+  Settings,
 } from 'lucide-react';
-import { dashboardApi, teachersApi } from '../../api';
+import { dashboardApi } from '../../api';
+import { getTeacherRole } from '../../utils/teacherRole';
 
 const DashboardOverview = () => {
   const navigate = useNavigate();
@@ -41,7 +46,10 @@ const DashboardOverview = () => {
 
   return (
   <div className="flex flex-col gap-lg">
-    <div className="grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
+    <div
+      className="grid"
+      style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}
+    >
       <div className="card" style={{ background: 'var(--color-primary)', color: 'white' }}>
         <h4 style={{ opacity: 0.8 }}>目前活躍考場</h4>
         <div style={{ fontSize: '2.5rem', fontWeight: 800, margin: '0.5rem 0' }}>{stats?.activeExams || 0}</div>
@@ -57,31 +65,33 @@ const DashboardOverview = () => {
         <div style={{ fontSize: '2.5rem', fontWeight: 800, margin: '0.5rem 0' }}>{stats?.totalSubmissions || 0}</div>
         <p className="text-xs">即時連線數據</p>
       </div>
+      <div
+        className="card"
+        style={{
+          border: (stats?.sessionsAwaitingScore || 0) + (stats?.sessionsPendingReview || 0) > 0
+            ? '2px solid var(--color-danger)'
+            : undefined,
+        }}
+      >
+        <h4 className="text-secondary">成績未完成</h4>
+        <div
+          style={{
+            fontSize: '2.5rem',
+            fontWeight: 800,
+            margin: '0.5rem 0',
+            color: 'var(--color-danger)',
+          }}
+        >
+          {(stats?.sessionsAwaitingScore || 0) + (stats?.sessionsPendingReview || 0)}
+        </div>
+        <p className="text-xs text-secondary">
+          待評分 {stats?.sessionsAwaitingScore ?? 0}／待複閱 {stats?.sessionsPendingReview ?? 0}
+        </p>
+      </div>
     </div>
       <div className="card">
         <h3 className="mb-md">系統日誌</h3>
         <p className="text-sm text-secondary">暫無最新日誌</p>
-      </div>
-
-      <div className="card mt-lg">
-        <h3 className="mb-md">邀請其他教師</h3>
-        <p className="text-sm text-secondary mb-md">輸入電子郵件以發送平台加入邀請連結。</p>
-        <div className="flex gap-sm">
-          <input 
-            type="email" 
-            className="form-input" 
-            placeholder="teacher@nchu.edu.tw"
-            id="invite-email"
-          />
-          <button className="btn btn-primary" onClick={async () => {
-            const email = (document.getElementById('invite-email') as HTMLInputElement).value;
-            if (!email) return;
-            try {
-              await teachersApi.invite(email);
-              alert('邀請已送出 (請查看後端 Log 模擬發信)');
-            } catch { alert('邀請失敗'); }
-          }}>發送邀請</button>
-        </div>
       </div>
     </div>
   );
@@ -106,13 +116,16 @@ const TeacherDashboard: React.FC = () => {
     );
   }
 
+  const role = getTeacherRole();
   const menuItems = [
-    { path: '/teacher/overview', label: '儀表板', icon: <LayoutDashboard size={18} /> },
-    { path: '/teacher/classes', label: '班級與學生', icon: <Users size={18} /> },
-    { path: '/teacher/exams', label: '考卷管理', icon: <ClipboardList size={18} /> },
-    { path: '/teacher/results', label: '成績後台', icon: <Trophy size={18} /> },
-    { path: '/teacher/cheat', label: '防弊監控', icon: <ShieldAlert size={18} /> },
-  ];
+    { path: '/teacher/overview', label: '儀表板', icon: <LayoutDashboard size={18} />, show: true },
+    { path: '/teacher/classes', label: '班級與學生', icon: <Users size={18} />, show: role !== 'viewer' },
+    { path: '/teacher/teachers', label: '教師帳號', icon: <UserCog size={18} />, show: role === 'admin' },
+    { path: '/teacher/exams', label: '考卷管理', icon: <ClipboardList size={18} />, show: role !== 'viewer' },
+    { path: '/teacher/results', label: '成績後台', icon: <Trophy size={18} />, show: true },
+    { path: '/teacher/cheat', label: '防弊監控', icon: <ShieldAlert size={18} />, show: true },
+    { path: '/teacher/system', label: '系統管理', icon: <Settings size={18} />, show: role === 'admin' },
+  ].filter((i) => i.show);
 
   return (
     <Layout>
@@ -147,11 +160,13 @@ const TeacherDashboard: React.FC = () => {
             <Route path="dashboard" element={<DashboardOverview />} />
             <Route path="classes" element={<ClassManagement />} />
             <Route path="students" element={<ClassManagement />} />
+            <Route path="teachers" element={<TeacherAccounts />} />
             <Route path="exams" element={<ExamManagement />} />
             <Route path="questions" element={<QuestionManagement />} />
             <Route path="results" element={<ResultsView />} />
             <Route path="result/:studentId" element={<StudentResultDetail />} />
             <Route path="cheat" element={<AntiCheatMonitor />} />
+            <Route path="system" element={<SystemManagement />} />
             <Route path="/" element={<DashboardOverview />} />
           </Routes>
         </div>

@@ -18,6 +18,8 @@ export declare class CheatController {
             examId: number;
             startedAt: Date | null;
             submittedAt: Date | null;
+            overallFeedbackEn: string | null;
+            overallFeedbackZh: string | null;
         };
     } & {
         createdAt: Date;
@@ -44,6 +46,8 @@ export declare class CheatController {
                 examId: number;
                 startedAt: Date | null;
                 submittedAt: Date | null;
+                overallFeedbackEn: string | null;
+                overallFeedbackZh: string | null;
             };
         } & {
             createdAt: Date;

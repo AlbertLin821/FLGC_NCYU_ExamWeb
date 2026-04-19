@@ -37,6 +37,7 @@ let CheatController = class CheatController {
 exports.CheatController = CheatController;
 __decorate([
     (0, common_1.Get)('alerts'),
+    (0, guards_1.Roles)('teacher', 'admin', 'viewer'),
     __param(0, (0, common_1.Query)('page')),
     __param(1, (0, common_1.Query)('limit')),
     __metadata("design:type", Function),
@@ -45,6 +46,7 @@ __decorate([
 ], CheatController.prototype, "getPendingAlerts", null);
 __decorate([
     (0, common_1.Get)('session/:sessionId'),
+    (0, guards_1.Roles)('teacher', 'admin', 'viewer'),
     __param(0, (0, common_1.Param)('sessionId', common_1.ParseIntPipe)),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Number]),
@@ -52,6 +54,7 @@ __decorate([
 ], CheatController.prototype, "getSessionLogs", null);
 __decorate([
     (0, common_1.Post)(':logId/unlock'),
+    (0, guards_1.Roles)('teacher', 'admin', 'viewer'),
     __param(0, (0, common_1.Param)('logId', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
@@ -60,6 +63,7 @@ __decorate([
 ], CheatController.prototype, "unlock", null);
 __decorate([
     (0, common_1.Post)(':logId/terminate'),
+    (0, guards_1.Roles)('teacher', 'admin', 'viewer'),
     __param(0, (0, common_1.Param)('logId', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
@@ -69,7 +73,6 @@ __decorate([
 exports.CheatController = CheatController = __decorate([
     (0, common_1.Controller)('api/cheat'),
     (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
-    (0, guards_1.Roles)('teacher', 'admin'),
     __metadata("design:paramtypes", [cheat_service_1.CheatService])
 ], CheatController);
 //# sourceMappingURL=cheat.controller.js.map

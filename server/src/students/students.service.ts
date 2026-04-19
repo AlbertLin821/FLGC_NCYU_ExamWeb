@@ -5,13 +5,49 @@ import { PrismaService } from '../prisma/prisma.service';
 export class StudentsService {
   constructor(private prisma: PrismaService) {}
 
+  /** 管理員：跨班學生列表（分頁） */
+  async findAllPaginated(page?: number, limit?: number) {
+    const p = page || 1;
+    const l = limit || 20;
+    const skip = (p - 1) * l;
+    const where = {};
+    const orderBy: any = { id: 'asc' };
+    const [items, total] = await Promise.all([
+      this.prisma.student.findMany({
+        where,
+        include: {
+          class: { select: { id: true, name: true } },
+        },
+        orderBy,
+        skip,
+        take: l,
+      }),
+      this.prisma.student.count({ where }),
+    ]);
+    return {
+      items,
+      total,
+      page: p,
+      limit: l,
+      totalPages: Math.ceil(total / l),
+    };
+  }
+
   async findByClass(classId: number, page?: number, limit?: number) {
     const where = { classId };
     const include = {
       sessions: {
         orderBy: { id: 'desc' as const },
-        take: 1,
-        include: { exam: true },
+        include: {
+          exam: true,
+          answers: {
+            include: {
+              question: {
+                select: { id: true, orderNum: true, maxPoints: true },
+              },
+            },
+          },
+        },
       },
     };
     const orderBy: any = { studentId: 'asc' };

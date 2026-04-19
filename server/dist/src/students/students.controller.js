@@ -72,8 +72,20 @@ let StudentsController = class StudentsController {
     constructor(studentsService) {
         this.studentsService = studentsService;
     }
-    findByClass(classId, page, limit) {
-        return this.studentsService.findByClass(classId, page ? parseInt(page) : undefined, limit ? parseInt(limit) : undefined);
+    list(req, classIdStr, page, limit) {
+        const p = page ? parseInt(page, 10) : undefined;
+        const l = limit ? parseInt(limit, 10) : undefined;
+        if (classIdStr === undefined || classIdStr === '') {
+            if (req.user.role !== 'admin') {
+                throw new common_1.ForbiddenException('僅管理員可查詢全校學生');
+            }
+            return this.studentsService.findAllPaginated(p, l);
+        }
+        const classId = parseInt(classIdStr, 10);
+        if (Number.isNaN(classId)) {
+            throw new common_1.BadRequestException('classId 無效');
+        }
+        return this.studentsService.findByClass(classId, p, l);
     }
     getStudentExams(id) {
         return this.studentsService.getStudentExams(id);
@@ -98,14 +110,15 @@ exports.StudentsController = StudentsController;
 __decorate([
     (0, common_1.Get)(),
     (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
-    (0, guards_1.Roles)('teacher', 'admin'),
-    __param(0, (0, common_1.Query)('classId', common_1.ParseIntPipe)),
-    __param(1, (0, common_1.Query)('page')),
-    __param(2, (0, common_1.Query)('limit')),
+    (0, guards_1.Roles)('teacher', 'admin', 'viewer'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Query)('classId')),
+    __param(2, (0, common_1.Query)('page')),
+    __param(3, (0, common_1.Query)('limit')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, String, String]),
+    __metadata("design:paramtypes", [Object, Object, String, String]),
     __metadata("design:returntype", void 0)
-], StudentsController.prototype, "findByClass", null);
+], StudentsController.prototype, "list", null);
 __decorate([
     (0, common_1.Get)(':id/exams'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
@@ -116,7 +129,7 @@ __decorate([
 __decorate([
     (0, common_1.Get)(':id'),
     (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
-    (0, guards_1.Roles)('teacher', 'admin'),
+    (0, guards_1.Roles)('teacher', 'admin', 'viewer'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Number]),

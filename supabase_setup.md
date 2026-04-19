@@ -1,10 +1,10 @@
-# NCHU Online English Exam Platform — Supabase 雲端資料庫設定
+# NCYU Online English Exam Platform — Supabase 雲端資料庫設定
 
 既然您決定直接使用 Supabase 而不建置本地 Docker 資料庫，請按照以下步驟進行設定：
 
 ## 1. Supabase 控制台操作
 1. **建立專案**: 登入 [Supabase](https://supabase.com/)，點擊 **New Project**。
-   - Name: `nchu-exam`
+   - Name: `ncyu-exam`
    - Database Password: `[請設定一個強密碼並記錄下來]`
    - Region: `Singapore` (對台灣通訊延遲最低)
 2. **獲取連線字串**:
@@ -65,14 +65,14 @@ npx prisma db seed
 npx prisma db seed
 ```
 這會在 Supabase 中建立：
-- 測試老師：`admin@nchu.edu.tw` / `admin123`
+- 示範帳號見 `docs/startup_guide.md`（例如 `system@ncyu.edu.tw` / `SystemDemo123!`）
 - 預設班級與學員資訊
 
 ---
 
 ## 7. 錯誤排查：`Tenant or user not found`（與老師帳號無關）
 
-若後端日誌出現 `DriverAdapterError: Tenant or user not found` 或 PostgreSQL `FATAL: Tenant or user not found`，這是 **Supabase 連線集區（Supavisor）拒絕連線**，不是資料庫裡找不到 `admin@nchu.edu.tw` 這筆老師資料。
+若後端日誌出現 `DriverAdapterError: Tenant or user not found` 或 PostgreSQL `FATAL: Tenant or user not found`，這是 **Supabase 連線集區（Supavisor）拒絕連線**，不是資料庫裡找不到種子建立的教師帳號。
 
 請依序檢查：
 
@@ -87,7 +87,7 @@ npx prisma db seed
    - `DIRECT_URL` / **Session 模式（常為 5432）** 用於遷移與 `prisma db seed`，請勿與 Transaction URL 混用同一條來跑 Prisma Migrate（見 [Prisma × Supabase 說明](https://supabase.com/docs/guides/database/prisma)）。
 
 4. **確認已有種子資料**  
-   連線成功後，若仍無法以 `admin@nchu.edu.tw` 登入，請在 `server` 目錄執行：
+   連線成功後，若仍無法以種子帳號登入，請在 `server` 目錄執行：
    ```bash
    npx prisma db seed
    ```
