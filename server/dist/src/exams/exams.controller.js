@@ -12,14 +12,15 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ExamsController = exports.SubmitAnswerDto = exports.CreateExamDto = void 0;
+exports.ExamsController = exports.SubmitAnswerDto = exports.UpdateExamDto = exports.CreateExamDto = void 0;
 const common_1 = require("@nestjs/common");
 const exams_service_1 = require("./exams.service");
 const guards_1 = require("../auth/guards");
 const class_validator_1 = require("class-validator");
+const class_transformer_1 = require("class-transformer");
 class CreateExamDto {
     title;
-    classId;
+    classIds;
     difficulty;
     timeLimit;
     startTime;
@@ -32,9 +33,12 @@ __decorate([
     __metadata("design:type", String)
 ], CreateExamDto.prototype, "title", void 0);
 __decorate([
-    (0, class_validator_1.IsInt)(),
-    __metadata("design:type", Number)
-], CreateExamDto.prototype, "classId", void 0);
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ArrayMinSize)(1),
+    (0, class_validator_1.IsInt)({ each: true }),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Array)
+], CreateExamDto.prototype, "classIds", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
@@ -52,6 +56,54 @@ __decorate([
     (0, class_validator_1.IsDateString)(),
     __metadata("design:type", String)
 ], CreateExamDto.prototype, "endTime", void 0);
+class UpdateExamDto {
+    title;
+    classIds;
+    difficulty;
+    timeLimit;
+    startTime;
+    endTime;
+    status;
+}
+exports.UpdateExamDto = UpdateExamDto;
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateExamDto.prototype, "title", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ArrayMinSize)(1),
+    (0, class_validator_1.IsInt)({ each: true }),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Array)
+], UpdateExamDto.prototype, "classIds", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateExamDto.prototype, "difficulty", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsInt)(),
+    __metadata("design:type", Number)
+], UpdateExamDto.prototype, "timeLimit", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsDateString)(),
+    __metadata("design:type", String)
+], UpdateExamDto.prototype, "startTime", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsDateString)(),
+    __metadata("design:type", String)
+], UpdateExamDto.prototype, "endTime", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateExamDto.prototype, "status", void 0);
 class SubmitAnswerDto {
     questionId;
     content;
@@ -135,7 +187,7 @@ __decorate([
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, Object]),
+    __metadata("design:paramtypes", [Number, UpdateExamDto]),
     __metadata("design:returntype", void 0)
 ], ExamsController.prototype, "update", null);
 __decorate([

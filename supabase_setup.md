@@ -69,4 +69,29 @@ npx prisma db seed
 - 預設班級與學員資訊
 
 ---
+
+## 7. 錯誤排查：`Tenant or user not found`（與老師帳號無關）
+
+若後端日誌出現 `DriverAdapterError: Tenant or user not found` 或 PostgreSQL `FATAL: Tenant or user not found`，這是 **Supabase 連線集區（Supavisor）拒絕連線**，不是資料庫裡找不到 `admin@nchu.edu.tw` 這筆老師資料。
+
+請依序檢查：
+
+1. **使用者名稱格式（最常見）**  
+   使用 **Connection Pooler** 主機（網址含 `pooler.supabase`）時，使用者必須是 **`postgres.[專案代號]`**，不能只有 `postgres`。請到 Supabase 控制台 **Project Settings → Database → Connection string**，依 **Transaction** / **Session** 模式各複製一次，勿手動改成單純的 `postgres`。
+
+2. **密碼**  
+   須與建立專案時設定的 **Database password** 一致；若曾重設密碼，請更新 `.env` 內兩條 URL 的密碼（本專案禁止由助理代改 `.env`，請您本機自行確認）。
+
+3. **埠與參數**  
+   - 日常執行用的 `DATABASE_URL` 若為 **Transaction 模式（常為 6543）**，請保留官方字串中的 **`pgbouncer=true`**（或同等查詢參數）。  
+   - `DIRECT_URL` / **Session 模式（常為 5432）** 用於遷移與 `prisma db seed`，請勿與 Transaction URL 混用同一條來跑 Prisma Migrate（見 [Prisma × Supabase 說明](https://supabase.com/docs/guides/database/prisma)）。
+
+4. **確認已有種子資料**  
+   連線成功後，若仍無法以 `admin@nchu.edu.tw` 登入，請在 `server` 目錄執行：
+   ```bash
+   npx prisma db seed
+   ```
+
+---
+
 *完成後，您可以啟動您的伺服器 `npm run start:dev`，它就會連到雲端資料庫了！*

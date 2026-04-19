@@ -56,7 +56,7 @@ export class CheatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // Tell the student their exam is paused
     client.emit('exam:paused', {
-      message: '考試已暫停，請等待老師處理',
+      message: '考試已被強制暫停，請等待處理',
       logId: log.id,
     });
 
@@ -79,7 +79,7 @@ export class CheatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // Notify the student
     this.server.emit(`session:${result.sessionId}:resume`, {
-      message: '老師已解除封鎖，考試恢復',
+      message: '已解除封鎖，考試恢復',
     });
 
     return result;
@@ -94,7 +94,7 @@ export class CheatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // Notify the student
     this.server.emit(`session:${result.sessionId}:terminated`, {
-      message: '考試已被老師結束',
+      message: '考試已被結束',
     });
 
     return result;

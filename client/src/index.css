@@ -112,6 +112,19 @@ a:hover {
   padding: var(--space-2xl) 0;
 }
 
+/* 列表／表格在視窗內捲動，避免項目過多時整頁被拉高 */
+.scroll-region-y {
+  overflow-y: auto;
+  max-height: min(72vh, calc(100vh - 10.5rem));
+  padding-right: var(--space-xs);
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.table-container.scroll-region-y {
+  overflow-x: auto;
+}
+
 /* --- Header --- */
 .header {
   background: var(--color-bg);
@@ -455,7 +468,15 @@ textarea.form-input {
 .flex-col { flex-direction: column; }
 .items-center { align-items: center; }
 .justify-center { justify-content: center; }
+.justify-start { justify-content: flex-start; }
 .justify-between { justify-content: space-between; }
+
+/* Lucide 圖示在按鈕／導覽內維持可見寬度 */
+.btn svg,
+a.btn svg {
+  flex-shrink: 0;
+  display: block;
+}
 .gap-sm { gap: var(--space-sm); }
 .gap-md { gap: var(--space-md); }
 .gap-lg { gap: var(--space-lg); }

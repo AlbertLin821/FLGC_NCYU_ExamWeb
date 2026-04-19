@@ -38,11 +38,13 @@ const client_1 = require("@prisma/client");
 const adapter_pg_1 = require("@prisma/adapter-pg");
 const pg = __importStar(require("pg"));
 const bcrypt = __importStar(require("bcryptjs"));
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new pg.Pool({
+    connectionString: process.env.DIRECT_URL || process.env.DB_URL || process.env.DATABASE_URL,
+});
 const adapter = new adapter_pg_1.PrismaPg(pool);
 const prisma = new client_1.PrismaClient({ adapter });
 async function main() {
-    console.log('🚮 Cleaning up database...');
+    console.log('Cleaning up database...');
     await prisma.cheatLog.deleteMany();
     await prisma.answer.deleteMany();
     await prisma.examSession.deleteMany();
@@ -57,7 +59,7 @@ async function main() {
             resetPasswordExpires: null,
         }
     });
-    console.log('🌱 Seeding test data...');
+    console.log('Seeding test data...');
     const hashedPassword = await bcrypt.hash('admin123', 10);
     const admin = await prisma.teacher.upsert({
         where: { email: 'admin@nchu.edu.tw' },
@@ -93,8 +95,10 @@ async function main() {
             startTime: new Date(Date.now() - 60000),
             endTime: new Date(Date.now() + 3600000),
             status: 'published',
-            classId: testClass.id,
             createdBy: admin.id,
+            examClasses: {
+                create: { classId: testClass.id },
+            },
             questions: {
                 create: [
                     {

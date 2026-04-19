@@ -38,11 +38,13 @@ const client_1 = require("@prisma/client");
 const adapter_pg_1 = require("@prisma/adapter-pg");
 const pg = __importStar(require("pg"));
 const bcrypt = __importStar(require("bcryptjs"));
-const pool = new pg.Pool({ connectionString: process.env.DB_URL || process.env.DATABASE_URL });
+const pool = new pg.Pool({
+    connectionString: process.env.DIRECT_URL || process.env.DB_URL || process.env.DATABASE_URL,
+});
 const adapter = new adapter_pg_1.PrismaPg(pool);
 const prisma = new client_1.PrismaClient({ adapter });
 async function main() {
-    console.log('🌱 Seeding database...');
+    console.log('Seeding database...');
     const hashedPassword = await bcrypt.hash('admin123', 10);
     const teacher = await prisma.teacher.upsert({
         where: { email: 'admin@nchu.edu.tw' },
@@ -98,8 +100,10 @@ async function main() {
             startTime: new Date(),
             endTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
             status: 'published',
-            classId: classA.id,
             createdBy: teacher.id,
+            examClasses: {
+                create: { classId: classA.id },
+            },
             questions: {
                 createMany: {
                     data: [
@@ -111,7 +115,7 @@ async function main() {
             }
         }
     });
-    console.log('✅ Seeding complete!');
+    console.log('Seeding complete.');
     console.log(`- Teacher login: admin@nchu.edu.tw / admin123`);
     console.log(`- Default Admin: albertlin94821@gmail.com / Tt12345678`);
     console.log(`- Student IDs: 411200001 (王小明), 411200002 (李小華)`);

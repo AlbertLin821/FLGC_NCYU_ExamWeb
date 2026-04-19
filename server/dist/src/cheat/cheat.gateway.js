@@ -40,7 +40,7 @@ let CheatGateway = CheatGateway_1 = class CheatGateway {
             timestamp: log.createdAt,
         });
         client.emit('exam:paused', {
-            message: '考試已暫停，請等待老師處理',
+            message: '考試已被強制暫停，請等待處理',
             logId: log.id,
         });
         return { status: 'reported', logId: log.id };
@@ -52,14 +52,14 @@ let CheatGateway = CheatGateway_1 = class CheatGateway {
     async handleUnlock(data) {
         const result = await this.cheatService.unlockSession(data.logId, data.teacherId);
         this.server.emit(`session:${result.sessionId}:resume`, {
-            message: '老師已解除封鎖，考試恢復',
+            message: '已解除封鎖，考試恢復',
         });
         return result;
     }
     async handleTerminate(data) {
         const result = await this.cheatService.terminateSession(data.logId, data.teacherId);
         this.server.emit(`session:${result.sessionId}:terminated`, {
-            message: '考試已被老師結束',
+            message: '考試已被結束',
         });
         return result;
     }

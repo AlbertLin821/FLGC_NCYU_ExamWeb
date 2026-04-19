@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { examsApi, classesApi, scoringApi } from '../../api';
 import * as XLSX from 'xlsx';
+import { sessionScorePercent } from '../../utils/sessionScore';
 
 const ResultsView: React.FC = () => {
   const navigate = useNavigate();
@@ -27,11 +28,7 @@ const ResultsView: React.FC = () => {
     }
   }, [selectedClassId]);
 
-  const calculateTotal = (answers: any[]) => {
-    if (!answers || answers.length === 0) return 0;
-    const sum = answers.reduce((acc, cur) => acc + (cur.aiScore || 0), 0);
-    return Math.round(sum / answers.length);
-  };
+  const calculateTotal = (answers: any[]) => sessionScorePercent(answers);
 
   const handleTriggerScoring = async (sessionId: number) => {
     try {
@@ -52,7 +49,7 @@ const ResultsView: React.FC = () => {
       '學號': r.student.studentId,
       '姓名': r.student.name,
       '考試項目': r.exam.title,
-      '分數': calculateTotal(r.answers)
+      '加權得分': calculateTotal(r.answers),
     }));
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
@@ -90,7 +87,7 @@ const ResultsView: React.FC = () => {
                 <th>姓名</th>
                 <th>考試項目</th>
                 <th>狀態</th>
-                <th>平均分數</th>
+                <th>加權得分</th>
                 <th>操作</th>
               </tr>
             </thead>
@@ -110,7 +107,12 @@ const ResultsView: React.FC = () => {
                     <div className="flex gap-sm">
                       <button
                         className="btn btn-xs btn-secondary"
-                        onClick={() => navigate(`/teacher/result/${r.student.id}`)}
+                        disabled={typeof r.student?.id !== 'number'}
+                        onClick={() => {
+                          if (typeof r.student?.id === 'number') {
+                            navigate(`/teacher/result/${r.student.id}`);
+                          }
+                        }}
                       >查看細節</button>
                       {r.status === 'submitted' && (
                         <button

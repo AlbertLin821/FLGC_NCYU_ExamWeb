@@ -27,7 +27,7 @@ export declare class StudentsController {
                 startTime: Date;
                 endTime: Date;
                 status: string;
-                classId: number;
+                deletedAt: Date | null;
             };
         } & {
             id: number;
@@ -58,7 +58,7 @@ export declare class StudentsController {
                     startTime: Date;
                     endTime: Date;
                     status: string;
-                    classId: number;
+                    deletedAt: Date | null;
                 };
             } & {
                 id: number;
@@ -84,7 +84,20 @@ export declare class StudentsController {
     }>;
     findOne(id: number): Promise<({
         sessions: ({
-            answers: {
+            answers: ({
+                question: {
+                    id: number;
+                    type: string;
+                    content: string | null;
+                    options: import("@prisma/client/runtime/client").JsonValue | null;
+                    answer: string | null;
+                    word1: string | null;
+                    word2: string | null;
+                    orderNum: number;
+                    maxPoints: number;
+                    examId: number;
+                };
+            } & {
                 createdAt: Date;
                 id: number;
                 content: string | null;
@@ -93,7 +106,7 @@ export declare class StudentsController {
                 questionId: number;
                 aiFeedback: string | null;
                 aiModel: string | null;
-            }[];
+            })[];
             exam: {
                 createdAt: Date;
                 id: number;
@@ -104,7 +117,7 @@ export declare class StudentsController {
                 startTime: Date;
                 endTime: Date;
                 status: string;
-                classId: number;
+                deletedAt: Date | null;
             };
         } & {
             id: number;

@@ -4,12 +4,15 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import * as pg from 'pg';
 import * as bcrypt from 'bcryptjs';
 
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new pg.Pool({
+  connectionString:
+    process.env.DIRECT_URL || process.env.DB_URL || process.env.DATABASE_URL,
+});
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  console.log('🚮 Cleaning up database...');
+  console.log('Cleaning up database...');
 
   // Delete in order to avoid FK constraints
   await prisma.cheatLog.deleteMany();
@@ -29,7 +32,7 @@ async function main() {
     }
   });
 
-  console.log('🌱 Seeding test data...');
+  console.log('Seeding test data...');
 
   // 1. Ensure Admin Teacher exists
   const hashedPassword = await bcrypt.hash('admin123', 10);
@@ -71,8 +74,10 @@ async function main() {
       startTime: new Date(Date.now() - 60000), // Started 1 minute ago
       endTime: new Date(Date.now() + 3600000), // Ends in 1 hour
       status: 'published',
-      classId: testClass.id,
       createdBy: admin.id,
+      examClasses: {
+        create: { classId: testClass.id },
+      },
       questions: {
         create: [
           { 

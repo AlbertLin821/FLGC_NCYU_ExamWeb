@@ -24,9 +24,12 @@ let ExamsService = class ExamsService {
         this.scoringService = scoringService;
     }
     async findAll(classId, page, limit) {
-        const where = classId ? { classId } : undefined;
+        const where = {
+            deletedAt: null,
+            ...(classId ? { examClasses: { some: { classId } } } : {}),
+        };
         const include = {
-            class: { select: { id: true, name: true } },
+            examClasses: { include: { class: { select: { id: true, name: true } } } },
             _count: { select: { questions: true, sessions: true } },
         };
         const orderBy = { createdAt: 'desc' };
@@ -49,47 +52,100 @@ let ExamsService = class ExamsService {
         return { items, total, page: p, limit: l, totalPages: Math.ceil(total / l) };
     }
     async findById(id) {
-        return this.prisma.exam.findUnique({
-            where: { id },
+        return this.prisma.exam.findFirst({
+            where: { id, deletedAt: null },
             include: {
                 questions: { orderBy: { orderNum: 'asc' } },
-                class: { select: { id: true, name: true } },
+                examClasses: { include: { class: { select: { id: true, name: true } } } },
             },
         });
     }
     async create(data) {
-        return this.prisma.exam.create({
-            data: {
-                title: data.title,
-                classId: data.classId,
-                difficulty: data.difficulty,
-                timeLimit: data.timeLimit,
-                startTime: new Date(data.startTime),
-                endTime: new Date(data.endTime),
-                createdBy: data.createdBy,
-            },
+        const uniqueClassIds = [...new Set(data.classIds)].filter((id) => Number.isInteger(id) && id > 0);
+        if (uniqueClassIds.length === 0) {
+            throw new common_1.BadRequestException('至少選擇一個適用班級');
+        }
+        return this.prisma.$transaction(async (tx) => {
+            const exam = await tx.exam.create({
+                data: {
+                    title: data.title,
+                    difficulty: data.difficulty,
+                    timeLimit: data.timeLimit,
+                    startTime: new Date(data.startTime),
+                    endTime: new Date(data.endTime),
+                    createdBy: data.createdBy,
+                    examClasses: {
+                        create: uniqueClassIds.map((classId) => ({ classId })),
+                    },
+                },
+                include: {
+                    examClasses: { include: { class: { select: { id: true, name: true } } } },
+                },
+            });
+            return exam;
         });
     }
     async update(id, data) {
-        const updateData = { ...data };
+        const alive = await this.prisma.exam.findFirst({ where: { id, deletedAt: null } });
+        if (!alive)
+            throw new common_1.NotFoundException('考卷不存在或已移除');
+        const { classIds, ...rest } = data;
+        const updateData = { ...rest };
         if (data.startTime)
             updateData.startTime = new Date(data.startTime);
         if (data.endTime)
             updateData.endTime = new Date(data.endTime);
+        if (classIds !== undefined) {
+            const uniqueClassIds = [...new Set(classIds)].filter((cid) => Number.isInteger(cid) && cid > 0);
+            if (uniqueClassIds.length === 0) {
+                throw new common_1.BadRequestException('至少選擇一個適用班級');
+            }
+            return this.prisma.$transaction(async (tx) => {
+                await tx.examClass.deleteMany({ where: { examId: id } });
+                await tx.examClass.createMany({
+                    data: uniqueClassIds.map((classId) => ({ examId: id, classId })),
+                });
+                const hasExamFieldUpdates = Object.keys(updateData).length > 0;
+                if (hasExamFieldUpdates) {
+                    return tx.exam.update({
+                        where: { id },
+                        data: updateData,
+                        include: {
+                            examClasses: { include: { class: { select: { id: true, name: true } } } },
+                        },
+                    });
+                }
+                return tx.exam.findUniqueOrThrow({
+                    where: { id },
+                    include: {
+                        examClasses: { include: { class: { select: { id: true, name: true } } } },
+                    },
+                });
+            });
+        }
         return this.prisma.exam.update({ where: { id }, data: updateData });
     }
     async delete(id) {
-        return this.prisma.exam.delete({ where: { id } });
+        const exam = await this.prisma.exam.findFirst({ where: { id, deletedAt: null } });
+        if (!exam)
+            throw new common_1.NotFoundException('考卷不存在或已移除');
+        return this.prisma.exam.update({
+            where: { id },
+            data: { deletedAt: new Date() },
+        });
     }
     async publish(id) {
+        const exam = await this.prisma.exam.findFirst({ where: { id, deletedAt: null } });
+        if (!exam)
+            throw new common_1.NotFoundException('考卷不存在或已移除');
         return this.prisma.exam.update({
             where: { id },
             data: { status: 'published' },
         });
     }
     async startSession(studentId, examId) {
-        const exam = await this.prisma.exam.findUnique({
-            where: { id: examId },
+        const exam = await this.prisma.exam.findFirst({
+            where: { id: examId, deletedAt: null },
             include: { questions: { orderBy: { orderNum: 'asc' } } },
         });
         if (!exam)
@@ -140,14 +196,14 @@ let ExamsService = class ExamsService {
     }
     async getResults(classId, examId, page, limit) {
         const where = {
-            exam: { classId },
+            exam: { examClasses: { some: { classId } } },
             ...(examId ? { examId } : {}),
         };
         const include = {
-            student: { select: { studentId: true, name: true } },
+            student: { select: { id: true, studentId: true, name: true } },
             exam: { select: { title: true } },
             answers: {
-                include: { question: { select: { word1: true, word2: true } } },
+                include: { question: { select: { word1: true, word2: true, maxPoints: true } } },
             },
         };
         const orderBy = { submittedAt: 'desc' };

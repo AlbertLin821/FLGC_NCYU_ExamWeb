@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { studentsApi } from '../../api';
 import Layout from '../../components/Layout';
+import { earnedPointsOnQuestion, sessionScorePercent } from '../../utils/sessionScore';
 
 const StudentResultDetail: React.FC = () => {
   const { studentId } = useParams<{ studentId: string }>();
@@ -10,18 +11,25 @@ const StudentResultDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (studentId) {
-      studentsApi.getById(Number(studentId)).then(res => {
+    const id = studentId ? Number(studentId) : NaN;
+    if (!studentId || !Number.isFinite(id) || id <= 0) {
+      alert('無效的學生編號');
+      navigate('/teacher/results');
+      return;
+    }
+    studentsApi
+      .getById(id)
+      .then((res) => {
         setStudent(res.data);
         setLoading(false);
-      }).catch(() => {
+      })
+      .catch(() => {
         alert('找不到學生資料');
         navigate('/teacher/results');
       });
-    }
   }, [studentId, navigate]);
 
-  if (loading) return <div className="spinner"></div>;
+  if (loading || !student) return <div className="spinner"></div>;
 
   return (
     <Layout>
@@ -42,7 +50,7 @@ const StudentResultDetail: React.FC = () => {
               <div key={session.id} className="card">
                 <div className="flex justify-between items-start mb-lg">
                   <div>
-                    <h4 className="mb-xs">{session.exam.title}</h4>
+                    <h4 className="mb-xs">{session.exam?.title ?? '（已下架考卷）'}</h4>
                     <p className="text-sm text-secondary">
                       提交時間：{session.submittedAt ? new Date(session.submittedAt).toLocaleString() : '未提交'}
                     </p>
@@ -53,7 +61,7 @@ const StudentResultDetail: React.FC = () => {
                     </span>
                     {session.status === 'graded' && (
                       <div className="mt-xs text-2xl font-bold text-primary">
-                        平均：{Math.round(session.answers.reduce((acc: number, cur: any) => acc + Number(cur.aiScore || 0), 0) / session.answers.length)} 分
+                        加權得分：{sessionScorePercent(session.answers)} 分
                       </div>
                     )}
                   </div>
@@ -64,8 +72,12 @@ const StudentResultDetail: React.FC = () => {
                     <div key={ans.id} className="p-md bg-alt rounded-md" style={{ border: '1px solid #e2e8f0' }}>
                       <div className="flex justify-between mb-sm">
                         <span className="font-bold">題目 {idx + 1}</span>
-                        {ans.aiScore !== null && (
-                          <span className="badge badge-primary">{Number(ans.aiScore)} 分</span>
+                        {ans.aiScore !== null && ans.aiScore !== undefined && (
+                          <span className="badge badge-primary">
+                            得分 {earnedPointsOnQuestion(ans.aiScore, ans.question?.maxPoints)} / 配分{' '}
+                            {Math.max(1, Number(ans.question?.maxPoints) || 100)}
+                            （{Number(ans.aiScore)}%）
+                          </span>
                         )}
                       </div>
                       <p className="mb-md" style={{ fontStyle: 'italic', fontSize: '1.1rem' }}>

@@ -82,7 +82,7 @@ let ClassesService = class ClassesService {
     async getClassStats(classId) {
         const aggregate = await this.prisma.answer.aggregate({
             where: {
-                session: { exam: { classId } },
+                session: { exam: { examClasses: { some: { classId } } } },
                 aiScore: { not: null },
             },
             _avg: { aiScore: true },

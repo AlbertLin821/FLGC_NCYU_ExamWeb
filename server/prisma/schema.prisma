@@ -40,7 +40,7 @@ model Class {
   creator     Teacher          @relation("ClassCreator", fields: [createdBy], references: [id])
   teachers    TeacherClass[]
   students    Student[]
-  exams       Exam[]
+  examClasses ExamClass[]
 
   @@index([createdBy])
   @@map("classes")
@@ -77,11 +77,23 @@ model Student {
   @@map("students")
 }
 
+// ============ 考卷 ↔ 班級（多對多） ============
+model ExamClass {
+  examId  Int @map("exam_id")
+  classId Int @map("class_id")
+
+  exam  Exam  @relation(fields: [examId], references: [id], onDelete: Cascade)
+  class Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@id([examId, classId])
+  @@index([classId])
+  @@map("exam_classes")
+}
+
 // ============ 考卷 ============
 model Exam {
   id         Int       @id @default(autoincrement())
   title      String
-  classId    Int       @map("class_id")
   difficulty String?   // 'easy' | 'medium' | 'hard'
   timeLimit  Int       @map("time_limit") // 分鐘
   startTime  DateTime  @map("start_time")
@@ -89,13 +101,13 @@ model Exam {
   status     String    @default("draft") // 'draft' | 'published' | 'closed'
   createdBy  Int       @map("created_by")
   createdAt  DateTime  @default(now()) @map("created_at")
+  deletedAt  DateTime? @map("deleted_at")
 
-  class      Class       @relation(fields: [classId], references: [id], onDelete: Cascade)
-  creator    Teacher     @relation(fields: [createdBy], references: [id])
-  questions  Question[]
-  sessions   ExamSession[]
+  examClasses ExamClass[]
+  creator     Teacher     @relation(fields: [createdBy], references: [id])
+  questions   Question[]
+  sessions    ExamSession[]
 
-  @@index([classId])
   @@index([status])
   @@index([startTime, endTime])
   @@index([createdBy])
@@ -113,7 +125,8 @@ model Question {
   word1    String?  // Existing field for sentence building
   word2    String?  // Existing field for sentence building
   orderNum Int      @map("order_num")
-  
+  maxPoints Int     @default(100) @map("max_points")
+
   exam     Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
   answers  Answer[]
 

@@ -4,14 +4,17 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import * as pg from 'pg';
 import * as bcrypt from 'bcryptjs';
 
-// 在 Prisma 7 中，如果使用了 prisma.config.ts，Client 會根據該配置生成。
-// 這裡我們比照 PrismaService 使用 adapter 以確保連線穩定
-const pool = new pg.Pool({ connectionString: process.env.DB_URL || process.env.DATABASE_URL });
+// 與 prisma.config.ts 的 datasource 順序一致；遷移／seed 建議使用 Session 端點（DIRECT_URL），
+// 避免僅 DATABASE_URL（Transaction pooler）設定錯誤時導致 seed 失敗。
+const pool = new pg.Pool({
+  connectionString:
+    process.env.DIRECT_URL || process.env.DB_URL || process.env.DATABASE_URL,
+});
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  console.log('🌱 Seeding database...');
+  console.log('Seeding database...');
 
   // 1. Create Teacher
   const hashedPassword = await bcrypt.hash('admin123', 10);
@@ -77,8 +80,10 @@ async function main() {
       startTime: new Date(),
       endTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days later
       status: 'published',
-      classId: classA.id,
       createdBy: teacher.id,
+      examClasses: {
+        create: { classId: classA.id },
+      },
       questions: {
         createMany: {
           data: [
@@ -91,7 +96,7 @@ async function main() {
     }
   });
 
-  console.log('✅ Seeding complete!');
+  console.log('Seeding complete.');
   console.log(`- Teacher login: admin@nchu.edu.tw / admin123`);
   console.log(`- Default Admin: albertlin94821@gmail.com / Tt12345678`);
   console.log(`- Student IDs: 411200001 (王小明), 411200002 (李小華)`);

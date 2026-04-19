@@ -83,6 +83,10 @@ npm run dev
 *   **無法連線至資料庫 (P1001)**:
     *   請檢查 `DATABASE_URL` 是否正確。
     *   如果您在 IPv4 環境下（如大部分家用網路），請務必使用帶有 `pooler.supabase.com` 的連線網址（見 [supabase_setup.md](../supabase_setup.md)）。
+*   **`Tenant or user not found`（Prisma / 登入時一併失敗）**:
+    *   此為 Supabase **連線集區驗證失敗**，不是密碼錯在應用程式帳號。請確認 Pooler 連線字串的使用者為 **`postgres.[專案代號]`**，密碼與控制台 Database 密碼一致，且 Transaction URL（埠 6543）含 **`pgbouncer=true`**。完整說明見 [supabase_setup.md](../supabase_setup.md) 第七節。
+*   **連線正常但預設老師無法登入**:
+    *   請在 `server` 目錄執行 `npx prisma db seed`，再重試 `admin@nchu.edu.tw` / `admin123`。
 *   **Redis 連線失敗**:
     *   請確保您的 Redis 服務已啟動。如果是本地開發，請檢查 Redis 埠號（預設 6379）是否被佔用。
 *   **Prisma 二進位檔錯誤**:

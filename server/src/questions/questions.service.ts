@@ -21,6 +21,7 @@ export class QuestionsService {
     word1?: string;
     word2?: string;
     orderNum: number;
+    maxPoints?: number;
   }) {
     return this.prisma.question.create({ data });
   }
@@ -33,6 +34,7 @@ export class QuestionsService {
     word1?: string;
     word2?: string;
     orderNum?: number;
+    maxPoints?: number;
   }) {
     return this.prisma.question.update({ where: { id }, data });
   }

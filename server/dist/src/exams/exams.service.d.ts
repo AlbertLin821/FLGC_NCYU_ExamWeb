@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScoringService } from '../scoring/scoring.service';
 export declare class ExamsService {
@@ -5,10 +6,15 @@ export declare class ExamsService {
     private scoringService;
     constructor(prisma: PrismaService, scoringService: ScoringService);
     findAll(classId?: number, page?: number, limit?: number): Promise<({
-        class: {
-            name: string;
-            id: number;
-        };
+        examClasses: ({
+            class: {
+                name: string;
+                id: number;
+            };
+        } & {
+            classId: number;
+            examId: number;
+        })[];
         _count: {
             sessions: number;
             questions: number;
@@ -23,13 +29,18 @@ export declare class ExamsService {
         startTime: Date;
         endTime: Date;
         status: string;
-        classId: number;
+        deletedAt: Date | null;
     })[] | {
         items: ({
-            class: {
-                name: string;
-                id: number;
-            };
+            examClasses: ({
+                class: {
+                    name: string;
+                    id: number;
+                };
+            } & {
+                classId: number;
+                examId: number;
+            })[];
             _count: {
                 sessions: number;
                 questions: number;
@@ -44,7 +55,7 @@ export declare class ExamsService {
             startTime: Date;
             endTime: Date;
             status: string;
-            classId: number;
+            deletedAt: Date | null;
         })[];
         total: number;
         page: number;
@@ -52,19 +63,25 @@ export declare class ExamsService {
         totalPages: number;
     }>;
     findById(id: number): Promise<({
-        class: {
-            name: string;
-            id: number;
-        };
+        examClasses: ({
+            class: {
+                name: string;
+                id: number;
+            };
+        } & {
+            classId: number;
+            examId: number;
+        })[];
         questions: {
             id: number;
             type: string;
             content: string | null;
-            options: import("@prisma/client/runtime/client").JsonValue | null;
+            options: Prisma.JsonValue | null;
             answer: string | null;
             word1: string | null;
             word2: string | null;
             orderNum: number;
+            maxPoints: number;
             examId: number;
         }[];
     } & {
@@ -77,17 +94,27 @@ export declare class ExamsService {
         startTime: Date;
         endTime: Date;
         status: string;
-        classId: number;
+        deletedAt: Date | null;
     }) | null>;
     create(data: {
         title: string;
-        classId: number;
+        classIds: number[];
         difficulty?: string;
         timeLimit: number;
         startTime: string;
         endTime: string;
         createdBy: number;
     }): Promise<{
+        examClasses: ({
+            class: {
+                name: string;
+                id: number;
+            };
+        } & {
+            classId: number;
+            examId: number;
+        })[];
+    } & {
         createdAt: Date;
         id: number;
         createdBy: number;
@@ -97,10 +124,11 @@ export declare class ExamsService {
         startTime: Date;
         endTime: Date;
         status: string;
-        classId: number;
+        deletedAt: Date | null;
     }>;
     update(id: number, data: Partial<{
         title: string;
+        classIds: number[];
         difficulty: string;
         timeLimit: number;
         startTime: string;
@@ -116,7 +144,7 @@ export declare class ExamsService {
         startTime: Date;
         endTime: Date;
         status: string;
-        classId: number;
+        deletedAt: Date | null;
     }>;
     delete(id: number): Promise<{
         createdAt: Date;
@@ -128,7 +156,7 @@ export declare class ExamsService {
         startTime: Date;
         endTime: Date;
         status: string;
-        classId: number;
+        deletedAt: Date | null;
     }>;
     publish(id: number): Promise<{
         createdAt: Date;
@@ -140,7 +168,7 @@ export declare class ExamsService {
         startTime: Date;
         endTime: Date;
         status: string;
-        classId: number;
+        deletedAt: Date | null;
     }>;
     startSession(studentId: number, examId: number): Promise<{
         session: {
@@ -155,11 +183,12 @@ export declare class ExamsService {
             id: number;
             type: string;
             content: string | null;
-            options: import("@prisma/client/runtime/client").JsonValue | null;
+            options: Prisma.JsonValue | null;
             answer: string | null;
             word1: string | null;
             word2: string | null;
             orderNum: number;
+            maxPoints: number;
             examId: number;
         }[];
         timeLimit: number;
@@ -168,7 +197,7 @@ export declare class ExamsService {
         createdAt: Date;
         id: number;
         content: string | null;
-        aiScore: import("@prisma/client-runtime-utils").Decimal | null;
+        aiScore: Prisma.Decimal | null;
         sessionId: number;
         questionId: number;
         aiFeedback: string | null;
@@ -187,12 +216,13 @@ export declare class ExamsService {
             question: {
                 word1: string | null;
                 word2: string | null;
+                maxPoints: number;
             };
         } & {
             createdAt: Date;
             id: number;
             content: string | null;
-            aiScore: import("@prisma/client-runtime-utils").Decimal | null;
+            aiScore: Prisma.Decimal | null;
             sessionId: number;
             questionId: number;
             aiFeedback: string | null;
@@ -203,6 +233,7 @@ export declare class ExamsService {
         };
         student: {
             name: string;
+            id: number;
             studentId: string;
         };
     } & {
@@ -218,12 +249,13 @@ export declare class ExamsService {
                 question: {
                     word1: string | null;
                     word2: string | null;
+                    maxPoints: number;
                 };
             } & {
                 createdAt: Date;
                 id: number;
                 content: string | null;
-                aiScore: import("@prisma/client-runtime-utils").Decimal | null;
+                aiScore: Prisma.Decimal | null;
                 sessionId: number;
                 questionId: number;
                 aiFeedback: string | null;
@@ -234,6 +266,7 @@ export declare class ExamsService {
             };
             student: {
                 name: string;
+                id: number;
                 studentId: string;
             };
         } & {

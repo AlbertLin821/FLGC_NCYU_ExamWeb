@@ -32,6 +32,107 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], QuestionItem.prototype, "word2", void 0);
+class CreateQuestionBody {
+    type;
+    content;
+    options;
+    answer;
+    word1;
+    word2;
+    orderNum;
+    maxPoints;
+}
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateQuestionBody.prototype, "type", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateQuestionBody.prototype, "content", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Object)
+], CreateQuestionBody.prototype, "options", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateQuestionBody.prototype, "answer", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateQuestionBody.prototype, "word1", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateQuestionBody.prototype, "word2", void 0);
+__decorate([
+    (0, class_validator_1.IsInt)(),
+    __metadata("design:type", Number)
+], CreateQuestionBody.prototype, "orderNum", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(1),
+    (0, class_validator_1.Max)(1000),
+    __metadata("design:type", Number)
+], CreateQuestionBody.prototype, "maxPoints", void 0);
+class UpdateQuestionBody {
+    type;
+    content;
+    options;
+    answer;
+    word1;
+    word2;
+    orderNum;
+    maxPoints;
+}
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateQuestionBody.prototype, "type", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateQuestionBody.prototype, "content", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Object)
+], UpdateQuestionBody.prototype, "options", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateQuestionBody.prototype, "answer", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateQuestionBody.prototype, "word1", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateQuestionBody.prototype, "word2", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsInt)(),
+    __metadata("design:type", Number)
+], UpdateQuestionBody.prototype, "orderNum", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(1),
+    (0, class_validator_1.Max)(1000),
+    __metadata("design:type", Number)
+], UpdateQuestionBody.prototype, "maxPoints", void 0);
 class BulkCreateDto {
     questions;
 }
@@ -64,11 +165,11 @@ let QuestionsController = class QuestionsController {
     bulkCreate(examId, dto) {
         return this.questionsService.bulkCreate(examId, dto.questions);
     }
-    update(id, dto) {
-        return this.questionsService.update(id, dto);
-    }
     reorder(dto) {
         return this.questionsService.reorder(dto.questions);
+    }
+    update(id, dto) {
+        return this.questionsService.update(id, dto);
     }
     delete(id) {
         return this.questionsService.delete(id);
@@ -87,7 +188,7 @@ __decorate([
     __param(0, (0, common_1.Param)('examId', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, Object]),
+    __metadata("design:paramtypes", [Number, CreateQuestionBody]),
     __metadata("design:returntype", void 0)
 ], QuestionsController.prototype, "create", null);
 __decorate([
@@ -99,20 +200,20 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], QuestionsController.prototype, "bulkCreate", null);
 __decorate([
-    (0, common_1.Put)(':id'),
-    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
-    __param(1, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, Object]),
-    __metadata("design:returntype", void 0)
-], QuestionsController.prototype, "update", null);
-__decorate([
     (0, common_1.Put)('reorder'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [ReorderDto]),
     __metadata("design:returntype", void 0)
 ], QuestionsController.prototype, "reorder", null);
+__decorate([
+    (0, common_1.Put)(':id'),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, UpdateQuestionBody]),
+    __metadata("design:returntype", void 0)
+], QuestionsController.prototype, "update", null);
 __decorate([
     (0, common_1.Delete)(':id'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),

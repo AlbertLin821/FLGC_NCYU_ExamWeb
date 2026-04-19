@@ -48,7 +48,9 @@ let StudentsService = class StudentsService {
     async findById(id) {
         return this.prisma.student.findUnique({
             where: { id },
-            include: { sessions: { include: { exam: true, answers: true } } },
+            include: {
+                sessions: { include: { exam: true, answers: { include: { question: true } } } },
+            },
         });
     }
     async bulkImport(students, classId) {
@@ -86,7 +88,8 @@ let StudentsService = class StudentsService {
         const now = new Date();
         const exams = await this.prisma.exam.findMany({
             where: {
-                classId: student.classId,
+                deletedAt: null,
+                examClasses: { some: { classId: student.classId } },
                 status: 'published',
                 startTime: { lte: now },
                 endTime: { gte: now },

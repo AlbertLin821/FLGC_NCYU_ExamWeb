@@ -11,6 +11,7 @@ export declare class QuestionsService {
         word1: string | null;
         word2: string | null;
         orderNum: number;
+        maxPoints: number;
         examId: number;
     }[]>;
     create(data: {
@@ -22,6 +23,7 @@ export declare class QuestionsService {
         word1?: string;
         word2?: string;
         orderNum: number;
+        maxPoints?: number;
     }): Promise<{
         id: number;
         type: string;
@@ -31,6 +33,7 @@ export declare class QuestionsService {
         word1: string | null;
         word2: string | null;
         orderNum: number;
+        maxPoints: number;
         examId: number;
     }>;
     update(id: number, data: {
@@ -41,6 +44,7 @@ export declare class QuestionsService {
         word1?: string;
         word2?: string;
         orderNum?: number;
+        maxPoints?: number;
     }): Promise<{
         id: number;
         type: string;
@@ -50,6 +54,7 @@ export declare class QuestionsService {
         word1: string | null;
         word2: string | null;
         orderNum: number;
+        maxPoints: number;
         examId: number;
     }>;
     delete(id: number): Promise<{
@@ -61,6 +66,7 @@ export declare class QuestionsService {
         word1: string | null;
         word2: string | null;
         orderNum: number;
+        maxPoints: number;
         examId: number;
     }>;
     bulkCreate(examId: number, questions: {
@@ -80,6 +86,7 @@ export declare class QuestionsService {
         word1: string | null;
         word2: string | null;
         orderNum: number;
+        maxPoints: number;
         examId: number;
     }[]>;
 }

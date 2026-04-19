@@ -24,6 +24,7 @@ let AppService = class AppService {
         const now = new Date();
         const activeExams = await this.prisma.exam.count({
             where: {
+                deletedAt: null,
                 status: 'published',
                 startTime: { lte: now },
                 endTime: { gte: now },

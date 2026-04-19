@@ -1,11 +1,20 @@
 import { ExamsService } from './exams.service';
 export declare class CreateExamDto {
     title: string;
-    classId: number;
+    classIds: number[];
     difficulty?: string;
     timeLimit: number;
     startTime: string;
     endTime: string;
+}
+export declare class UpdateExamDto {
+    title?: string;
+    classIds?: number[];
+    difficulty?: string;
+    timeLimit?: number;
+    startTime?: string;
+    endTime?: string;
+    status?: string;
 }
 export declare class SubmitAnswerDto {
     questionId: number;
@@ -15,10 +24,15 @@ export declare class ExamsController {
     private examsService;
     constructor(examsService: ExamsService);
     findAll(classId?: string, page?: string, limit?: string): Promise<({
-        class: {
-            name: string;
-            id: number;
-        };
+        examClasses: ({
+            class: {
+                name: string;
+                id: number;
+            };
+        } & {
+            classId: number;
+            examId: number;
+        })[];
         _count: {
             sessions: number;
             questions: number;
@@ -33,13 +47,18 @@ export declare class ExamsController {
         startTime: Date;
         endTime: Date;
         status: string;
-        classId: number;
+        deletedAt: Date | null;
     })[] | {
         items: ({
-            class: {
-                name: string;
-                id: number;
-            };
+            examClasses: ({
+                class: {
+                    name: string;
+                    id: number;
+                };
+            } & {
+                classId: number;
+                examId: number;
+            })[];
             _count: {
                 sessions: number;
                 questions: number;
@@ -54,7 +73,7 @@ export declare class ExamsController {
             startTime: Date;
             endTime: Date;
             status: string;
-            classId: number;
+            deletedAt: Date | null;
         })[];
         total: number;
         page: number;
@@ -62,10 +81,15 @@ export declare class ExamsController {
         totalPages: number;
     }>;
     findOne(id: number): Promise<({
-        class: {
-            name: string;
-            id: number;
-        };
+        examClasses: ({
+            class: {
+                name: string;
+                id: number;
+            };
+        } & {
+            classId: number;
+            examId: number;
+        })[];
         questions: {
             id: number;
             type: string;
@@ -75,6 +99,7 @@ export declare class ExamsController {
             word1: string | null;
             word2: string | null;
             orderNum: number;
+            maxPoints: number;
             examId: number;
         }[];
     } & {
@@ -87,9 +112,19 @@ export declare class ExamsController {
         startTime: Date;
         endTime: Date;
         status: string;
-        classId: number;
+        deletedAt: Date | null;
     }) | null>;
     create(dto: CreateExamDto, req: any): Promise<{
+        examClasses: ({
+            class: {
+                name: string;
+                id: number;
+            };
+        } & {
+            classId: number;
+            examId: number;
+        })[];
+    } & {
         createdAt: Date;
         id: number;
         createdBy: number;
@@ -99,9 +134,9 @@ export declare class ExamsController {
         startTime: Date;
         endTime: Date;
         status: string;
-        classId: number;
+        deletedAt: Date | null;
     }>;
-    update(id: number, dto: Partial<CreateExamDto>): Promise<{
+    update(id: number, dto: UpdateExamDto): Promise<{
         createdAt: Date;
         id: number;
         createdBy: number;
@@ -111,7 +146,7 @@ export declare class ExamsController {
         startTime: Date;
         endTime: Date;
         status: string;
-        classId: number;
+        deletedAt: Date | null;
     }>;
     delete(id: number): Promise<{
         createdAt: Date;
@@ -123,7 +158,7 @@ export declare class ExamsController {
         startTime: Date;
         endTime: Date;
         status: string;
-        classId: number;
+        deletedAt: Date | null;
     }>;
     publish(id: number): Promise<{
         createdAt: Date;
@@ -135,7 +170,7 @@ export declare class ExamsController {
         startTime: Date;
         endTime: Date;
         status: string;
-        classId: number;
+        deletedAt: Date | null;
     }>;
     startExam(examId: number, studentId: number): Promise<{
         session: {
@@ -155,6 +190,7 @@ export declare class ExamsController {
             word1: string | null;
             word2: string | null;
             orderNum: number;
+            maxPoints: number;
             examId: number;
         }[];
         timeLimit: number;
@@ -182,6 +218,7 @@ export declare class ExamsController {
             question: {
                 word1: string | null;
                 word2: string | null;
+                maxPoints: number;
             };
         } & {
             createdAt: Date;
@@ -198,6 +235,7 @@ export declare class ExamsController {
         };
         student: {
             name: string;
+            id: number;
             studentId: string;
         };
     } & {
@@ -213,6 +251,7 @@ export declare class ExamsController {
                 question: {
                     word1: string | null;
                     word2: string | null;
+                    maxPoints: number;
                 };
             } & {
                 createdAt: Date;
@@ -229,6 +268,7 @@ export declare class ExamsController {
             };
             student: {
                 name: string;
+                id: number;
                 studentId: string;
             };
         } & {

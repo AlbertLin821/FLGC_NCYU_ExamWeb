@@ -10,12 +10,13 @@ interface Question {
   options?: any;
   answer?: string;
   orderNum: number;
+  maxPoints?: number;
 }
 
 interface Exam {
   id: number;
   title: string;
-  class?: { id: number; name: string };
+  examClasses?: { class: { id: number; name: string } }[];
   _count?: { questions: number };
 }
 
@@ -36,6 +37,7 @@ const QuestionManagement: React.FC = () => {
   const [content, setContent] = useState('');
   const [options, setOptions] = useState(['', '', '', '']); // For MC
   const [answer, setAnswer] = useState('');
+  const [maxPoints, setMaxPoints] = useState(100);
 
   useEffect(() => {
     const examIdParam = searchParams.get('examId');
@@ -74,6 +76,7 @@ const QuestionManagement: React.FC = () => {
     setContent('');
     setOptions(['', '', '', '']);
     setAnswer('');
+    setMaxPoints(100);
     setShowAdd(false);
     setEditingId(null);
   };
@@ -82,7 +85,8 @@ const QuestionManagement: React.FC = () => {
     e.preventDefault();
     if (!selectedExamId) return;
     try {
-      const payload: any = { type, orderNum: questions.length + 1 };
+      const mp = Math.min(1000, Math.max(1, Math.round(Number(maxPoints)) || 100));
+      const payload: any = { type, orderNum: questions.length + 1, maxPoints: mp };
       if (type === 'multiple_choice' || type === 'multiple_selection') {
         payload.content = content;
         payload.options = options.filter(o => o.trim());
@@ -101,7 +105,8 @@ const QuestionManagement: React.FC = () => {
 
   const handleEdit = async (id: number) => {
     try {
-      const payload: any = { type, content, answer };
+      const mp = Math.min(1000, Math.max(1, Math.round(Number(maxPoints)) || 100));
+      const payload: any = { type, content, answer, maxPoints: mp };
       if (type === 'multiple_choice' || type === 'multiple_selection') {
         payload.options = options.filter(o => o.trim());
       }
@@ -128,6 +133,7 @@ const QuestionManagement: React.FC = () => {
     setType(q.type);
     setContent(q.content || '');
     setAnswer(q.answer || '');
+    setMaxPoints(typeof q.maxPoints === 'number' ? q.maxPoints : 100);
     setOptions(q.options && Array.isArray(q.options) ? [...q.options, '', '', ''].slice(0, 4) : ['', '', '', '']);
   };
 
@@ -166,7 +172,10 @@ const QuestionManagement: React.FC = () => {
             <option value="" disabled>— 請選擇考卷 —</option>
             {exams.map((ex) => (
               <option key={ex.id} value={ex.id}>
-                {ex.title}{ex.class ? ` (${ex.class.name})` : ''}
+                {ex.title}
+                {ex.examClasses?.length
+                  ? ` (${ex.examClasses.map((ec) => ec.class?.name).filter(Boolean).join('、')})`
+                  : ''}
               </option>
             ))}
           </select>
@@ -185,6 +194,21 @@ const QuestionManagement: React.FC = () => {
                 <option value="multiple_selection">選擇題 (複選)</option>
                 <option value="essay">問答題 / 自由造句</option>
               </select>
+            </div>
+
+            <div className="form-group mb-md">
+              <label className="form-label">此題配分（滿分）</label>
+              <input
+                type="number"
+                className="form-input"
+                style={{ maxWidth: '120px' }}
+                min={1}
+                max={1000}
+                value={maxPoints}
+                onChange={(e) => setMaxPoints(Number(e.target.value))}
+                required
+              />
+              <p className="text-xs text-secondary mt-xs">AI 與自動評分仍以 0–100% 計算，此處為該題佔整卷比重（加權）。</p>
             </div>
 
             {(type === 'multiple_choice' || type === 'multiple_selection' || type === 'essay') && (
@@ -246,6 +270,7 @@ const QuestionManagement: React.FC = () => {
                   <tr>
                     <th style={{ width: '60px' }}>序號</th>
                     <th style={{ width: '100px' }}>類型</th>
+                    <th style={{ width: '80px' }}>配分</th>
                     <th>內容</th>
                     <th style={{ width: '150px' }}>操作</th>
                   </tr>
@@ -260,13 +285,23 @@ const QuestionManagement: React.FC = () => {
                         </span>
                       </td>
                       {editingId === q.id ? (
-                        <td colSpan={2}>
+                        <td colSpan={3}>
                           <div className="p-sm bg-alt border-radius flex flex-col gap-sm">
                             <select className="form-input text-sm" value={type} onChange={(e) => setType(e.target.value)}>
                               <option value="multiple_choice">單選</option>
                               <option value="multiple_selection">複選</option>
                               <option value="essay">問答</option>
                             </select>
+                            <label className="form-label text-sm">配分（滿分）</label>
+                            <input
+                              type="number"
+                              className="form-input text-sm"
+                              style={{ maxWidth: '120px' }}
+                              min={1}
+                              max={1000}
+                              value={maxPoints}
+                              onChange={(e) => setMaxPoints(Number(e.target.value))}
+                            />
                             <textarea className="form-input" value={content} onChange={(e) => setContent(e.target.value)} />
                             <div className="flex gap-sm mt-sm">
                               <button className="btn btn-xs btn-square btn-primary" onClick={() => handleEdit(q.id)}>儲存</button>
@@ -276,6 +311,7 @@ const QuestionManagement: React.FC = () => {
                         </td>
                       ) : (
                         <>
+                          <td className="text-sm">{q.maxPoints ?? 100}</td>
                           <td>
                             <div className="text-sm truncate" style={{ maxWidth: '400px' }}>{q.content}</div>
                           </td>

@@ -6,6 +6,45 @@ import {
   Type 
 } from 'lucide-react';
 
+/** 至少四位純數字視為學號，用於同一行多組「學號 姓名」掃描；非純數字學號（如 TEST001）仍用每行「第一欄 其餘」 */
+const NUMERIC_STUDENT_ID = /^\d{4,}$/;
+
+function parseBulkStudentImportText(text: string): { studentId: string; name: string }[] {
+  const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+  const out: { studentId: string; name: string }[] = [];
+
+  for (const line of lines) {
+    const tokens = line.split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) continue;
+
+    const lineHasNumericId = tokens.some((t) => NUMERIC_STUDENT_ID.test(t));
+
+    if (lineHasNumericId) {
+      let i = 0;
+      while (i < tokens.length) {
+        const t = tokens[i];
+        if (t && NUMERIC_STUDENT_ID.test(t)) {
+          const studentId = t;
+          i++;
+          const nameParts: string[] = [];
+          while (i < tokens.length && tokens[i] && !NUMERIC_STUDENT_ID.test(tokens[i])) {
+            nameParts.push(tokens[i]!);
+            i++;
+          }
+          const name = nameParts.join(' ').trim();
+          if (name) out.push({ studentId, name });
+        } else {
+          i++;
+        }
+      }
+    } else if (tokens.length >= 2) {
+      out.push({ studentId: tokens[0]!, name: tokens.slice(1).join(' ') });
+    }
+  }
+
+  return out;
+}
+
 const ClassManagement: React.FC = () => {
   const [classes, setClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -117,11 +156,7 @@ const ClassManagement: React.FC = () => {
   };
 
   const handleBulkImportText = async () => {
-    const lines = importText.split('\n').filter(l => l.trim());
-    const data = lines.map(line => {
-      const parts = line.split(/\s+/);
-      return { studentId: parts[0], name: parts.slice(1).join(' ') };
-    }).filter(s => s.studentId && s.name);
+    const data = parseBulkStudentImportText(importText).filter((s) => s.studentId && s.name);
 
     if (data.length === 0) return alert('數據無效');
     try {
@@ -162,7 +197,7 @@ const ClassManagement: React.FC = () => {
               <FileSpreadsheet size={16} /> Excel 匯入
             </button>
             <button className="btn btn-primary flex items-center gap-xs" onClick={() => setShowImport(true)}>
-              <Type size={16} /> 批量匯入 (文字)
+              <Type size={16} /> 文字批量匯入
             </button>
             <button className="btn btn-primary" onClick={() => { setEditingStudent({ studentId: '', name: '' }); setShowStudentModal(true); }}>
               + 新增學生
@@ -172,7 +207,7 @@ const ClassManagement: React.FC = () => {
 
         <div className="card">
           {studentsLoading ? <div className="spinner"></div> : (
-            <div className="table-container">
+            <div className="table-container scroll-region-y">
               <table className="table">
                 <thead>
                   <tr>
@@ -208,7 +243,7 @@ const ClassManagement: React.FC = () => {
         {showStudentModal && (
           <div className="modal-overlay">
             <div className="card w-full max-w-sm">
-              <h3 className="mb-lg">{editingStudent.id ? '編輯學生' : '新增學生'}</h3>
+              <h3 className="mb-lg">{editingStudent.id ? '編輯' : '新增'}</h3>
               <form onSubmit={handleStudentSave}>
                 <div className="form-group">
                   <label>學號</label>
@@ -232,10 +267,12 @@ const ClassManagement: React.FC = () => {
         {showImport && (
           <div className="modal-overlay">
             <div className="card w-full max-w-lg">
-              <h3 className="mb-md">批量匯入學生</h3>
-              <p className="text-sm text-secondary mb-md">每一行格式：學號 姓名</p>
+              <h3 className="mb-md">批量匯入</h3>
+              <p className="text-sm text-secondary mb-md">
+                格式須為：<b>學號 姓名</b>（空白分隔）。可連續多組；學號須至少四位數字，例如「11245004 王小明 1124505 李小華」。
+              </p>
               <textarea className="form-input mb-md" style={{ minHeight: '200px' }} 
-                value={importText} onChange={e => setImportText(e.target.value)} placeholder="411001 王小明" />
+                value={importText} onChange={e => setImportText(e.target.value)} placeholder={'111000 王小明 111001 李小華'} />
               <div className="flex gap-md justify-end">
                 <button className="btn btn-secondary" onClick={() => setShowImport(false)}>取消</button>
                 <button className="btn btn-primary" onClick={handleBulkImportText}>確認匯入</button>
@@ -255,7 +292,8 @@ const ClassManagement: React.FC = () => {
       </div>
 
       {loading ? <div className="spinner"></div> : (
-        <div className="grid grid-2">
+        <div className="scroll-region-y">
+          <div className="grid grid-2">
           {classes.map(c => (
             <div 
               key={c.id} 
@@ -295,6 +333,7 @@ const ClassManagement: React.FC = () => {
               </div>
             </div>
           ))}
+          </div>
         </div>
       )}
 

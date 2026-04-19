@@ -4,15 +4,30 @@ import {
 } from '@nestjs/common';
 import { ExamsService } from './exams.service';
 import { JwtAuthGuard } from '../auth/guards';
-import { IsNotEmpty, IsString, IsOptional, IsInt, IsDateString } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, IsInt, IsDateString, IsArray, ArrayMinSize } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateExamDto {
   @IsNotEmpty() @IsString() title: string;
-  @IsInt() classId: number;
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsInt({ each: true })
+  @Type(() => Number)
+  classIds: number[];
   @IsOptional() @IsString() difficulty?: string;
   @IsInt() timeLimit: number;
   @IsDateString() startTime: string;
   @IsDateString() endTime: string;
+}
+
+export class UpdateExamDto {
+  @IsOptional() @IsString() title?: string;
+  @IsOptional() @IsArray() @ArrayMinSize(1) @IsInt({ each: true }) @Type(() => Number) classIds?: number[];
+  @IsOptional() @IsString() difficulty?: string;
+  @IsOptional() @IsInt() timeLimit?: number;
+  @IsOptional() @IsDateString() startTime?: string;
+  @IsOptional() @IsDateString() endTime?: string;
+  @IsOptional() @IsString() status?: string;
 }
 
 export class SubmitAnswerDto {
@@ -52,7 +67,7 @@ export class ExamsController {
 
   @Put(':id')
   @UseGuards(JwtAuthGuard)
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: Partial<CreateExamDto>) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateExamDto) {
     return this.examsService.update(id, dto);
   }
 

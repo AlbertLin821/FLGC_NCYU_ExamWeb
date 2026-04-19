@@ -4,12 +4,43 @@ import {
 } from '@nestjs/common';
 import { QuestionsService } from './questions.service';
 import { JwtAuthGuard } from '../auth/guards';
-import { IsNotEmpty, IsString, IsInt, IsArray, ValidateNested } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsInt,
+  IsArray,
+  ValidateNested,
+  IsOptional,
+  Min,
+  Max,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 class QuestionItem {
   @IsNotEmpty() @IsString() word1: string;
   @IsNotEmpty() @IsString() word2: string;
+}
+
+class CreateQuestionBody {
+  @IsOptional() @IsString() type?: string;
+  @IsOptional() @IsString() content?: string;
+  @IsOptional() options?: unknown;
+  @IsOptional() @IsString() answer?: string;
+  @IsOptional() @IsString() word1?: string;
+  @IsOptional() @IsString() word2?: string;
+  @IsInt() orderNum: number;
+  @IsOptional() @IsInt() @Min(1) @Max(1000) maxPoints?: number;
+}
+
+class UpdateQuestionBody {
+  @IsOptional() @IsString() type?: string;
+  @IsOptional() @IsString() content?: string;
+  @IsOptional() options?: unknown;
+  @IsOptional() @IsString() answer?: string;
+  @IsOptional() @IsString() word1?: string;
+  @IsOptional() @IsString() word2?: string;
+  @IsOptional() @IsInt() orderNum?: number;
+  @IsOptional() @IsInt() @Min(1) @Max(1000) maxPoints?: number;
 }
 
 export class BulkCreateDto {
@@ -35,10 +66,7 @@ export class QuestionsController {
   }
 
   @Post('exam/:examId')
-  create(
-    @Param('examId', ParseIntPipe) examId: number,
-    @Body() dto: QuestionItem & { orderNum: number },
-  ) {
+  create(@Param('examId', ParseIntPipe) examId: number, @Body() dto: CreateQuestionBody) {
     return this.questionsService.create({ examId, ...dto });
   }
 
@@ -50,14 +78,14 @@ export class QuestionsController {
     return this.questionsService.bulkCreate(examId, dto.questions);
   }
 
-  @Put(':id')
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: Partial<QuestionItem>) {
-    return this.questionsService.update(id, dto);
-  }
-
   @Put('reorder')
   reorder(@Body() dto: ReorderDto) {
     return this.questionsService.reorder(dto.questions);
+  }
+
+  @Put(':id')
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateQuestionBody) {
+    return this.questionsService.update(id, dto);
   }
 
   @Delete(':id')
