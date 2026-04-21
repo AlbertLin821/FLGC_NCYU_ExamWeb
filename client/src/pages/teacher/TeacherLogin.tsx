@@ -42,7 +42,7 @@ const TeacherLogin: React.FC = () => {
   return (
     <Layout>
       <div className="flex justify-center">
-        <div className="card w-full" style={{ maxWidth: '400px' }}>
+        <div className="card modal-card modal-card--sm">
           <div className="text-center mb-xl">
             <h2 className="mb-xs">老師/管理端登入</h2>
             <p className="text-sm text-secondary">請輸入您的教育帳號與密碼</p>

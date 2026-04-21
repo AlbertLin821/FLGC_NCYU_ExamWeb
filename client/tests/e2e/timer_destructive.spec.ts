@@ -41,8 +41,8 @@ test.describe('考試倒數與錨定', () => {
 
     await page.goto('/student/login');
     await page.fill('input[placeholder="例如: 411200000"]', '411200001');
-    await page.fill('input[placeholder="您的真實姓名"]', '王小明');
     await page.click('button[type="submit"]');
+    await page.getByRole('button', { name: '確認進入考試' }).click();
     await page.waitForURL(/\/student\/exams/, { timeout: 20_000 });
 
     await page.goto('/student/exam/1');

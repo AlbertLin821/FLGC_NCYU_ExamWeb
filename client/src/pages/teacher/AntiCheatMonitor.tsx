@@ -79,9 +79,9 @@ const AntiCheatMonitor: React.FC = () => {
         <div className="flex flex-col gap-md">
           {alerts.map((alert) => (
             <div key={alert.id} className="card border-l-4" style={{ borderLeft: '5px solid var(--color-danger)' }}>
-              <div className="flex justify-between items-start">
-                <div>
-                  <div className="flex items-center gap-md mb-sm">
+              <div className="flex justify-between items-start flex-wrap gap-md">
+                <div className="min-w-0">
+                  <div className="action-group mb-sm">
                     <span className="badge badge-danger">異常：{
                       alert.eventType === 'tab_switch' ? '切換分頁' :
                       alert.eventType === 'window_blur' ? '視窗失焦' : '退出全螢幕'
@@ -91,7 +91,7 @@ const AntiCheatMonitor: React.FC = () => {
                   <h4 className="mb-xs">{alert.session.student.name} ({alert.session.student.studentId})</h4>
                   <p className="text-sm text-secondary">考卷：{alert.session.exam.title}</p>
                 </div>
-                <div className="flex gap-md">
+                <div className="card-actions">
                   <button
                     className="btn btn-secondary btn-sm"
                     onClick={() => handleResolve(alert.id, 'unlock')}

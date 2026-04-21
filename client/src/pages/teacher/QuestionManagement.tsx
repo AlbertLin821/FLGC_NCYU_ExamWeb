@@ -139,7 +139,7 @@ const QuestionManagement: React.FC = () => {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-lg">
+      <div className="page-header">
         <div className="flex items-center gap-md">
           <button className="btn btn-secondary btn-xs btn-square" onClick={() => navigate('/teacher/exams')}>
             <ArrowLeft size={16} /> 返回考卷列表
@@ -151,7 +151,7 @@ const QuestionManagement: React.FC = () => {
           </h3>
         </div>
         {selectedExamId && (
-          <div className="flex gap-sm">
+          <div className="toolbar">
             <button className="btn btn-primary btn-square" onClick={() => { setShowAdd(true); }}>+ 新增單題</button>
           </div>
         )}
@@ -164,8 +164,7 @@ const QuestionManagement: React.FC = () => {
         <div className="mb-lg">
           <label className="form-label">選擇考卷</label>
           <select
-            className="form-input"
-            style={{ maxWidth: '400px' }}
+            className="form-input select-compact"
             value={selectedExamId || ''}
             onChange={(e) => selectExam(Number(e.target.value))}
           >
@@ -200,8 +199,7 @@ const QuestionManagement: React.FC = () => {
               <label className="form-label">此題配分（滿分）</label>
               <input
                 type="number"
-                className="form-input"
-                style={{ maxWidth: '120px' }}
+                className="form-input field-min-sm"
                 min={1}
                 max={1000}
                 value={maxPoints}
@@ -243,7 +241,7 @@ const QuestionManagement: React.FC = () => {
               </div>
             )}
 
-            <div className="flex gap-sm justify-end">
+            <div className="modal-actions">
               <button type="button" className="btn btn-secondary btn-square" onClick={() => setShowAdd(false)}>取消</button>
               <button type="submit" className="btn btn-primary btn-square">確認新增</button>
             </div>
@@ -268,11 +266,11 @@ const QuestionManagement: React.FC = () => {
               <table className="table">
                 <thead>
                   <tr>
-                    <th style={{ width: '60px' }}>序號</th>
-                    <th style={{ width: '100px' }}>類型</th>
-                    <th style={{ width: '80px' }}>配分</th>
+                    <th>序號</th>
+                    <th>類型</th>
+                    <th>配分</th>
                     <th>內容</th>
-                    <th style={{ width: '150px' }}>操作</th>
+                    <th>操作</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -296,14 +294,13 @@ const QuestionManagement: React.FC = () => {
                             <input
                               type="number"
                               className="form-input text-sm"
-                              style={{ maxWidth: '120px' }}
                               min={1}
                               max={1000}
                               value={maxPoints}
                               onChange={(e) => setMaxPoints(Number(e.target.value))}
                             />
                             <textarea className="form-input" value={content} onChange={(e) => setContent(e.target.value)} />
-                            <div className="flex gap-sm mt-sm">
+                            <div className="card-actions mt-sm">
                               <button className="btn btn-xs btn-square btn-primary" onClick={() => handleEdit(q.id)}>儲存</button>
                               <button className="btn btn-xs btn-square btn-secondary" onClick={() => setEditingId(null)}>取消</button>
                             </div>
@@ -313,10 +310,10 @@ const QuestionManagement: React.FC = () => {
                         <>
                           <td className="text-sm">{q.maxPoints ?? 100}</td>
                           <td>
-                            <div className="text-sm truncate" style={{ maxWidth: '400px' }}>{q.content}</div>
+                            <div className="text-sm text-truncate question-content-truncate">{q.content}</div>
                           </td>
                           <td>
-                            <div className="flex gap-sm">
+                            <div className="table-actions">
                               <button className="btn btn-xs btn-ghost btn-square btn-ghost-secondary" onClick={() => startEdit(q)}>編輯</button>
                               <button className="btn btn-xs btn-ghost btn-square btn-ghost-danger" onClick={() => handleDelete(q.id)}>刪除</button>
                             </div>

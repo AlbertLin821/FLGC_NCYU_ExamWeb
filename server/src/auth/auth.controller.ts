@@ -15,10 +15,6 @@ export class StudentLoginDto {
   @IsNotEmpty()
   @IsString()
   studentId: string;
-
-  @IsNotEmpty()
-  @IsString()
-  name: string;
 }
 
 export class RequestResetDto {
@@ -47,16 +43,15 @@ export class AuthController {
 
   @Post('student/verify')
   async studentVerify(@Body() dto: StudentLoginDto) {
-    const student = await this.authService.validateStudent(
-      dto.studentId,
-      dto.name,
-    );
+    const student = await this.authService.validateStudent(dto.studentId);
     return {
       student: {
         id: student.id,
         studentId: student.studentId,
         name: student.name,
+        schoolName: student.schoolName,
         classId: student.classId,
+        className: student.class.name,
       },
     };
   }

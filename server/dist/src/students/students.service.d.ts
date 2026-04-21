@@ -13,6 +13,7 @@ export declare class StudentsService {
             createdAt: Date;
             id: number;
             studentId: string;
+            schoolName: string;
             loginAttempts: number;
             lockedUntil: Date | null;
             classId: number;
@@ -67,6 +68,7 @@ export declare class StudentsService {
         createdAt: Date;
         id: number;
         studentId: string;
+        schoolName: string;
         loginAttempts: number;
         lockedUntil: Date | null;
         classId: number;
@@ -116,6 +118,7 @@ export declare class StudentsService {
             createdAt: Date;
             id: number;
             studentId: string;
+            schoolName: string;
             loginAttempts: number;
             lockedUntil: Date | null;
             classId: number;
@@ -177,6 +180,7 @@ export declare class StudentsService {
         createdAt: Date;
         id: number;
         studentId: string;
+        schoolName: string;
         loginAttempts: number;
         lockedUntil: Date | null;
         classId: number;
@@ -184,6 +188,7 @@ export declare class StudentsService {
     bulkImport(students: {
         studentId: string;
         name: string;
+        schoolName: string;
     }[], classId: number): Promise<{
         created: number;
         updated: number;
@@ -192,24 +197,28 @@ export declare class StudentsService {
     create(data: {
         studentId: string;
         name: string;
+        schoolName: string;
         classId: number;
     }): Promise<{
         name: string;
         createdAt: Date;
         id: number;
         studentId: string;
+        schoolName: string;
         loginAttempts: number;
         lockedUntil: Date | null;
         classId: number;
     }>;
     update(id: number, data: {
         name?: string;
+        schoolName?: string;
         classId?: number;
     }): Promise<{
         name: string;
         createdAt: Date;
         id: number;
         studentId: string;
+        schoolName: string;
         loginAttempts: number;
         lockedUntil: Date | null;
         classId: number;
@@ -219,6 +228,7 @@ export declare class StudentsService {
         createdAt: Date;
         id: number;
         studentId: string;
+        schoolName: string;
         loginAttempts: number;
         lockedUntil: Date | null;
         classId: number;

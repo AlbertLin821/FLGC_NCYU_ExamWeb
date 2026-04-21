@@ -21,6 +21,7 @@ import { Type } from 'class-transformer';
 class StudentImportItem {
   @IsNotEmpty() @IsString() studentId: string;
   @IsNotEmpty() @IsString() name: string;
+  @IsNotEmpty() @IsString() schoolName: string;
 }
 
 export class BulkImportDto {
@@ -36,6 +37,7 @@ export class BulkImportDto {
 export class CreateStudentDto {
   @IsNotEmpty() @IsString() studentId: string;
   @IsNotEmpty() @IsString() name: string;
+  @IsNotEmpty() @IsString() schoolName: string;
   @IsInt() classId: number;
 }
 

@@ -151,84 +151,77 @@ const ExamManagement: React.FC = () => {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-lg">
+      <div className="page-header">
         <h3>考卷管理</h3>
         <button className="btn btn-primary" onClick={openCreateModal}>+ 新增考卷</button>
       </div>
 
-      <div className="table-container card">
+      <div className="card table-card">
         {loading ? <div className="spinner"></div> : (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>名稱</th>
-                <th>適用班級</th>
-                <th>狀態</th>
-                <th>難度</th>
-                <th>時限</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {exams.map(e => (
-                <tr key={e.id}>
-                  <td><b>{e.title}</b></td>
-                  <td>{e.examClasses?.map((ec: { class: { name: string } }) => ec.class?.name).filter(Boolean).join('、') || '—'}</td>
-                  <td>
-                    {(() => {
-                      if (e.status !== 'published') return <span className="badge badge-warning">草稿</span>;
-                      const now = new Date().getTime();
-                      const start = new Date(e.startTime).getTime();
-                      const end = new Date(e.endTime).getTime();
-                      if (now > end) return <span className="badge badge-danger">已結束</span>;
-                      if (now < start) return <span className="badge badge-secondary" style={{ background: '#e9ecef', color: '#6c757d' }}>未開始</span>;
-                      return <span className="badge badge-success">進行中</span>;
-                    })()}
-                  </td>
-                  <td>{e.difficulty}</td>
-                  <td>{e.timeLimit} 分</td>
-                  <td>
-                    <div className="flex gap-sm">
-                      <button className="btn btn-xs btn-primary" onClick={() => window.location.href = `/teacher/questions?examId=${e.id}`}>題目管理</button>
-                      <button className="btn btn-xs btn-secondary" onClick={() => openEditModal(e)}>編輯</button>
-                      {e.status === 'draft' && <button className="btn btn-xs btn-primary" onClick={async () => {
-                        await examsApi.publish(e.id);
-                        fetchExams();
-                      }}>發放</button>}
-                      <button className="btn btn-xs btn-danger" onClick={() => handleDelete(e.id)}>刪除</button>
-                    </div>
-                  </td>
+          <div className="table-container">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>名稱</th>
+                  <th>適用班級</th>
+                  <th>狀態</th>
+                  <th>難度</th>
+                  <th>時限</th>
+                  <th>操作</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {exams.map(e => (
+                  <tr key={e.id}>
+                    <td><b>{e.title}</b></td>
+                    <td className="cell-wrap-sm">{e.examClasses?.map((ec: { class: { name: string } }) => ec.class?.name).filter(Boolean).join('、') || '—'}</td>
+                    <td>
+                      {(() => {
+                        if (e.status !== 'published') return <span className="badge badge-warning">草稿</span>;
+                        const now = new Date().getTime();
+                        const start = new Date(e.startTime).getTime();
+                        const end = new Date(e.endTime).getTime();
+                        if (now > end) return <span className="badge badge-danger">已結束</span>;
+                        if (now < start) return <span className="badge badge-secondary">未開始</span>;
+                        return <span className="badge badge-success">進行中</span>;
+                      })()}
+                    </td>
+                    <td>{e.difficulty}</td>
+                    <td>{e.timeLimit} 分</td>
+                    <td>
+                      <div className="table-actions">
+                        <button className="btn btn-xs btn-primary" onClick={() => window.location.href = `/teacher/questions?examId=${e.id}`}>題目管理</button>
+                        <button className="btn btn-xs btn-secondary" onClick={() => openEditModal(e)}>編輯</button>
+                        {e.status === 'draft' && <button className="btn btn-xs btn-primary" onClick={async () => {
+                          await examsApi.publish(e.id);
+                          fetchExams();
+                        }}>發放</button>}
+                        <button className="btn btn-xs btn-danger" onClick={() => handleDelete(e.id)}>刪除</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
       {showModal && (
-        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="card w-full" style={{ maxWidth: '500px' }}>
+        <div className="modal-overlay">
+          <div className="card modal-card modal-card--md">
             <h3 className="mb-lg">{editingExamId ? '編輯考卷' : '建立新考卷'}</h3>
             <form onSubmit={handleSave}>
               <div className="form-group">
                 <label className="form-label">考卷標題</label>
                 <input className="form-input" value={newExam.title} onChange={e => setNewExam({ ...newExam, title: e.target.value })} required />
               </div>
-              <div className="flex gap-md mb-md">
+              <div className="form-grid mb-md">
                 <div className="form-group w-full" ref={classMenuRef} style={{ position: 'relative' }}>
                   <label className="form-label">適用班級</label>
                   <button
                     type="button"
-                    className="form-input"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: '0.5rem',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      background: 'var(--color-bg)',
-                    }}
+                    className="form-input dropdown-trigger"
                     onClick={() => setClassMenuOpen((o) => !o)}
                     aria-expanded={classMenuOpen}
                     aria-haspopup="listbox"
@@ -257,19 +250,7 @@ const ExamManagement: React.FC = () => {
                     <div
                       role="listbox"
                       aria-multiselectable
-                      className="form-input"
-                      style={{
-                        position: 'absolute',
-                        left: 0,
-                        right: 0,
-                        top: '100%',
-                        marginTop: 4,
-                        zIndex: 1001,
-                        maxHeight: 220,
-                        overflowY: 'auto',
-                        padding: 'var(--space-sm)',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
-                      }}
+                      className="form-input dropdown-panel"
                       onMouseDown={(e) => e.preventDefault()}
                     >
                       {classes.map((c) => {
@@ -352,7 +333,7 @@ const ExamManagement: React.FC = () => {
                   <input type="datetime-local" className="form-input" value={newExam.endTime} onChange={e => setNewExam({ ...newExam, endTime: e.target.value })} required />
                 </div>
               </div>
-              <div className="flex gap-md justify-end mt-lg">
+              <div className="modal-actions mt-lg">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>取消</button>
                 <button type="submit" className="btn btn-primary">{editingExamId ? '儲存變更' : '確認'}</button>
               </div>

@@ -27,11 +27,17 @@ export declare class AuthService {
         };
     }>;
     hashPassword(password: string): Promise<string>;
-    validateStudent(studentId: string, name: string): Promise<{
+    validateStudent(studentId: string): Promise<{
+        class: {
+            name: string;
+            id: number;
+        };
+    } & {
         name: string;
         createdAt: Date;
         id: number;
         studentId: string;
+        schoolName: string;
         loginAttempts: number;
         lockedUntil: Date | null;
         classId: number;

@@ -14,8 +14,8 @@ test.describe('錯誤與權限（非完整快樂路徑）', () => {
   test('學生登入後造訪不存在的考卷會提示並返回考卷列表', async ({ page }) => {
     await page.goto('/student/login');
     await page.fill('input[placeholder="例如: 411200000"]', '411200001');
-    await page.fill('input[placeholder="您的真實姓名"]', '王小明');
     await page.click('button[type="submit"]');
+    await page.getByRole('button', { name: '確認進入考試' }).click();
     await page.waitForURL(/\/student\/exams/, { timeout: 20_000 });
 
     const dialogPromise = page.waitForEvent('dialog', { timeout: 20_000 });
@@ -37,7 +37,6 @@ test.describe('錯誤與權限（非完整快樂路徑）', () => {
 
     await page.goto('/student/login');
     await page.fill('input[placeholder="例如: 411200000"]', '411200001');
-    await page.fill('input[placeholder="您的真實姓名"]', '王小明');
     await page.click('button[type="submit"]');
 
     await expect(page.getByText('伺服器錯誤')).toBeVisible({ timeout: 15_000 });

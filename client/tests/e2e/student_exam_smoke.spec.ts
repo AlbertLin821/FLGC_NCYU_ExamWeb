@@ -12,8 +12,8 @@ test('學生：考試頁計時與交卷最小流程', async ({ page }) => {
   test.setTimeout(120_000);
   await page.goto('/student/login');
   await page.fill('input[placeholder="例如: 411200000"]', '411200002');
-  await page.fill('input[placeholder="您的真實姓名"]', '李小華');
   await page.click('button[type="submit"]');
+  await page.getByRole('button', { name: '確認進入考試' }).click();
   await page.waitForURL(/\/student\/exams/, { timeout: 20_000 });
   await page.waitForResponse(
     (r) => r.url().includes('/api/students/') && r.url().includes('/exams') && r.status() === 200,

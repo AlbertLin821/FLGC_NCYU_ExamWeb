@@ -53,6 +53,7 @@ const SystemManagement: React.FC = () => {
                   <tr>
                     <th>學號</th>
                     <th>姓名</th>
+                    <th>校名</th>
                     <th>班級</th>
                   </tr>
                 </thead>
@@ -61,13 +62,14 @@ const SystemManagement: React.FC = () => {
                     <tr key={s.id}>
                       <td>{s.studentId}</td>
                       <td>{s.name}</td>
+                      <td>{s.schoolName}</td>
                       <td>{s.class?.name ?? s.classId}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <div className="flex gap-md items-center mt-md">
+            <div className="action-group mt-md">
               <button
                 type="button"
                 className="btn btn-sm btn-secondary"

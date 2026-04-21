@@ -40,7 +40,7 @@ const ResetPassword: React.FC = () => {
   return (
     <Layout>
       <div className="flex justify-center">
-        <div className="card w-full" style={{ maxWidth: '400px' }}>
+        <div className="card modal-card modal-card--sm">
           <div className="text-center mb-xl">
             <h2 className="mb-xs">重設密碼</h2>
             <p className="text-sm text-secondary">請輸入您的驗證碼與新密碼</p>

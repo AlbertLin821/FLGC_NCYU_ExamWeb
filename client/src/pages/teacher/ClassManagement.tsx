@@ -39,43 +39,128 @@ function gradedWeightedSummary(sessions: any[] | undefined): string {
   return parts.length ? parts.join('；') : '—';
 }
 
-/** 至少四位純數字視為學號，用於同一行多組「學號 姓名」掃描；非純數字學號（如 TEST001）仍用每行「第一欄 其餘」 */
-const NUMERIC_STUDENT_ID = /^\d{4,}$/;
+type StudentImportRow = { studentId: string; name: string; schoolName: string };
+type ImportMode = 'text' | 'excel';
 
-function parseBulkStudentImportText(text: string): { studentId: string; name: string }[] {
-  const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
-  const out: { studentId: string; name: string }[] = [];
+const STUDENT_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]*\d[A-Za-z0-9_-]*$/;
+const SCHOOL_NAME_HINT_PATTERN = /(校|學校|大學|學院|高中|高職|國中|國小|university|college|school|ncyu)/i;
 
-  for (const line of lines) {
-    const tokens = line.split(/\s+/).filter(Boolean);
-    if (tokens.length === 0) continue;
+function normalizeImportCell(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  return String(value).trim();
+}
 
-    const lineHasNumericId = tokens.some((t) => NUMERIC_STUDENT_ID.test(t));
+function isStudentIdValue(value: string): boolean {
+  return STUDENT_ID_PATTERN.test(value) && value.length >= 4;
+}
 
-    if (lineHasNumericId) {
-      let i = 0;
-      while (i < tokens.length) {
-        const t = tokens[i];
-        if (t && NUMERIC_STUDENT_ID.test(t)) {
-          const studentId = t;
-          i++;
-          const nameParts: string[] = [];
-          while (i < tokens.length && tokens[i] && !NUMERIC_STUDENT_ID.test(tokens[i])) {
-            nameParts.push(tokens[i]!);
-            i++;
-          }
-          const name = nameParts.join(' ').trim();
-          if (name) out.push({ studentId, name });
-        } else {
-          i++;
-        }
-      }
-    } else if (tokens.length >= 2) {
-      out.push({ studentId: tokens[0]!, name: tokens.slice(1).join(' ') });
+function isSchoolNameValue(value: string): boolean {
+  return SCHOOL_NAME_HINT_PATTERN.test(value);
+}
+
+function detectHeaderColumn(value: string): keyof StudentImportRow | null {
+  const normalized = value.toLowerCase().replace(/[\s_-]+/g, '');
+  if (/校名|學校|school|university|college/.test(normalized)) return 'schoolName';
+  if (/學號|studentid|studentno|id/.test(normalized)) return 'studentId';
+  if (/姓名|名字|name/.test(normalized)) return 'name';
+  return null;
+}
+
+function getHeaderMap(row: string[]): Partial<Record<keyof StudentImportRow, number>> | null {
+  const map: Partial<Record<keyof StudentImportRow, number>> = {};
+  row.forEach((cell, index) => {
+    const column = detectHeaderColumn(cell);
+    if (column && map[column] === undefined) {
+      map[column] = index;
     }
+  });
+
+  return map.schoolName !== undefined && map.studentId !== undefined && map.name !== undefined
+    ? map
+    : null;
+}
+
+function rowFromHeader(row: string[], headerMap: Partial<Record<keyof StudentImportRow, number>>): StudentImportRow | null {
+  const schoolName = row[headerMap.schoolName ?? -1]?.trim() ?? '';
+  const studentId = row[headerMap.studentId ?? -1]?.trim() ?? '';
+  const name = row[headerMap.name ?? -1]?.trim() ?? '';
+  return schoolName && studentId && name ? { schoolName, studentId, name } : null;
+}
+
+function inferStudentImportRow(values: string[]): StudentImportRow | null {
+  const cells = values.map(normalizeImportCell).filter(Boolean);
+  const studentIdIndex = cells.findIndex(isStudentIdValue);
+  if (studentIdIndex < 0 || cells.length < 3) return null;
+
+  const studentId = cells[studentIdIndex]!;
+  const before = cells.slice(0, studentIdIndex);
+  const after = cells.slice(studentIdIndex + 1);
+  let schoolName = '';
+  let name = '';
+
+  if (studentIdIndex === 0) {
+    const schoolIndex = after.findIndex(isSchoolNameValue);
+    if (schoolIndex >= 0) {
+      name = after.slice(0, schoolIndex).join(' ');
+      schoolName = after.slice(schoolIndex).join(' ');
+      if (!name) {
+        schoolName = after.slice(0, Math.max(1, after.length - 1)).join(' ');
+        name = after.slice(Math.max(1, after.length - 1)).join(' ');
+      }
+    } else {
+      name = after[0] ?? '';
+      schoolName = after.slice(1).join(' ');
+    }
+  } else if (studentIdIndex === cells.length - 1) {
+    const schoolIndex = before.findIndex(isSchoolNameValue);
+    if (schoolIndex >= 0) {
+      name = before.slice(0, schoolIndex).join(' ');
+      schoolName = before.slice(schoolIndex).join(' ');
+      if (!name) {
+        schoolName = before.slice(0, Math.max(1, before.length - 1)).join(' ');
+        name = before.slice(Math.max(1, before.length - 1)).join(' ');
+      }
+    } else {
+      schoolName = before[0] ?? '';
+      name = before.slice(1).join(' ');
+    }
+  } else if (before.some(isSchoolNameValue) && after.length > 0) {
+    schoolName = before.join(' ');
+    name = after.join(' ');
+  } else if (after.some(isSchoolNameValue) && before.length > 0) {
+    schoolName = after.join(' ');
+    name = before.join(' ');
+  } else {
+    schoolName = before.join(' ');
+    name = after.join(' ');
   }
 
-  return out;
+  return schoolName && studentId && name ? { schoolName, studentId, name } : null;
+}
+
+function parseStudentImportRows(rows: unknown[][]): StudentImportRow[] {
+  const normalizedRows = rows
+    .map((row) => row.map(normalizeImportCell))
+    .filter((row) => row.some(Boolean));
+
+  if (normalizedRows.length === 0) return [];
+
+  const headerMap = getHeaderMap(normalizedRows[0]!);
+  if (headerMap) {
+    return normalizedRows
+      .slice(1)
+      .map((row) => rowFromHeader(row, headerMap))
+      .filter((row): row is StudentImportRow => row !== null);
+  }
+
+  return normalizedRows
+    .map(inferStudentImportRow)
+    .filter((row): row is StudentImportRow => row !== null);
+}
+
+function parseBulkStudentImportText(text: string): StudentImportRow[] {
+  const rows = text.split('\n').map((line) => line.split(/\s+/));
+  return parseStudentImportRows(rows);
 }
 
 const ClassManagement: React.FC = () => {
@@ -93,7 +178,11 @@ const ClassManagement: React.FC = () => {
   const [showStudentModal, setShowStudentModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState<any>(null);
   const [showImport, setShowImport] = useState(false);
+  const [importMode, setImportMode] = useState<ImportMode | null>(null);
   const [importText, setImportText] = useState('');
+  const [importPreview, setImportPreview] = useState<StudentImportRow[]>([]);
+  const [importError, setImportError] = useState('');
+  const [importFileName, setImportFileName] = useState('');
 
   const fetchClasses = async () => {
     try {
@@ -149,7 +238,10 @@ const ClassManagement: React.FC = () => {
     e.preventDefault();
     try {
       if (editingStudent.id) {
-        await studentsApi.update(editingStudent.id, { name: editingStudent.name });
+        await studentsApi.update(editingStudent.id, {
+          name: editingStudent.name,
+          schoolName: editingStudent.schoolName,
+        });
       } else {
         await studentsApi.create({ ...editingStudent, classId: selectedClass.id });
       }
@@ -166,37 +258,78 @@ const ClassManagement: React.FC = () => {
     } catch { alert('刪除失敗'); }
   };
 
+  const resetImportState = () => {
+    setImportMode(null);
+    setImportText('');
+    setImportPreview([]);
+    setImportError('');
+    setImportFileName('');
+  };
+
+  const openImportModal = () => {
+    resetImportState();
+    setShowImport(true);
+  };
+
+  const closeImportModal = () => {
+    resetImportState();
+    setShowImport(false);
+  };
+
+  const selectImportMode = (mode: ImportMode) => {
+    setImportMode(mode);
+    setImportPreview([]);
+    setImportError('');
+    setImportFileName('');
+  };
+
+  const setPreviewOrError = (rows: StudentImportRow[]) => {
+    if (rows.length === 0) {
+      setImportPreview([]);
+      setImportError('無法辨識資料，請確認至少包含校名、學號、姓名。');
+      return;
+    }
+    setImportError('');
+    setImportPreview(rows);
+  };
+
   const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !selectedClass) return;
+    setImportFileName(file.name);
+    setImportError('');
+    setImportPreview([]);
     const reader = new FileReader();
     reader.onload = (evt) => {
-      const bstr = evt.target?.result;
-      const wb = XLSX.read(bstr, { type: 'binary' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
-      const studentsToImport = data.slice(1).map(row => ({
-        studentId: String(row[0]),
-        name: String(row[1])
-      })).filter(s => s.studentId && s.name && s.studentId !== 'undefined');
-
-      if (studentsToImport.length === 0) return alert('格式錯誤或無數據');
-      studentsApi.bulkImport(studentsToImport, selectedClass.id).then(() => {
-        alert(`成功匯入 ${studentsToImport.length} 位學生`);
-        fetchStudents(selectedClass.id);
-      }).catch(() => alert('匯入失敗'));
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
+        setPreviewOrError(parseStudentImportRows(data));
+      } catch {
+        setImportError('Excel 解析失敗，請確認檔案格式。');
+      } finally {
+        e.target.value = '';
+      }
     };
     reader.readAsBinaryString(file);
   };
 
-  const handleBulkImportText = async () => {
-    const data = parseBulkStudentImportText(importText).filter((s) => s.studentId && s.name);
+  const handleTextPreview = () => {
+    const data = parseBulkStudentImportText(importText).filter((s) => s.studentId && s.name && s.schoolName);
+    setPreviewOrError(data);
+  };
 
-    if (data.length === 0) return alert('數據無效');
+  const handleConfirmImport = async () => {
+    if (importPreview.length === 0) {
+      setImportError('請先檢視並確認要匯入的資料。');
+      return;
+    }
     try {
-      await studentsApi.bulkImport(data, selectedClass.id);
-      setShowImport(false);
-      setImportText('');
+      await studentsApi.bulkImport(importPreview, selectedClass.id);
+      alert(`成功匯入 ${importPreview.length} 位學生`);
+      closeImportModal();
       fetchStudents(selectedClass.id);
     } catch { alert('匯入失敗'); }
   };
@@ -204,26 +337,22 @@ const ClassManagement: React.FC = () => {
   if (selectedClass) {
     return (
       <div className="fade-in">
-        <div className="flex justify-between items-center mb-lg">
+        <div className="page-header">
           <div className="flex items-center gap-md">
             <button className="btn btn-secondary btn-xs" onClick={() => setSelectedClass(null)}>← 返回班級列表</button>
             <h3>{selectedClass.name} - 學生管理</h3>
           </div>
-          <div className="flex gap-md">
-            <input type="file" id="st-excel" hidden accept=".xlsx,.xls" onChange={handleExcelUpload} />
-            <button className="btn btn-secondary flex items-center gap-xs" onClick={() => document.getElementById('st-excel')?.click()}>
-              <FileSpreadsheet size={16} /> Excel 匯入
+          <div className="toolbar">
+            <button className="btn btn-primary flex items-center gap-xs" onClick={openImportModal}>
+              <FileSpreadsheet size={16} /> 匯入
             </button>
-            <button className="btn btn-primary flex items-center gap-xs" onClick={() => setShowImport(true)}>
-              <Type size={16} /> 文字批量匯入
-            </button>
-            <button className="btn btn-primary" onClick={() => { setEditingStudent({ studentId: '', name: '' }); setShowStudentModal(true); }}>
+            <button className="btn btn-primary" onClick={() => { setEditingStudent({ studentId: '', name: '', schoolName: '國立嘉義大學' }); setShowStudentModal(true); }}>
               + 新增學生
             </button>
           </div>
         </div>
 
-        <div className="card">
+        <div className="card table-card">
           {studentsLoading ? <div className="spinner"></div> : (
             <div className="table-container scroll-region-y">
               <table className="table">
@@ -231,6 +360,7 @@ const ClassManagement: React.FC = () => {
                   <tr>
                     <th>學號</th>
                     <th>姓名</th>
+                    <th>校名</th>
                     <th>各場次狀況</th>
                     <th>加權得分</th>
                     <th>操作</th>
@@ -241,7 +371,8 @@ const ClassManagement: React.FC = () => {
                     <tr key={s.id}>
                       <td><b>{s.studentId}</b></td>
                       <td>{s.name}</td>
-                      <td style={{ minWidth: '220px', maxWidth: '360px' }}>
+                      <td>{s.schoolName}</td>
+                      <td className="cell-wrap">
                         {s.sessions?.length ? (
                           <ul style={{ margin: 0, paddingLeft: '1.15rem', fontSize: '0.875rem', lineHeight: 1.5 }}>
                             {s.sessions.map((sess: any) => (
@@ -252,11 +383,11 @@ const ClassManagement: React.FC = () => {
                           <span className="text-secondary">尚未有考試紀錄</span>
                         )}
                       </td>
-                      <td className="text-sm" style={{ whiteSpace: 'normal', maxWidth: '280px' }}>
+                      <td className="text-sm cell-wrap-sm">
                         {gradedWeightedSummary(s.sessions)}
                       </td>
                       <td>
-                        <div className="flex gap-sm flex-wrap">
+                        <div className="table-actions">
                           <button
                             type="button"
                             className="btn btn-xs btn-primary flex items-center gap-xs"
@@ -271,7 +402,7 @@ const ClassManagement: React.FC = () => {
                       </td>
                     </tr>
                   ))}
-                  {students.length === 0 && <tr><td colSpan={5} className="text-center text-secondary">尚無學生數據</td></tr>}
+                  {students.length === 0 && <tr><td colSpan={6} className="text-center text-secondary">尚無學生數據</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -280,7 +411,7 @@ const ClassManagement: React.FC = () => {
 
         {showStudentModal && (
           <div className="modal-overlay">
-            <div className="card w-full max-w-sm">
+            <div className="card modal-card modal-card--sm">
               <h3 className="mb-lg">{editingStudent.id ? '編輯' : '新增'}</h3>
               <form onSubmit={handleStudentSave}>
                 <div className="form-group">
@@ -293,7 +424,16 @@ const ClassManagement: React.FC = () => {
                   <input className="form-input" value={editingStudent.name} 
                     onChange={e => setEditingStudent({...editingStudent, name: e.target.value})} required />
                 </div>
-                <div className="flex gap-md justify-end">
+                <div className="form-group">
+                  <label>校名</label>
+                  <input className="form-input" value={editingStudent.schoolName ?? ''}
+                    onChange={e => setEditingStudent({...editingStudent, schoolName: e.target.value})} required />
+                </div>
+                <div className="form-group">
+                  <label>班級名稱</label>
+                  <input className="form-input" value={selectedClass.name} disabled />
+                </div>
+                <div className="modal-actions">
                   <button type="button" className="btn btn-secondary" onClick={() => setShowStudentModal(false)}>取消</button>
                   <button type="submit" className="btn btn-primary">儲存</button>
                 </div>
@@ -304,17 +444,92 @@ const ClassManagement: React.FC = () => {
 
         {showImport && (
           <div className="modal-overlay">
-            <div className="card w-full max-w-lg">
-              <h3 className="mb-md">批量匯入</h3>
-              <p className="text-sm text-secondary mb-md">
-                格式須為：<b>學號 姓名</b>（空白分隔）。可連續多組；學號須至少四位數字，例如「11245004 王小明 1124505 李小華」。
-              </p>
-              <textarea className="form-input mb-md" style={{ minHeight: '200px' }} 
-                value={importText} onChange={e => setImportText(e.target.value)} placeholder={'111000 王小明 111001 李小華'} />
-              <div className="flex gap-md justify-end">
-                <button className="btn btn-secondary" onClick={() => setShowImport(false)}>取消</button>
-                <button className="btn btn-primary" onClick={handleBulkImportText}>確認匯入</button>
-              </div>
+            <div className={`card modal-card ${importPreview.length > 0 ? 'modal-card--lg' : 'modal-card--sm'}`}>
+              {importPreview.length > 0 ? (
+                <>
+                  <h3 className="mb-md">檢視即將匯入的資料</h3>
+                  <p className="text-sm text-secondary mb-md">
+                    即將匯入 {importPreview.length} 位學生至「{selectedClass.name}」。
+                  </p>
+                  <div className="table-container modal-scroll mb-lg">
+                    <table className="table">
+                      <thead>
+                        <tr>
+                          <th>校名</th>
+                          <th>學號</th>
+                          <th>姓名</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {importPreview.map((s, index) => (
+                          <tr key={`${s.studentId}-${index}`}>
+                            <td>{s.schoolName}</td>
+                            <td><b>{s.studentId}</b></td>
+                            <td>{s.name}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="modal-actions">
+                    <button className="btn btn-secondary" onClick={() => setImportPreview([])}>返回修改</button>
+                    <button className="btn btn-secondary" onClick={closeImportModal}>取消</button>
+                    <button className="btn btn-primary" onClick={handleConfirmImport}>確認匯入</button>
+                  </div>
+                </>
+              ) : importMode === null ? (
+                <>
+                  <h3 className="mb-md">匯入學生</h3>
+                  <p className="text-sm text-secondary mb-lg">
+                    請選擇匯入方式。班級名稱將使用目前的「{selectedClass.name}」。
+                  </p>
+                  <div className="action-group mb-lg">
+                    <button className="btn btn-secondary btn-sm" onClick={() => selectImportMode('excel')}>
+                      <FileSpreadsheet size={16} /> Excel 匯入
+                    </button>
+                    <button className="btn btn-secondary btn-sm" onClick={() => selectImportMode('text')}>
+                      <Type size={16} /> 文字匯入
+                    </button>
+                  </div>
+                  <div className="modal-actions">
+                    <button className="btn btn-secondary" onClick={closeImportModal}>取消</button>
+                  </div>
+                </>
+              ) : importMode === 'excel' ? (
+                <>
+                  <h3 className="mb-md">Excel 匯入</h3>
+                  <p className="text-sm text-secondary mb-md">
+                    建議欄位順序為：<b>校名、學號、姓名</b>。若有標題列或欄位順序不同，系統會嘗試自動辨識。
+                  </p>
+                  <div className="form-group">
+                    <label className="form-label">選擇 Excel 檔案</label>
+                    <input type="file" className="form-input" accept=".xlsx,.xls" onChange={handleExcelUpload} />
+                  </div>
+                  {importFileName && <p className="text-sm text-secondary mb-md">已選擇：{importFileName}</p>}
+                  {importError && <div className="alert alert-danger mb-md">{importError}</div>}
+                  <div className="modal-actions">
+                    <button className="btn btn-secondary" onClick={() => selectImportMode('text')}>改用文字匯入</button>
+                    <button className="btn btn-secondary" onClick={() => setImportMode(null)}>返回</button>
+                    <button className="btn btn-secondary" onClick={closeImportModal}>取消</button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h3 className="mb-md">文字匯入</h3>
+                  <p className="text-sm text-secondary mb-md">
+                    建議格式為：<b>校名 學號 姓名</b>（空白分隔）。也可貼上「學號 姓名 校名」等格式，系統會嘗試自動辨識。
+                  </p>
+                  <textarea className="form-input mb-md" style={{ minHeight: '200px' }}
+                    value={importText} onChange={e => setImportText(e.target.value)} placeholder={'國立嘉義大學 111000 王小明\n國立嘉義大學 111001 李小華'} />
+                  {importError && <div className="alert alert-danger mb-md">{importError}</div>}
+                  <div className="modal-actions">
+                    <button className="btn btn-secondary" onClick={() => selectImportMode('excel')}>改用 Excel 匯入</button>
+                    <button className="btn btn-secondary" onClick={() => setImportMode(null)}>返回</button>
+                    <button className="btn btn-secondary" onClick={closeImportModal}>取消</button>
+                    <button className="btn btn-primary" onClick={handleTextPreview}>檢視資料</button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -324,46 +539,41 @@ const ClassManagement: React.FC = () => {
 
   return (
     <div className="fade-in">
-      <div className="flex justify-between items-center mb-lg">
+      <div className="page-header">
         <h3>班級管理</h3>
         <button className="btn btn-primary" onClick={() => setShowClassModal(true)}>+ 新增班級</button>
       </div>
 
       {loading ? <div className="spinner"></div> : (
         <div className="scroll-region-y">
-          <div className="grid grid-2">
+          <div className="grid class-list">
           {classes.map(c => (
             <div 
               key={c.id} 
-              className="card hover-trigger" 
+              className="card class-card hover-trigger" 
               onClick={() => setSelectedClass(c)}
-              style={{ position: 'relative', cursor: 'pointer', minHeight: '140px' }}
             >
-              <div 
-                className="flex gap-xs" 
-                style={{ position: 'absolute', top: '12px', right: '12px', zIndex: 10 }}
-              >
-                <button 
-                  className="btn btn-xs btn-secondary" 
-                  style={{ padding: '6px 12px', fontSize: '13px' }}
-                  onClick={(e) => { e.stopPropagation(); setEditingClassId(c.id); setNewClass({name:c.name, description:c.description||''}); setShowClassModal(true); }}
-                >
-                  編輯
-                </button>
-                <button 
-                  className="btn btn-xs btn-danger" 
-                  style={{ padding: '6px 12px', fontSize: '13px' }}
-                  onClick={(e) => { e.stopPropagation(); deleteClass(c.id); }}
-                >
-                  刪除
-                </button>
-              </div>
-
-              <div>
-                <h4 className="mb-xs" style={{ paddingRight: '120px' }}>{c.name}</h4>
-                <p className="text-secondary text-sm" style={{ paddingRight: '120px' }}>
-                  {c.description || '暫無說明'}
-                </p>
+              <div className="class-card__header">
+                <div className="class-card__body">
+                  <h4 className="mb-xs">{c.name}</h4>
+                  <p className="text-secondary text-sm">
+                    {c.description || '暫無說明'}
+                  </p>
+                </div>
+                <div className="card-actions">
+                  <button 
+                    className="btn btn-xs btn-secondary" 
+                    onClick={(e) => { e.stopPropagation(); setEditingClassId(c.id); setNewClass({name:c.name, description:c.description||''}); setShowClassModal(true); }}
+                  >
+                    編輯
+                  </button>
+                  <button 
+                    className="btn btn-xs btn-danger" 
+                    onClick={(e) => { e.stopPropagation(); deleteClass(c.id); }}
+                  >
+                    刪除
+                  </button>
+                </div>
               </div>
               
               <div className="mt-lg pt-md border-t flex justify-between items-center">
@@ -377,7 +587,7 @@ const ClassManagement: React.FC = () => {
 
       {showClassModal && (
         <div className="modal-overlay">
-          <div className="card w-full max-w-sm">
+          <div className="card modal-card modal-card--sm">
             <h3 className="mb-lg">{editingClassId ? '編輯班級' : '新增班級'}</h3>
             <form onSubmit={handleClassSave}>
               <div className="form-group">
@@ -388,7 +598,7 @@ const ClassManagement: React.FC = () => {
                 <label>說明</label>
                 <textarea className="form-input" value={newClass.description} onChange={e => setNewClass({...newClass, description: e.target.value})} />
               </div>
-              <div className="flex gap-md justify-end">
+              <div className="modal-actions">
                 <button type="button" className="btn btn-secondary" onClick={() => { setShowClassModal(false); setEditingClassId(null); setNewClass({name:'', description:''}); }}>取消</button>
                 <button type="submit" className="btn btn-primary">儲存</button>
               </div>

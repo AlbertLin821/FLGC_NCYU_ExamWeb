@@ -279,7 +279,7 @@ const StudentResultDetail: React.FC = () => {
 
   return (
     <div className="fade-in">
-      <div className="flex justify-between items-center mb-xl flex-wrap gap-md">
+      <div className="page-header mb-xl">
         <div>
           <h3 className="mb-xs">{student.name}</h3>
           <p className="text-secondary text-sm mb-0">
@@ -324,7 +324,6 @@ const StudentResultDetail: React.FC = () => {
                     {showWeightedBlock && (
                       <div
                         className="text-2xl font-bold text-primary tabular-nums"
-                        style={{ letterSpacing: '-0.02em' }}
                       >
                         加權得分 {sessionScorePercent(session.answers)} 分
                       </div>
@@ -333,8 +332,8 @@ const StudentResultDetail: React.FC = () => {
                 </div>
 
                 {showWeightedBlock && (
-                  <div className="mb-lg overflow-x-auto">
-                    <table className="table" style={{ fontSize: 'var(--font-size-sm)', minWidth: '280px' }}>
+                  <div className="table-container mb-lg">
+                    <table className="table table--compact" style={{ fontSize: 'var(--font-size-sm)' }}>
                       <thead>
                         <tr>
                           <th>題號</th>

@@ -98,9 +98,9 @@ async function main() {
                 students: {
                     createMany: {
                         data: [
-                            { studentId: '411200001', name: '王小明' },
-                            { studentId: '411200002', name: '李小華' },
-                            { studentId: '411200003', name: '張測試' },
+                            { studentId: '411200001', name: '王小明', schoolName: '國立嘉義大學' },
+                            { studentId: '411200002', name: '李小華', schoolName: '國立嘉義大學' },
+                            { studentId: '411200003', name: '張測試', schoolName: '國立嘉義大學' },
                         ],
                         skipDuplicates: true,
                     },
@@ -157,7 +157,7 @@ async function main() {
     console.log('- 系統管理 system@ncyu.edu.tw / SystemDemo123!');
     console.log('- 示範教師 teacher@ncyu.edu.tw / TeacherDemo123!');
     console.log('- 檢視／監控 viewer@ncyu.edu.tw / ViewerDemo123!');
-    console.log('- 學生登入：學號 411200001，姓名 王小明（另見 411200002／411200003）');
+    console.log('- 學生登入：輸入學號 411200001（另見 411200002／411200003）');
 }
 main()
     .catch((e) => {

@@ -55,25 +55,14 @@ export class AuthService {
     return bcrypt.hash(password, 12);
   }
 
-  async validateStudent(studentId: string, name: string) {
+  async validateStudent(studentId: string) {
     const student = await this.prisma.student.findUnique({
-      where: { studentId },
+      where: { studentId: studentId.trim() },
+      include: { class: { select: { id: true, name: true } } },
     });
 
-    if (!student || student.name !== name) {
-      // Increment login attempts
-      if (student) {
-        const attempts = student.loginAttempts + 1;
-        const updateData: any = { loginAttempts: attempts };
-        if (attempts >= 3) {
-          updateData.lockedUntil = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-        }
-        await this.prisma.student.update({
-          where: { id: student.id },
-          data: updateData,
-        });
-      }
-      throw new UnauthorizedException('學號或姓名錯誤');
+    if (!student) {
+      throw new UnauthorizedException('查無此學號，請確認後重新輸入');
     }
 
     // Check if locked

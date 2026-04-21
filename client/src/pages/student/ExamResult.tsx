@@ -21,7 +21,7 @@ const ExamResult: React.FC = () => {
   return (
     <Layout>
       <div className="flex flex-col items-center justify-center mt-3xl">
-        <div className="card text-center" style={{ maxWidth: '600px' }}>
+        <div className="card modal-card modal-card--md text-center">
           <div className="flex justify-center text-success mb-lg">
             <CheckCircle size={64} />
           </div>
@@ -34,7 +34,7 @@ const ExamResult: React.FC = () => {
             </p>
           ) : null}
           <p className="text-secondary mb-xl">請靜候老師公布最後成績；如有疑問請洽監考老師。</p>
-          <div className="flex gap-md justify-center">
+          <div className="card-actions justify-center">
             <Link to="/student/exams" className="btn btn-primary">返回考卷列表</Link>
             <Link to="/" className="btn btn-secondary">回到首頁</Link>
           </div>

@@ -315,7 +315,7 @@ const ExamRoom: React.FC = () => {
   if (isPaused) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-alt">
-        <div className="card text-center" style={{ maxWidth: '500px' }}>
+        <div className="card modal-card modal-card--md text-center">
           <div className="flex justify-center text-warning mb-lg">
             <AlertTriangle size={64} />
           </div>
@@ -364,11 +364,11 @@ const ExamRoom: React.FC = () => {
       </div>
 
       <div className="container content py-xl" style={{ paddingBottom: 'max(var(--space-xl), env(safe-area-inset-bottom, 0px))' }}>
-        <div className="card mx-auto w-full" style={{ maxWidth: '800px' }}>
+        <div className="card mx-auto w-full exam-panel">
           <div className="mb-2xl">
             <h3 className="mb-lg">第 {currentIdx + 1} 題</h3>
             
-            <div className="mb-xl text-lg font-medium" style={{ whiteSpace: 'pre-wrap' }}>
+            <div className="mb-xl text-lg font-medium text-pre-wrap">
               {q?.content}
             </div>
           </div>
@@ -385,22 +385,21 @@ const ExamRoom: React.FC = () => {
                   return (
                     <div 
                       key={i} 
-                      className={`card p-md pointer flex items-center gap-md border-2 transition-all ${isSelected ? 'border-primary bg-primary-light bg-opacity-10' : 'hover:border-secondary'}`}
+                      className={`card p-md pointer choice-card flex items-center gap-md border-2 transition-all ${isSelected ? 'border-primary bg-primary-light bg-opacity-10' : 'hover:border-secondary'}`}
                       onClick={() => handleSelectionChange(label, q.type === 'multiple_selection')}
-                      style={{ cursor: 'pointer', border: isSelected ? '2px solid var(--color-primary)' : '2px solid transparent', background: isSelected ? 'rgba(var(--color-primary-rgb), 0.05)' : 'white' }}
+                      style={{ border: isSelected ? '2px solid var(--color-primary)' : '2px solid transparent', background: isSelected ? 'var(--color-primary-light)' : 'white' }}
                     >
-                      <div className={`flex items-center justify-center rounded-full font-bold ${isSelected ? 'bg-primary text-white' : 'bg-alt text-secondary'}`} style={{ width: '32px', height: '32px', background: isSelected ? 'var(--color-primary)' : '#f0f4f8', color: isSelected ? 'white' : '#64748b' }}>
+                      <div className={`option-marker flex items-center justify-center rounded-full font-bold ${isSelected ? 'bg-primary text-white' : 'bg-alt text-secondary'}`} style={{ background: isSelected ? 'var(--color-primary)' : '#f0f4f8', color: isSelected ? 'white' : '#64748b' }}>
                         {label}
                       </div>
-                      <div className="text-md">{opt}</div>
+                      <div className="text-md min-w-0">{opt}</div>
                     </div>
                   );
                 })}
               </div>
             ) : (
               <textarea
-                className="form-input"
-                style={{ fontSize: '1.2rem', minHeight: '150px' }}
+                className="form-input answer-textarea"
                 placeholder="在這邊輸入您的答案（問答题可留白，按下一題即視為不作答）"
                 value={userAnswer}
                 onChange={(e) => setUserAnswer(e.target.value)}
@@ -415,7 +414,6 @@ const ExamRoom: React.FC = () => {
             </div>
             <button
               className="btn btn-primary btn-lg w-full sm:w-auto shrink-0"
-              style={{ minWidth: 'min(100%, 10rem)' }}
               onClick={handleNext}
               disabled={submitting}
             >

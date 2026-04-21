@@ -92,23 +92,13 @@ let AuthService = AuthService_1 = class AuthService {
     async hashPassword(password) {
         return bcrypt.hash(password, 12);
     }
-    async validateStudent(studentId, name) {
+    async validateStudent(studentId) {
         const student = await this.prisma.student.findUnique({
-            where: { studentId },
+            where: { studentId: studentId.trim() },
+            include: { class: { select: { id: true, name: true } } },
         });
-        if (!student || student.name !== name) {
-            if (student) {
-                const attempts = student.loginAttempts + 1;
-                const updateData = { loginAttempts: attempts };
-                if (attempts >= 3) {
-                    updateData.lockedUntil = new Date(Date.now() + 10 * 60 * 1000);
-                }
-                await this.prisma.student.update({
-                    where: { id: student.id },
-                    data: updateData,
-                });
-            }
-            throw new common_1.UnauthorizedException('學號或姓名錯誤');
+        if (!student) {
+            throw new common_1.UnauthorizedException('查無此學號，請確認後重新輸入');
         }
         if (student.lockedUntil && student.lockedUntil > new Date()) {
             const remainMinutes = Math.ceil((student.lockedUntil.getTime() - Date.now()) / 60000);

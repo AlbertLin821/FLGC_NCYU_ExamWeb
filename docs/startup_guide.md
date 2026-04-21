@@ -112,7 +112,7 @@ npm run dev
 | 一般教師（`teacher`） | `teacher@ncyu.edu.tw` | `TeacherDemo123!` | 班級／考卷／題目等寫入權限 |
 | 檢視／監控（`viewer`） | `viewer@ncyu.edu.tw` | `ViewerDemo123!` | 僅儀表板、成績、防弊監控（無寫入） |
 
-學生登入為**學號＋姓名**（與種子一致方可登入），例如學號 `411200001`、姓名 `王小明`；實際資料以 `server/prisma/seed.ts` 為準。
+學生登入為**學號**，系統會顯示該生的學號、校名與班級名稱，學生確認後進入考卷列表。例如學號 `411200001`；實際資料以 `server/prisma/seed.ts` 為準。
 
 ### 成績 Excel 匯出
 

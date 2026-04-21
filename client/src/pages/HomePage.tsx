@@ -15,8 +15,7 @@ const HomePage: React.FC = () => {
           <span style={{ color: 'var(--color-primary)' }}>線上英文考試平台</span>
         </h1>
         <p
-          className="text-secondary mb-2xl mx-auto"
-          style={{ fontSize: 'clamp(1rem, 3vw, 1.2rem)', maxWidth: '36rem' }}
+          className="text-secondary text-lg mb-2xl mx-auto home-hero-copy"
         >
           選擇身分類別進入平台。
         </p>

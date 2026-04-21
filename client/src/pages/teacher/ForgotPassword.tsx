@@ -32,7 +32,7 @@ const ForgotPassword: React.FC = () => {
   return (
     <Layout>
       <div className="flex justify-center">
-        <div className="card w-full" style={{ maxWidth: '400px' }}>
+        <div className="card modal-card modal-card--sm">
           <div className="text-center mb-xl">
             <h2 className="mb-xs">忘記密碼</h2>
             <p className="text-sm text-secondary">請輸入您的註冊信箱以獲取重設驗證碼</p>

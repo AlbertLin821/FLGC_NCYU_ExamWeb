@@ -54,8 +54,8 @@ async function main() {
       },
       students: {
         create: [
-          { studentId: 'TEST001', name: '測試生甲' },
-          { studentId: 'TEST002', name: '測試生乙' },
+          { studentId: 'TEST001', name: '測試生甲', schoolName: '國立嘉義大學' },
+          { studentId: 'TEST002', name: '測試生乙', schoolName: '國立嘉義大學' },
         ],
       },
     },

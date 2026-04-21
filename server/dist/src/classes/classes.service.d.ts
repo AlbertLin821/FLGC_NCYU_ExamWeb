@@ -57,6 +57,7 @@ export declare class ClassesService {
             createdAt: Date;
             id: number;
             studentId: string;
+            schoolName: string;
             loginAttempts: number;
             lockedUntil: Date | null;
             classId: number;

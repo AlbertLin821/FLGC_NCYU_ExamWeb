@@ -26,6 +26,7 @@ const TeacherAccounts: React.FC = () => {
     name: '',
     role: 'teacher',
   });
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [resetId, setResetId] = useState<number | null>(null);
   const [resetPass, setResetPass] = useState('');
 
@@ -52,14 +53,24 @@ const TeacherAccounts: React.FC = () => {
     return <Navigate to="/teacher/overview" replace />;
   }
 
+  const resetCreateForm = () => {
+    setNewTeacher({ email: '', password: '', name: '', role: 'teacher' });
+  };
+
+  const closeCreateModal = () => {
+    resetCreateForm();
+    setShowCreateModal(false);
+  };
+
   const handleCreateTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTeacher.email || !newTeacher.password || !newTeacher.name) return;
+    const createdRoleName = roleLabel(newTeacher.role);
     try {
       await teachersApi.create(newTeacher);
-      setNewTeacher({ email: '', password: '', name: '', role: 'teacher' });
+      closeCreateModal();
       loadTeachers();
-      alert('已新增教師帳號');
+      alert(`已新增角色「${createdRoleName}」`);
     } catch {
       alert('新增失敗，請確認電子郵件是否已被使用');
     }
@@ -100,70 +111,29 @@ const TeacherAccounts: React.FC = () => {
 
   return (
     <div className="fade-in">
-      <div className="flex justify-between items-center mb-lg">
+      <div className="page-header">
         <div>
           <h3 className="mb-xs">教師帳號</h3>
           <p className="text-sm text-secondary">檢視與維護系統內所有教師帳號，與班級／學生管理分開操作。</p>
         </div>
       </div>
 
-      <div className="card mb-lg">
-        <h4 className="mb-md">新增其他教師</h4>
-        <form onSubmit={handleCreateTeacher} className="flex flex-col gap-md" style={{ maxWidth: '480px' }}>
-          <div>
-            <label className="form-label">電子郵件</label>
-            <input
-              className="form-input w-full"
-              type="email"
-              value={newTeacher.email}
-              onChange={(e) => setNewTeacher({ ...newTeacher, email: e.target.value })}
-              required
-            />
-          </div>
-          <div>
-            <label className="form-label">姓名</label>
-            <input
-              className="form-input w-full"
-              value={newTeacher.name}
-              onChange={(e) => setNewTeacher({ ...newTeacher, name: e.target.value })}
-              required
-            />
-          </div>
-          <div>
-            <label className="form-label">密碼</label>
-            <input
-              className="form-input w-full"
-              type="password"
-              value={newTeacher.password}
-              onChange={(e) => setNewTeacher({ ...newTeacher, password: e.target.value })}
-              required
-            />
-          </div>
-          <div>
-            <label className="form-label">角色</label>
-            <select
-              className="form-input w-full"
-              value={newTeacher.role}
-              onChange={(e) => setNewTeacher({ ...newTeacher, role: e.target.value })}
-            >
-              <option value="teacher">教師（完整）</option>
-              <option value="viewer">檢視／監控</option>
-              <option value="admin">管理員</option>
-            </select>
-          </div>
-          <button type="submit" className="btn btn-primary">
-            新增帳號
-          </button>
-        </form>
-      </div>
-
       <div className="card">
-        <h4 className="mb-md">目前教師列表</h4>
+        <div className="flex justify-between items-center flex-wrap gap-md mb-md">
+          <h4>目前教師列表</h4>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => setShowCreateModal(true)}
+          >
+            + 新增教師
+          </button>
+        </div>
         {loading ? (
           <div className="spinner" />
         ) : (
           <div className="table-container scroll-region-y">
-            <table className="table">
+            <table className="table table--sticky-header">
               <thead>
                 <tr>
                   <th>電子郵件</th>
@@ -183,13 +153,12 @@ const TeacherAccounts: React.FC = () => {
                       {t.createdAt ? new Date(t.createdAt).toLocaleString('zh-TW') : '—'}
                     </td>
                     <td>
-                      <div className="flex gap-sm items-center flex-wrap">
+                      <div className="table-actions">
                         {resetId === t.id ? (
                           <>
                             <input
                               type="password"
-                              className="form-input"
-                              style={{ width: '140px' }}
+                              className="form-input field-min-sm"
                               placeholder="新密碼"
                               value={resetPass}
                               onChange={(e) => setResetPass(e.target.value)}
@@ -233,6 +202,64 @@ const TeacherAccounts: React.FC = () => {
           </div>
         )}
       </div>
+
+      {showCreateModal && (
+        <div className="modal-overlay">
+          <div className="card modal-card modal-card--sm">
+            <h3 className="mb-lg">新增教師</h3>
+            <form onSubmit={handleCreateTeacher} className="flex flex-col gap-md">
+              <div>
+                <label className="form-label">電子郵件</label>
+                <input
+                  className="form-input w-full"
+                  type="email"
+                  value={newTeacher.email}
+                  onChange={(e) => setNewTeacher({ ...newTeacher, email: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className="form-label">姓名</label>
+                <input
+                  className="form-input w-full"
+                  value={newTeacher.name}
+                  onChange={(e) => setNewTeacher({ ...newTeacher, name: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className="form-label">密碼</label>
+                <input
+                  className="form-input w-full"
+                  type="password"
+                  value={newTeacher.password}
+                  onChange={(e) => setNewTeacher({ ...newTeacher, password: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className="form-label">角色</label>
+                <select
+                  className="form-input w-full"
+                  value={newTeacher.role}
+                  onChange={(e) => setNewTeacher({ ...newTeacher, role: e.target.value })}
+                >
+                  <option value="teacher">教師</option>
+                  <option value="admin">管理員</option>
+                </select>
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn btn-secondary" onClick={closeCreateModal}>
+                  取消
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  新增帳號
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -5,7 +5,6 @@ export declare class TeacherLoginDto {
 }
 export declare class StudentLoginDto {
     studentId: string;
-    name: string;
 }
 export declare class RequestResetDto {
     email: string;
@@ -31,7 +30,9 @@ export declare class AuthController {
             id: number;
             studentId: string;
             name: string;
+            schoolName: string;
             classId: number;
+            className: string;
         };
     }>;
     requestReset(dto: RequestResetDto): Promise<{

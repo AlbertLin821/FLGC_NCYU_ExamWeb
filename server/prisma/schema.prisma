@@ -65,6 +65,7 @@ model Student {
   id            Int       @id @default(autoincrement())
   studentId     String    @unique @map("student_id")
   name          String
+  schoolName    String    @default("國立嘉義大學") @map("school_name")
   classId       Int       @map("class_id")
   loginAttempts Int       @default(0) @map("login_attempts")
   lockedUntil   DateTime? @map("locked_until")

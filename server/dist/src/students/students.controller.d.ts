@@ -2,6 +2,7 @@ import { StudentsService } from './students.service';
 declare class StudentImportItem {
     studentId: string;
     name: string;
+    schoolName: string;
 }
 export declare class BulkImportDto {
     students: StudentImportItem[];
@@ -10,6 +11,7 @@ export declare class BulkImportDto {
 export declare class CreateStudentDto {
     studentId: string;
     name: string;
+    schoolName: string;
     classId: number;
 }
 export declare class StudentsController {
@@ -30,6 +32,7 @@ export declare class StudentsController {
             createdAt: Date;
             id: number;
             studentId: string;
+            schoolName: string;
             loginAttempts: number;
             lockedUntil: Date | null;
             classId: number;
@@ -83,6 +86,7 @@ export declare class StudentsController {
         createdAt: Date;
         id: number;
         studentId: string;
+        schoolName: string;
         loginAttempts: number;
         lockedUntil: Date | null;
         classId: number;
@@ -132,6 +136,7 @@ export declare class StudentsController {
             createdAt: Date;
             id: number;
             studentId: string;
+            schoolName: string;
             loginAttempts: number;
             lockedUntil: Date | null;
             classId: number;
@@ -203,6 +208,7 @@ export declare class StudentsController {
         createdAt: Date;
         id: number;
         studentId: string;
+        schoolName: string;
         loginAttempts: number;
         lockedUntil: Date | null;
         classId: number;
@@ -217,6 +223,7 @@ export declare class StudentsController {
         createdAt: Date;
         id: number;
         studentId: string;
+        schoolName: string;
         loginAttempts: number;
         lockedUntil: Date | null;
         classId: number;
@@ -226,6 +233,7 @@ export declare class StudentsController {
         createdAt: Date;
         id: number;
         studentId: string;
+        schoolName: string;
         loginAttempts: number;
         lockedUntil: Date | null;
         classId: number;
@@ -235,6 +243,7 @@ export declare class StudentsController {
         createdAt: Date;
         id: number;
         studentId: string;
+        schoolName: string;
         loginAttempts: number;
         lockedUntil: Date | null;
         classId: number;

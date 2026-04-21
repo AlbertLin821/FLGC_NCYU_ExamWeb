@@ -91,10 +91,16 @@ let StudentsService = class StudentsService {
         const results = { created: 0, updated: 0, errors: [] };
         for (const s of students) {
             try {
+                const data = {
+                    studentId: s.studentId.trim(),
+                    name: s.name.trim(),
+                    schoolName: s.schoolName.trim(),
+                    classId,
+                };
                 await this.prisma.student.upsert({
-                    where: { studentId: s.studentId },
-                    update: { name: s.name, classId },
-                    create: { studentId: s.studentId, name: s.name, classId },
+                    where: { studentId: data.studentId },
+                    update: { name: data.name, schoolName: data.schoolName, classId },
+                    create: data,
                 });
                 results.created++;
             }
@@ -105,10 +111,24 @@ let StudentsService = class StudentsService {
         return results;
     }
     async create(data) {
-        return this.prisma.student.create({ data });
+        return this.prisma.student.create({
+            data: {
+                studentId: data.studentId.trim(),
+                name: data.name.trim(),
+                schoolName: data.schoolName.trim(),
+                classId: data.classId,
+            },
+        });
     }
     async update(id, data) {
-        return this.prisma.student.update({ where: { id }, data });
+        return this.prisma.student.update({
+            where: { id },
+            data: {
+                ...(data.name !== undefined ? { name: data.name.trim() } : {}),
+                ...(data.schoolName !== undefined ? { schoolName: data.schoolName.trim() } : {}),
+                ...(data.classId !== undefined ? { classId: data.classId } : {}),
+            },
+        });
     }
     async delete(id) {
         return this.prisma.student.delete({ where: { id } });

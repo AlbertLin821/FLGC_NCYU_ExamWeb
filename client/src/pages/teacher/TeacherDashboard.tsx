@@ -17,8 +17,10 @@ import {
   Trophy,
   ShieldAlert,
   Settings,
+  Menu,
+  X,
 } from 'lucide-react';
-import { dashboardApi } from '../../api';
+import { dashboardApi, warmTeacherData } from '../../api';
 import { getTeacherRole } from '../../utils/teacherRole';
 
 const DashboardOverview = () => {
@@ -46,23 +48,20 @@ const DashboardOverview = () => {
 
   return (
   <div className="flex flex-col gap-lg">
-    <div
-      className="grid"
-      style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}
-    >
+    <div className="dashboard-grid">
       <div className="card" style={{ background: 'var(--color-primary)', color: 'white' }}>
         <h4 style={{ opacity: 0.8 }}>目前活躍考場</h4>
-        <div style={{ fontSize: '2.5rem', fontWeight: 800, margin: '0.5rem 0' }}>{stats?.activeExams || 0}</div>
+        <div className="numeric-display">{stats?.activeExams || 0}</div>
         <p className="text-xs">即時進行中</p>
       </div>
       <div className="card" onClick={() => navigate('/teacher/cheat')} style={{ cursor: 'pointer' }}>
         <h4 className="text-secondary">待處理異常</h4>
-        <div style={{ fontSize: '2.5rem', fontWeight: 800, margin: '0.5rem 0', color: 'var(--color-danger)' }}>{stats?.pendingAlerts || 0}</div>
+        <div className="numeric-display text-danger">{stats?.pendingAlerts || 0}</div>
         <p className="text-xs">請見監控面板</p>
       </div>
       <div className="card">
         <h4 className="text-secondary">本週交卷數</h4>
-        <div style={{ fontSize: '2.5rem', fontWeight: 800, margin: '0.5rem 0' }}>{stats?.totalSubmissions || 0}</div>
+        <div className="numeric-display">{stats?.totalSubmissions || 0}</div>
         <p className="text-xs">即時連線數據</p>
       </div>
       <div
@@ -74,14 +73,7 @@ const DashboardOverview = () => {
         }}
       >
         <h4 className="text-secondary">成績未完成</h4>
-        <div
-          style={{
-            fontSize: '2.5rem',
-            fontWeight: 800,
-            margin: '0.5rem 0',
-            color: 'var(--color-danger)',
-          }}
-        >
+        <div className="numeric-display text-danger">
           {(stats?.sessionsAwaitingScore || 0) + (stats?.sessionsPendingReview || 0)}
         </div>
         <p className="text-xs text-secondary">
@@ -101,10 +93,20 @@ const TeacherDashboard: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
+  const [teacherMenuOpen, setTeacherMenuOpen] = React.useState(false);
+  const role = getTeacherRole();
 
   React.useEffect(() => {
     if (!token) navigate('/teacher/login');
   }, [token, navigate]);
+
+  React.useEffect(() => {
+    setTeacherMenuOpen(false);
+  }, [location.pathname]);
+
+  React.useEffect(() => {
+    if (token) warmTeacherData(role);
+  }, [token, role]);
 
   if (!token) {
     return (
@@ -116,7 +118,6 @@ const TeacherDashboard: React.FC = () => {
     );
   }
 
-  const role = getTeacherRole();
   const menuItems = [
     { path: '/teacher/overview', label: '儀表板', icon: <LayoutDashboard size={18} />, show: true },
     { path: '/teacher/classes', label: '班級與學生', icon: <Users size={18} />, show: role !== 'viewer' },
@@ -126,12 +127,33 @@ const TeacherDashboard: React.FC = () => {
     { path: '/teacher/cheat', label: '防弊監控', icon: <ShieldAlert size={18} />, show: true },
     { path: '/teacher/system', label: '系統管理', icon: <Settings size={18} />, show: role === 'admin' },
   ].filter((i) => i.show);
+  const activeItem = menuItems.find(
+    (item) =>
+      location.pathname.startsWith(item.path) ||
+      (item.path === '/teacher/overview' && location.pathname === '/teacher/dashboard'),
+  );
 
   return (
     <Layout>
       <div className="teacher-layout">
         <aside className="teacher-layout__nav">
-          <div className="flex flex-col gap-sm">
+          <button
+            type="button"
+            className="btn teacher-nav-toggle"
+            onClick={() => setTeacherMenuOpen((open) => !open)}
+            aria-expanded={teacherMenuOpen}
+            aria-controls="teacher-dashboard-menu"
+          >
+            <span className="flex items-center gap-sm">
+              {activeItem?.icon}
+              {activeItem?.label ?? '功能選單'}
+            </span>
+            {teacherMenuOpen ? <X size={18} /> : <Menu size={18} />}
+          </button>
+          <div
+            id="teacher-dashboard-menu"
+            className={`teacher-menu ${teacherMenuOpen ? 'teacher-menu--open' : ''}`}
+          >
             {menuItems.map((item) => (
               <Link
                 key={item.path}

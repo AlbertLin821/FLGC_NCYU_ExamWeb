@@ -32,7 +32,6 @@ __decorate([
 ], TeacherLoginDto.prototype, "password", void 0);
 class StudentLoginDto {
     studentId;
-    name;
 }
 exports.StudentLoginDto = StudentLoginDto;
 __decorate([
@@ -40,11 +39,6 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], StudentLoginDto.prototype, "studentId", void 0);
-__decorate([
-    (0, class_validator_1.IsNotEmpty)(),
-    (0, class_validator_1.IsString)(),
-    __metadata("design:type", String)
-], StudentLoginDto.prototype, "name", void 0);
 class RequestResetDto {
     email;
 }
@@ -77,13 +71,15 @@ let AuthController = class AuthController {
         return this.authService.login(dto.email, dto.password);
     }
     async studentVerify(dto) {
-        const student = await this.authService.validateStudent(dto.studentId, dto.name);
+        const student = await this.authService.validateStudent(dto.studentId);
         return {
             student: {
                 id: student.id,
                 studentId: student.studentId,
                 name: student.name,
+                schoolName: student.schoolName,
                 classId: student.classId,
+                className: student.class.name,
             },
         };
     }

@@ -133,9 +133,9 @@ const ResultsView: React.FC = () => {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-lg flex-wrap gap-md">
+      <div className="page-header">
         <h3>成績後台</h3>
-        <div className="flex flex-wrap gap-sm">
+        <div className="toolbar">
           {!isViewer && (
             <button
               type="button"
@@ -157,12 +157,11 @@ const ResultsView: React.FC = () => {
         </div>
       </div>
 
-      <div className="mb-lg flex flex-wrap gap-lg items-end">
-        <div>
+      <div className="mb-lg action-group">
+        <div className="field-min-sm">
           <label className="form-label">選擇班級</label>
           <select
             className="form-input"
-            style={{ minWidth: '200px' }}
             value={selectedClassId || ''}
             onChange={(e) => {
               setSelectedClassId(Number(e.target.value));
@@ -176,11 +175,10 @@ const ResultsView: React.FC = () => {
             ))}
           </select>
         </div>
-        <div>
+        <div className="field-min-md">
           <label className="form-label">選擇考卷</label>
           <select
             className="form-input"
-            style={{ minWidth: '240px' }}
             value={selectedExamId === null ? '' : String(selectedExamId)}
             onChange={(e) => {
               const v = e.target.value;
@@ -197,60 +195,62 @@ const ResultsView: React.FC = () => {
         </div>
       </div>
 
-      <div className="table-container card">
+      <div className="card table-card">
         {loading ? (
           <div className="spinner"></div>
         ) : (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>學號</th>
-                <th>姓名</th>
-                <th>考試項目</th>
-                <th>狀態</th>
-                <th>加權得分</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {results.map((r) => (
-                <tr key={r.id}>
-                  <td>{r.student.studentId}</td>
-                  <td><b>{r.student.name}</b></td>
-                  <td>{r.exam.title}</td>
-                  <td>
-                    <span className={`badge ${statusLabel(r).className}`}>
-                      {statusLabel(r).text}
-                    </span>
-                  </td>
-                  <td><b>{calculateTotal(r.answers)}</b></td>
-                  <td>
-                    <div className="flex gap-sm">
-                      <button
-                        className="btn btn-xs btn-secondary"
-                        disabled={typeof r.student?.id !== 'number'}
-                        onClick={() => {
-                          if (typeof r.student?.id === 'number') {
-                            navigate(`/teacher/result/${r.student.id}`);
-                          }
-                        }}
-                      >查看細節</button>
-                      {r.status === 'submitted' && !isViewer && (
-                        <button
-                          type="button"
-                          className="btn btn-xs btn-secondary"
-                          title="僅重算選擇題與多選，不含問答题 AI"
-                          onClick={() => handleTriggerScoring(r.id)}
-                        >
-                          重算客觀題
-                        </button>
-                      )}
-                    </div>
-                  </td>
+          <div className="table-container">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>學號</th>
+                  <th>姓名</th>
+                  <th>考試項目</th>
+                  <th>狀態</th>
+                  <th>加權得分</th>
+                  <th>操作</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {results.map((r) => (
+                  <tr key={r.id}>
+                    <td>{r.student.studentId}</td>
+                    <td><b>{r.student.name}</b></td>
+                    <td className="cell-wrap-sm">{r.exam.title}</td>
+                    <td>
+                      <span className={`badge ${statusLabel(r).className}`}>
+                        {statusLabel(r).text}
+                      </span>
+                    </td>
+                    <td><b>{calculateTotal(r.answers)}</b></td>
+                    <td>
+                      <div className="table-actions">
+                        <button
+                          className="btn btn-xs btn-secondary"
+                          disabled={typeof r.student?.id !== 'number'}
+                          onClick={() => {
+                            if (typeof r.student?.id === 'number') {
+                              navigate(`/teacher/result/${r.student.id}`);
+                            }
+                          }}
+                        >查看細節</button>
+                        {r.status === 'submitted' && !isViewer && (
+                          <button
+                            type="button"
+                            className="btn btn-xs btn-secondary"
+                            title="僅重算選擇題與多選，不含問答题 AI"
+                            onClick={() => handleTriggerScoring(r.id)}
+                          >
+                            重算客觀題
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

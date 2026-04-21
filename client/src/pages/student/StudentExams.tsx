@@ -67,7 +67,10 @@ const StudentExams: React.FC = () => {
     <Layout>
       <div className="mb-xl">
         <h2 className="mb-xs">Hi，{student?.name}</h2>
-        <p className="text-secondary text-sm">學號: {student?.studentId} | 以下是目前可參加的測驗</p>
+        <p className="text-secondary text-sm">
+          校名: {student?.schoolName ?? '—'} | 班級: {student?.className ?? '—'} | 學號: {student?.studentId} | 姓名: {student?.name}
+        </p>
+        <p className="text-secondary text-sm">以下是目前可參加的測驗</p>
       </div>
 
       {error ? (
@@ -77,11 +80,11 @@ const StudentExams: React.FC = () => {
           <p className="text-secondary">目前沒有可考的考卷</p>
         </div>
       ) : (
-        <div className="grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
+        <div className="exam-card-grid">
           {exams.map((exam) => (
             <div key={exam.id} className="card flex flex-col justify-between">
               <div>
-                <div className="flex justify-between items-center mb-md">
+                <div className="flex justify-between items-center flex-wrap gap-sm mb-md">
                   <span className={`badge ${
                     exam.difficulty === 'hard' ? 'badge-danger' :
                     exam.difficulty === 'medium' ? 'badge-warning' : 'badge-success'

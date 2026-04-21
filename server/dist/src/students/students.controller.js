@@ -21,6 +21,7 @@ const class_transformer_1 = require("class-transformer");
 class StudentImportItem {
     studentId;
     name;
+    schoolName;
 }
 __decorate([
     (0, class_validator_1.IsNotEmpty)(),
@@ -32,6 +33,11 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], StudentImportItem.prototype, "name", void 0);
+__decorate([
+    (0, class_validator_1.IsNotEmpty)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], StudentImportItem.prototype, "schoolName", void 0);
 class BulkImportDto {
     students;
     classId;
@@ -50,6 +56,7 @@ __decorate([
 class CreateStudentDto {
     studentId;
     name;
+    schoolName;
     classId;
 }
 exports.CreateStudentDto = CreateStudentDto;
@@ -63,6 +70,11 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreateStudentDto.prototype, "name", void 0);
+__decorate([
+    (0, class_validator_1.IsNotEmpty)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateStudentDto.prototype, "schoolName", void 0);
 __decorate([
     (0, class_validator_1.IsInt)(),
     __metadata("design:type", Number)
