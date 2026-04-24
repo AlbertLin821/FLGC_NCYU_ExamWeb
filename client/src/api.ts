@@ -220,6 +220,10 @@ export const examsApi = {
     invalidateGetCache(['/exams', '/students', '/dashboard']);
     return res;
   }),
+  unpublish: (id: number) => api.post(`/exams/${id}/unpublish`).then((res) => {
+    invalidateGetCache(['/exams', '/students', '/dashboard']);
+    return res;
+  }),
   start: (examId: number, studentId: number) =>
     api.post(`/exams/${examId}/start`, { studentId }).then((res) => {
       invalidateGetCache(['/students', '/exams/results', '/dashboard']);

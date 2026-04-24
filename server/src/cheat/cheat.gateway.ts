@@ -66,8 +66,8 @@ export class CheatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   // Teacher joins the monitoring room
   @SubscribeMessage('teacher:join')
-  handleTeacherJoin(@ConnectedSocket() client: Socket) {
-    client.join('teachers');
+  async handleTeacherJoin(@ConnectedSocket() client: Socket) {
+    await client.join('teachers');
     this.logger.log(`Teacher joined monitoring: ${client.id}`);
   }
 

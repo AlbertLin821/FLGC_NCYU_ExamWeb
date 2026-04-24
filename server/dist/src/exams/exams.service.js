@@ -14,6 +14,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ExamsService = void 0;
 const common_1 = require("@nestjs/common");
+const client_1 = require("@prisma/client");
 const prisma_service_1 = require("../prisma/prisma.service");
 const scoring_service_1 = require("../scoring/scoring.service");
 const exam_time_util_1 = require("./exam-time.util");
@@ -145,6 +146,22 @@ let ExamsService = class ExamsService {
             data: { status: 'published' },
         });
     }
+    async unpublish(id) {
+        const exam = await this.prisma.exam.findFirst({ where: { id, deletedAt: null } });
+        if (!exam)
+            throw new common_1.NotFoundException('考卷不存在或已移除');
+        if (exam.status !== 'published') {
+            throw new common_1.BadRequestException('僅已發放之考卷可取消發放');
+        }
+        const sessionCount = await this.prisma.examSession.count({ where: { examId: id } });
+        if (sessionCount > 0) {
+            throw new common_1.BadRequestException('已有學生產生考試紀錄，無法取消發放');
+        }
+        return this.prisma.exam.update({
+            where: { id },
+            data: { status: 'draft' },
+        });
+    }
     async startSession(studentId, examId) {
         const exam = await this.prisma.exam.findFirst({
             where: { id: examId, deletedAt: null },
@@ -231,10 +248,19 @@ let ExamsService = class ExamsService {
         if (remaining <= 0) {
             throw new common_1.BadRequestException('作答時間已結束');
         }
-        return this.prisma.answer.upsert({
-            where: { sessionId_questionId: { sessionId, questionId } },
-            update: { content },
-            create: { sessionId, questionId, content },
+        return this.prisma.$transaction(async (tx) => {
+            const row = await tx.answer.upsert({
+                where: { sessionId_questionId: { sessionId, questionId } },
+                update: { content },
+                create: { sessionId, questionId, content },
+            });
+            const agg = await tx.$queryRaw(client_1.Prisma.sql `SELECT COUNT(*)::int AS c FROM "answers" WHERE "session_id" = ${sessionId} AND "content" IS NOT NULL AND TRIM("content") <> ''`);
+            const answeredQuestionCount = Number(agg[0]?.c ?? 0);
+            await tx.examSession.update({
+                where: { id: sessionId },
+                data: { answeredQuestionCount },
+            });
+            return row;
         });
     }
     async submitExam(sessionId) {

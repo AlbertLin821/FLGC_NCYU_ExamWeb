@@ -108,6 +108,13 @@ export class ExamsController {
     return this.examsService.publish(id);
   }
 
+  @Post(':id/unpublish')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('teacher', 'admin')
+  unpublish(@Param('id', ParseIntPipe) id: number) {
+    return this.examsService.unpublish(id);
+  }
+
   // === Student endpoints（維持無 JWT，由班級／學號流程驗證）===
   @Post(':id/start')
   startExam(@Param('id', ParseIntPipe) examId: number, @Body('studentId') studentId: number) {

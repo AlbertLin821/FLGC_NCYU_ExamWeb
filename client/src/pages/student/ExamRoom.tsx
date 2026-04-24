@@ -38,6 +38,9 @@ const ExamRoom: React.FC = () => {
   const hadFullscreenRef = useRef(false);
   /** 重新整理／關閉分頁時會觸發 blur，不應記為作弊（否則 reload 後 session 被後端設為 paused） */
   const pageLeaveRef = useRef(false);
+  /** 問答題週期性自動儲存：不早於 45 秒重複寫入同一草稿 */
+  const lastEssaySavedContentRef = useRef<string>('');
+  const userAnswerRef = useRef(userAnswer);
   const student = JSON.parse(localStorage.getItem('student') || '{}');
 
   // Anti-cheat: Fullscreen, Visibility, Blur
@@ -51,6 +54,10 @@ const ExamRoom: React.FC = () => {
       setIsPaused(true);
     }
   }, [session]);
+
+  useEffect(() => {
+    userAnswerRef.current = userAnswer;
+  }, [userAnswer]);
 
   const handleVisibilityChange = useCallback(() => {
     if (!cheatGuardReadyRef.current) return;
@@ -229,6 +236,33 @@ const ExamRoom: React.FC = () => {
     };
   }, [session, isPaused, handleVisibilityChange, handleBlur, handleFullscreenChange]);
 
+  useEffect(() => {
+    lastEssaySavedContentRef.current = '';
+  }, [currentIdx, questions[currentIdx]?.id]);
+
+  useEffect(() => {
+    if (!session?.id || isPaused || loading) return;
+    const q = questions[currentIdx];
+    if (q?.type !== 'essay') return;
+
+    const id = window.setInterval(() => {
+      if (hasSubmittedRef.current) return;
+      const draft = userAnswerRef.current;
+      if (draft === lastEssaySavedContentRef.current) return;
+      if (!String(draft).trim()) return;
+      void (async () => {
+        try {
+          await examsApi.submitAnswer(session.id, q.id, draft);
+          lastEssaySavedContentRef.current = draft;
+        } catch {
+          // 週期儲存失敗時不阻斷作答；下一題或下次 interval 可再試
+        }
+      })();
+    }, 45_000);
+
+    return () => clearInterval(id);
+  }, [session, session?.id, isPaused, loading, currentIdx, questions]);
+
   const handleSubmitExam = useCallback(async () => {
     if (!session?.id || hasSubmittedRef.current) return;
     hasSubmittedRef.current = true;
@@ -279,6 +313,9 @@ const ExamRoom: React.FC = () => {
     setSubmitting(true);
     try {
       await examsApi.submitAnswer(session.id, q.id, userAnswer);
+      if (q.type === 'essay') {
+        lastEssaySavedContentRef.current = userAnswer;
+      }
       if (currentIdx < questions.length - 1) {
         setCurrentIdx(currentIdx + 1);
         setUserAnswer('');
@@ -400,7 +437,7 @@ const ExamRoom: React.FC = () => {
             ) : (
               <textarea
                 className="form-input answer-textarea"
-                placeholder="在這邊輸入您的答案（問答题可留白，按下一題即視為不作答）"
+                placeholder="在這邊輸入您的答案（問答題可留白，按下一題即視為不作答）"
                 value={userAnswer}
                 onChange={(e) => setUserAnswer(e.target.value)}
                 disabled={submitting}
@@ -410,7 +447,9 @@ const ExamRoom: React.FC = () => {
 
           <div className="flex flex-col-reverse gap-md sm:flex-row sm:flex-wrap justify-between items-stretch sm:items-center">
             <div className="text-xs text-secondary self-center sm:self-auto text-center sm:text-left">
-              * 系統會自動儲存您的作答進度
+              {q?.type === 'essay'
+                ? '* 選擇／多選於按「下一題」時儲存；問答題另約每 45 秒自動儲存一次（內容有變更時才寫入）'
+                : '* 按「下一題」時儲存該題答案'}
             </div>
             <button
               className="btn btn-primary btn-lg w-full sm:w-auto shrink-0"

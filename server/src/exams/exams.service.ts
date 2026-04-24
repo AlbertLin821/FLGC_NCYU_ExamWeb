@@ -159,6 +159,23 @@ export class ExamsService {
     });
   }
 
+  /** 將已發放考卷改回草稿；僅在尚無任何學生考試紀錄時允許，避免影響已進入或已交卷資料 */
+  async unpublish(id: number) {
+    const exam = await this.prisma.exam.findFirst({ where: { id, deletedAt: null } });
+    if (!exam) throw new NotFoundException('考卷不存在或已移除');
+    if (exam.status !== 'published') {
+      throw new BadRequestException('僅已發放之考卷可取消發放');
+    }
+    const sessionCount = await this.prisma.examSession.count({ where: { examId: id } });
+    if (sessionCount > 0) {
+      throw new BadRequestException('已有學生產生考試紀錄，無法取消發放');
+    }
+    return this.prisma.exam.update({
+      where: { id },
+      data: { status: 'draft' },
+    });
+  }
+
   async startSession(studentId: number, examId: number) {
     const exam = await this.prisma.exam.findFirst({
       where: { id: examId, deletedAt: null },
@@ -270,10 +287,21 @@ export class ExamsService {
     if (remaining <= 0) {
       throw new BadRequestException('作答時間已結束');
     }
-    return this.prisma.answer.upsert({
-      where: { sessionId_questionId: { sessionId, questionId } },
-      update: { content },
-      create: { sessionId, questionId, content },
+    return this.prisma.$transaction(async (tx) => {
+      const row = await tx.answer.upsert({
+        where: { sessionId_questionId: { sessionId, questionId } },
+        update: { content },
+        create: { sessionId, questionId, content },
+      });
+      const agg = await tx.$queryRaw<[{ c: number }]>(
+        Prisma.sql`SELECT COUNT(*)::int AS c FROM "answers" WHERE "session_id" = ${sessionId} AND "content" IS NOT NULL AND TRIM("content") <> ''`,
+      );
+      const answeredQuestionCount = Number(agg[0]?.c ?? 0);
+      await tx.examSession.update({
+        where: { id: sessionId },
+        data: { answeredQuestionCount },
+      });
+      return row;
     });
   }
 
@@ -300,7 +328,7 @@ export class ExamsService {
 
     const session = await this.prisma.examSession.findUniqueOrThrow({ where: { id: sessionId } });
 
-    // 僅客觀題計分；問答题留待教師集體批閱
+    // 僅客觀題計分；問答題留待教師集體批閱
     this.scoringService.scoreObjectiveOnly(sessionId).catch((err) => {
       console.error(`Objective scoring failed for session ${sessionId}:`, err);
     });

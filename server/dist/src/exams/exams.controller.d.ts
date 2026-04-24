@@ -114,6 +114,7 @@ export declare class ExamsController {
         examId: number;
         startedAt: Date | null;
         submittedAt: Date | null;
+        answeredQuestionCount: number;
         overallFeedbackEn: string | null;
         overallFeedbackZh: string | null;
     } & {
@@ -153,6 +154,7 @@ export declare class ExamsController {
             examId: number;
             startedAt: Date | null;
             submittedAt: Date | null;
+            answeredQuestionCount: number;
             overallFeedbackEn: string | null;
             overallFeedbackZh: string | null;
         } & {
@@ -255,6 +257,18 @@ export declare class ExamsController {
         status: string;
         deletedAt: Date | null;
     }>;
+    unpublish(id: number): Promise<{
+        createdAt: Date;
+        id: number;
+        createdBy: number;
+        title: string;
+        difficulty: string | null;
+        timeLimit: number;
+        startTime: Date;
+        endTime: Date;
+        status: string;
+        deletedAt: Date | null;
+    }>;
     startExam(examId: number, studentId: number): Promise<{
         session: {
             exam: {
@@ -276,6 +290,7 @@ export declare class ExamsController {
             examId: number;
             startedAt: Date | null;
             submittedAt: Date | null;
+            answeredQuestionCount: number;
             overallFeedbackEn: string | null;
             overallFeedbackZh: string | null;
         };
@@ -311,6 +326,7 @@ export declare class ExamsController {
         examId: number;
         startedAt: Date | null;
         submittedAt: Date | null;
+        answeredQuestionCount: number;
         overallFeedbackEn: string | null;
         overallFeedbackZh: string | null;
     }>;

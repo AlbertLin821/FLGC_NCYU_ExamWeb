@@ -144,6 +144,9 @@ let ExamsController = class ExamsController {
     publish(id) {
         return this.examsService.publish(id);
     }
+    unpublish(id) {
+        return this.examsService.unpublish(id);
+    }
     startExam(examId, studentId) {
         return this.examsService.startSession(studentId, examId);
     }
@@ -225,6 +228,15 @@ __decorate([
     __metadata("design:paramtypes", [Number]),
     __metadata("design:returntype", void 0)
 ], ExamsController.prototype, "publish", null);
+__decorate([
+    (0, common_1.Post)(':id/unpublish'),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
+    (0, guards_1.Roles)('teacher', 'admin'),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number]),
+    __metadata("design:returntype", void 0)
+], ExamsController.prototype, "unpublish", null);
 __decorate([
     (0, common_1.Post)(':id/start'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),

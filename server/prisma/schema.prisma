@@ -143,6 +143,8 @@ model ExamSession {
   status      String    @default("pending") // pending | in_progress | paused | submitted | graded
   startedAt   DateTime? @map("started_at")
   submittedAt DateTime? @map("submitted_at")
+  /** 有非空白作答內容的題目數；列表／監看端可讀此欄，避免每筆都 JOIN answers 即時 COUNT */
+  answeredQuestionCount Int @default(0) @map("answered_question_count")
   overallFeedbackEn String? @map("overall_feedback_en") @db.Text
   overallFeedbackZh String? @map("overall_feedback_zh") @db.Text
 
@@ -153,6 +155,7 @@ model ExamSession {
 
   @@unique([studentId, examId])
   @@index([status])
+  @@index([examId, status])
   @@index([studentId])
   @@index([submittedAt])
   @@map("exam_sessions")

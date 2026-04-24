@@ -309,7 +309,7 @@ Respond in this exact JSON format only:
   }
 
   /**
-   * 交卷後僅計算選擇題／多選（不呼叫 AI）；問答题留待教師集體批閱。
+   * 交卷後僅計算選擇題／多選（不呼叫 AI）；問答題留待教師集體批閱。
    */
   async scoreObjectiveOnly(sessionId: number) {
     const answers = await this.prisma.answer.findMany({
@@ -382,7 +382,7 @@ Respond in this exact JSON format only:
     return results;
   }
 
-  /** 問答题是否仍待有效 AI 批閱（無紀錄、未計分、或僅 pending_review 暫記分） */
+  /** 問答題是否仍待有效 AI 批閱（無紀錄、未計分、或僅 pending_review 暫記分） */
   private static essayAnswerNeedsAiGrading(
     answer: { aiScore: unknown; aiModel: string | null } | undefined,
   ): boolean {
@@ -392,7 +392,7 @@ Respond in this exact JSON format only:
     return false;
   }
 
-  /** 若考卷無問答题，或問答题均已計分，則標記為 graded。 */
+  /** 若考卷無問答題，或問答題均已計分，則標記為 graded。 */
   private async finalizeSessionStatusAfterScoring(sessionId: number): Promise<void> {
     const session = await this.prisma.examSession.findUnique({
       where: { id: sessionId },
@@ -438,7 +438,7 @@ Respond in this exact JSON format only:
   }
 
   /**
-   * 教師端：對指定考卷與班級，將已交卷且問答题尚未 AI 計分之 session 逐人送一次集體批閱。
+   * 教師端：對指定考卷與班級，將已交卷且問答題尚未 AI 計分之 session 逐人送一次集體批閱。
    */
   async batchGradeEssaysForExamAndClass(examId: number, classId: number) {
     const link = await this.prisma.examClass.findUnique({
@@ -468,7 +468,7 @@ Respond in this exact JSON format only:
     };
 
     if (essayQuestions.length === 0) {
-      return { ...summary, message: '此考卷無問答题，無需集體批閱' };
+      return { ...summary, message: '此考卷無問答題，無需集體批閱' };
     }
 
     const essayIds = essayQuestions.map((q) => q.id);

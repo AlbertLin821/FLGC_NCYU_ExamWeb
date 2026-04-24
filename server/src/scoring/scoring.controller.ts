@@ -22,7 +22,7 @@ export class ScoringController {
     return this.scoringService.scoreSession(sessionId);
   }
 
-  /** 教師端：對該班已交卷 session 逐人集體 AI 批閱問答题（單次 Prompt） */
+  /** 教師端：對該班已交卷 session 逐人集體 AI 批閱問答題（單次 Prompt） */
   @Post('exams/:examId/batch-essay-grade')
   batchEssayGrade(
     @Param('examId', ParseIntPipe) examId: number,

@@ -73,7 +73,7 @@ const ResultsView: React.FC = () => {
       alert('請先選擇班級與單一考卷');
       return;
     }
-    if (!window.confirm('將對此班、此考卷所有「已交卷」學生逐人執行問答题集體 AI 批閱，可能耗時較久。確定繼續？')) {
+    if (!window.confirm('將對此班、此考卷所有「已交卷」學生逐人執行問答題集體 AI 批閱，可能耗時較久。確定繼續？')) {
       return;
     }
     setBatchGrading(true);
@@ -148,7 +148,7 @@ const ResultsView: React.FC = () => {
               }
               onClick={handleBatchEssayGrade}
             >
-              {batchGrading ? '集體批閱中…' : '集體 AI 批閱問答题'}
+              {batchGrading ? '集體批閱中…' : '集體 AI 批閱答題'}
             </button>
           )}
           <button className="btn btn-secondary" onClick={handleExport} disabled={results.length === 0}>
@@ -238,7 +238,7 @@ const ResultsView: React.FC = () => {
                           <button
                             type="button"
                             className="btn btn-xs btn-secondary"
-                            title="僅重算選擇題與多選，不含問答题 AI"
+                            title="僅重算選擇題與多選，不含問答題 AI"
                             onClick={() => handleTriggerScoring(r.id)}
                           >
                             重算客觀題

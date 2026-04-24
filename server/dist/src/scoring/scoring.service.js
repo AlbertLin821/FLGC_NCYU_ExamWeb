@@ -402,7 +402,7 @@ Respond in this exact JSON format only:
             failed: [],
         };
         if (essayQuestions.length === 0) {
-            return { ...summary, message: '此考卷無問答题，無需集體批閱' };
+            return { ...summary, message: '此考卷無問答題，無需集體批閱' };
         }
         const essayIds = essayQuestions.map((q) => q.id);
         const sessions = await this.prisma.examSession.findMany({

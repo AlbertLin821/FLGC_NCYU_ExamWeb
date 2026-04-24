@@ -8,10 +8,13 @@ describe('ExamsService submit flows', () => {
   let service: ExamsService;
   const mockScoreObjectiveOnly = jest.fn().mockResolvedValue([]);
   const mockPrisma = {
+    $transaction: jest.fn((fn: (tx: typeof mockPrisma) => Promise<unknown>) => fn(mockPrisma)),
+    $queryRaw: jest.fn().mockResolvedValue([{ c: 1 }]),
     examSession: {
       findUnique: jest.fn(),
       updateMany: jest.fn(),
       findUniqueOrThrow: jest.fn(),
+      update: jest.fn(),
     },
     answer: {
       upsert: jest.fn(),
@@ -20,6 +23,8 @@ describe('ExamsService submit flows', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockScoreObjectiveOnly.mockReset();
+    mockScoreObjectiveOnly.mockResolvedValue([]);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ExamsService,
@@ -54,20 +59,25 @@ describe('ExamsService submit flows', () => {
   });
 
   it('submitExam triggers background scoring without awaiting failure', async () => {
-    mockPrisma.examSession.findUnique.mockResolvedValue({
-      id: 2,
-      status: 'in_progress',
-      exam: { timeLimit: 10 },
-    });
-    mockPrisma.examSession.updateMany.mockResolvedValue({ count: 1 });
-    mockPrisma.examSession.findUniqueOrThrow.mockResolvedValue({ id: 2, status: 'submitted' });
-    mockScoreObjectiveOnly.mockRejectedValue(new Error('scoring boom'));
+    const errLog = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      mockPrisma.examSession.findUnique.mockResolvedValue({
+        id: 2,
+        status: 'in_progress',
+        exam: { timeLimit: 10 },
+      });
+      mockPrisma.examSession.updateMany.mockResolvedValue({ count: 1 });
+      mockPrisma.examSession.findUniqueOrThrow.mockResolvedValue({ id: 2, status: 'submitted' });
+      mockScoreObjectiveOnly.mockRejectedValue(new Error('scoring boom'));
 
-    const result = await service.submitExam(2);
+      const result = await service.submitExam(2);
 
-    expect(result.status).toBe('submitted');
-    await new Promise((r) => setImmediate(r));
-    expect(mockScoreObjectiveOnly).toHaveBeenCalledWith(2);
+      expect(result.status).toBe('submitted');
+      await new Promise((r) => setImmediate(r));
+      expect(mockScoreObjectiveOnly).toHaveBeenCalledWith(2);
+    } finally {
+      errLog.mockRestore();
+    }
   });
 
   it('submitAnswer 於時間歸零後拒絕作答', async () => {

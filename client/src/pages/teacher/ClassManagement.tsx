@@ -183,6 +183,8 @@ const ClassManagement: React.FC = () => {
   const [importPreview, setImportPreview] = useState<StudentImportRow[]>([]);
   const [importError, setImportError] = useState('');
   const [importFileName, setImportFileName] = useState('');
+  const [importParsing, setImportParsing] = useState(false);
+  const [importSubmitting, setImportSubmitting] = useState(false);
 
   const fetchClasses = async () => {
     try {
@@ -264,6 +266,8 @@ const ClassManagement: React.FC = () => {
     setImportPreview([]);
     setImportError('');
     setImportFileName('');
+    setImportParsing(false);
+    setImportSubmitting(false);
   };
 
   const openImportModal = () => {
@@ -295,43 +299,68 @@ const ClassManagement: React.FC = () => {
 
   const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    const input = e.target;
     if (!file || !selectedClass) return;
     setImportFileName(file.name);
     setImportError('');
     setImportPreview([]);
+    setImportParsing(true);
     const reader = new FileReader();
     reader.onload = (evt) => {
-      try {
-        const bstr = evt.target?.result;
-        const wb = XLSX.read(bstr, { type: 'binary' });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
-        setPreviewOrError(parseStudentImportRows(data));
-      } catch {
-        setImportError('Excel 解析失敗，請確認檔案格式。');
-      } finally {
-        e.target.value = '';
-      }
+      window.setTimeout(() => {
+        try {
+          const bstr = evt.target?.result;
+          const wb = XLSX.read(bstr, { type: 'binary' });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as unknown[][];
+          setPreviewOrError(parseStudentImportRows(data));
+        } catch {
+          setImportError('Excel 解析失敗，請確認檔案格式。');
+        } finally {
+          setImportParsing(false);
+          input.value = '';
+        }
+      }, 0);
+    };
+    reader.onerror = () => {
+      setImportParsing(false);
+      setImportError('讀取檔案失敗。');
+      input.value = '';
     };
     reader.readAsBinaryString(file);
   };
 
   const handleTextPreview = () => {
-    const data = parseBulkStudentImportText(importText).filter((s) => s.studentId && s.name && s.schoolName);
-    setPreviewOrError(data);
+    if (importParsing) return;
+    setImportParsing(true);
+    setImportError('');
+    window.setTimeout(() => {
+      try {
+        const data = parseBulkStudentImportText(importText).filter((s) => s.studentId && s.name && s.schoolName);
+        setPreviewOrError(data);
+      } finally {
+        setImportParsing(false);
+      }
+    }, 0);
   };
 
   const handleConfirmImport = async () => {
+    if (importSubmitting || importParsing) return;
     if (importPreview.length === 0) {
       setImportError('請先檢視並確認要匯入的資料。');
       return;
     }
+    setImportSubmitting(true);
     try {
       await studentsApi.bulkImport(importPreview, selectedClass.id);
       alert(`成功匯入 ${importPreview.length} 位學生`);
       closeImportModal();
       fetchStudents(selectedClass.id);
-    } catch { alert('匯入失敗'); }
+    } catch {
+      alert('匯入失敗');
+    } finally {
+      setImportSubmitting(false);
+    }
   };
 
   if (selectedClass) {
@@ -369,7 +398,7 @@ const ClassManagement: React.FC = () => {
                 <tbody>
                   {students.map(s => (
                     <tr key={s.id}>
-                      <td><b>{s.studentId}</b></td>
+                      <td className="cell-student-id"><b>{s.studentId}</b></td>
                       <td>{s.name}</td>
                       <td>{s.schoolName}</td>
                       <td className="cell-wrap">
@@ -402,7 +431,7 @@ const ClassManagement: React.FC = () => {
                       </td>
                     </tr>
                   ))}
-                  {students.length === 0 && <tr><td colSpan={6} className="text-center text-secondary">尚無學生數據</td></tr>}
+                  {students.length === 0 && <tr><td colSpan={6} className="text-center text-secondary">尚無學生資料</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -444,7 +473,15 @@ const ClassManagement: React.FC = () => {
 
         {showImport && (
           <div className="modal-overlay">
-            <div className={`card modal-card ${importPreview.length > 0 ? 'modal-card--lg' : 'modal-card--sm'}`}>
+            <div className={`card modal-card modal-card--relative ${importPreview.length > 0 ? 'modal-card--lg' : 'modal-card--sm'}`}>
+              {(importSubmitting || importParsing) && (
+                <div className="modal-busy" role="status" aria-live="polite">
+                  <div className="spinner" />
+                  <p className="text-sm text-secondary mt-sm">
+                    {importSubmitting ? '匯入中，請勿關閉視窗或重複按鈕…' : '正在解析資料…'}
+                  </p>
+                </div>
+              )}
               {importPreview.length > 0 ? (
                 <>
                   <h3 className="mb-md">檢視即將匯入的資料</h3>
@@ -464,7 +501,7 @@ const ClassManagement: React.FC = () => {
                         {importPreview.map((s, index) => (
                           <tr key={`${s.studentId}-${index}`}>
                             <td>{s.schoolName}</td>
-                            <td><b>{s.studentId}</b></td>
+                            <td className="cell-student-id"><b>{s.studentId}</b></td>
                             <td>{s.name}</td>
                           </tr>
                         ))}
@@ -472,9 +509,11 @@ const ClassManagement: React.FC = () => {
                     </table>
                   </div>
                   <div className="modal-actions">
-                    <button className="btn btn-secondary" onClick={() => setImportPreview([])}>返回修改</button>
-                    <button className="btn btn-secondary" onClick={closeImportModal}>取消</button>
-                    <button className="btn btn-primary" onClick={handleConfirmImport}>確認匯入</button>
+                    <button type="button" className="btn btn-secondary" disabled={importSubmitting || importParsing} onClick={() => setImportPreview([])}>返回修改</button>
+                    <button type="button" className="btn btn-secondary" disabled={importSubmitting} onClick={closeImportModal}>取消</button>
+                    <button type="button" className="btn btn-primary" disabled={importSubmitting || importParsing} onClick={handleConfirmImport}>
+                      {importSubmitting ? '匯入中…' : '確認匯入'}
+                    </button>
                   </div>
                 </>
               ) : importMode === null ? (
@@ -503,7 +542,7 @@ const ClassManagement: React.FC = () => {
                   </p>
                   <div className="form-group">
                     <label className="form-label">選擇 Excel 檔案</label>
-                    <input type="file" className="form-input" accept=".xlsx,.xls" onChange={handleExcelUpload} />
+                    <input type="file" className="form-input" accept=".xlsx,.xls" disabled={importParsing} onChange={handleExcelUpload} />
                   </div>
                   {importFileName && <p className="text-sm text-secondary mb-md">已選擇：{importFileName}</p>}
                   {importError && <div className="alert alert-danger mb-md">{importError}</div>}
@@ -520,13 +559,16 @@ const ClassManagement: React.FC = () => {
                     建議格式為：<b>校名 學號 姓名</b>（空白分隔）。也可貼上「學號 姓名 校名」等格式，系統會嘗試自動辨識。
                   </p>
                   <textarea className="form-input mb-md" style={{ minHeight: '200px' }}
-                    value={importText} onChange={e => setImportText(e.target.value)} placeholder={'國立嘉義大學 111000 王小明\n國立嘉義大學 111001 李小華'} />
+                    value={importText} onChange={e => setImportText(e.target.value)} disabled={importParsing}
+                    placeholder={'國立嘉義大學 111000 王小明\n國立嘉義大學 111001 李小華'} />
                   {importError && <div className="alert alert-danger mb-md">{importError}</div>}
                   <div className="modal-actions">
                     <button className="btn btn-secondary" onClick={() => selectImportMode('excel')}>改用 Excel 匯入</button>
                     <button className="btn btn-secondary" onClick={() => setImportMode(null)}>返回</button>
                     <button className="btn btn-secondary" onClick={closeImportModal}>取消</button>
-                    <button className="btn btn-primary" onClick={handleTextPreview}>檢視資料</button>
+                    <button type="button" className="btn btn-primary" disabled={importParsing} onClick={handleTextPreview}>
+                      {importParsing ? '解析中…' : '檢視資料'}
+                    </button>
                   </div>
                 </>
               )}

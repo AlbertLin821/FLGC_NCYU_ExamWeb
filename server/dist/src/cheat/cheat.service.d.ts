@@ -36,6 +36,7 @@ export declare class CheatService {
             examId: number;
             startedAt: Date | null;
             submittedAt: Date | null;
+            answeredQuestionCount: number;
             overallFeedbackEn: string | null;
             overallFeedbackZh: string | null;
         };
@@ -64,6 +65,7 @@ export declare class CheatService {
                 examId: number;
                 startedAt: Date | null;
                 submittedAt: Date | null;
+                answeredQuestionCount: number;
                 overallFeedbackEn: string | null;
                 overallFeedbackZh: string | null;
             };

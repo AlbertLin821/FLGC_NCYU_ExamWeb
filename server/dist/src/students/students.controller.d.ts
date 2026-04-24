@@ -43,33 +43,16 @@ export declare class StudentsController {
         totalPages: number;
     }> | Promise<({
         sessions: ({
-            answers: ({
+            answers: {
                 question: {
-                    id: number;
-                    orderNum: number;
                     maxPoints: number;
                 };
-            } & {
-                createdAt: Date;
-                id: number;
-                content: string | null;
-                sessionId: number;
-                aiModel: string | null;
                 aiScore: import("@prisma/client-runtime-utils").Decimal | null;
-                questionId: number;
-                aiFeedback: string | null;
-            })[];
+            }[];
             exam: {
-                createdAt: Date;
-                id: number;
-                createdBy: number;
                 title: string;
-                difficulty: string | null;
-                timeLimit: number;
                 startTime: Date;
                 endTime: Date;
-                status: string;
-                deletedAt: Date | null;
             };
         } & {
             id: number;
@@ -78,6 +61,7 @@ export declare class StudentsController {
             examId: number;
             startedAt: Date | null;
             submittedAt: Date | null;
+            answeredQuestionCount: number;
             overallFeedbackEn: string | null;
             overallFeedbackZh: string | null;
         })[];
@@ -93,33 +77,16 @@ export declare class StudentsController {
     })[] | {
         items: ({
             sessions: ({
-                answers: ({
+                answers: {
                     question: {
-                        id: number;
-                        orderNum: number;
                         maxPoints: number;
                     };
-                } & {
-                    createdAt: Date;
-                    id: number;
-                    content: string | null;
-                    sessionId: number;
-                    aiModel: string | null;
                     aiScore: import("@prisma/client-runtime-utils").Decimal | null;
-                    questionId: number;
-                    aiFeedback: string | null;
-                })[];
+                }[];
                 exam: {
-                    createdAt: Date;
-                    id: number;
-                    createdBy: number;
                     title: string;
-                    difficulty: string | null;
-                    timeLimit: number;
                     startTime: Date;
                     endTime: Date;
-                    status: string;
-                    deletedAt: Date | null;
                 };
             } & {
                 id: number;
@@ -128,6 +95,7 @@ export declare class StudentsController {
                 examId: number;
                 startedAt: Date | null;
                 submittedAt: Date | null;
+                answeredQuestionCount: number;
                 overallFeedbackEn: string | null;
                 overallFeedbackZh: string | null;
             })[];
@@ -200,6 +168,7 @@ export declare class StudentsController {
             examId: number;
             startedAt: Date | null;
             submittedAt: Date | null;
+            answeredQuestionCount: number;
             overallFeedbackEn: string | null;
             overallFeedbackZh: string | null;
         })[];

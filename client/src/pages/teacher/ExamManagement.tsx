@@ -28,6 +28,8 @@ const ExamManagement: React.FC = () => {
   const [, setTick] = useState(0);
   const [classMenuOpen, setClassMenuOpen] = useState(false);
   const classMenuRef = useRef<HTMLDivElement>(null);
+  const [saveSubmitting, setSaveSubmitting] = useState(false);
+  const [examActionId, setExamActionId] = useState<number | null>(null);
 
   useEffect(() => {
     const interval = setInterval(() => setTick(t => t + 1), 60000);
@@ -130,6 +132,7 @@ const ExamManagement: React.FC = () => {
       endTime: newExam.endTime,
     };
 
+    setSaveSubmitting(true);
     try {
       if (editingExamId) {
         await examsApi.update(editingExamId, payload);
@@ -139,6 +142,7 @@ const ExamManagement: React.FC = () => {
       setShowModal(false);
       fetchExams();
     } catch { alert(editingExamId ? '更新失敗' : '建立失敗'); }
+    finally { setSaveSubmitting(false); }
   };
 
   const handleDelete = async (id: number) => {
@@ -192,10 +196,57 @@ const ExamManagement: React.FC = () => {
                       <div className="table-actions">
                         <button className="btn btn-xs btn-primary" onClick={() => window.location.href = `/teacher/questions?examId=${e.id}`}>題目管理</button>
                         <button className="btn btn-xs btn-secondary" onClick={() => openEditModal(e)}>編輯</button>
-                        {e.status === 'draft' && <button className="btn btn-xs btn-primary" onClick={async () => {
-                          await examsApi.publish(e.id);
-                          fetchExams();
-                        }}>發放</button>}
+                        {e.status === 'draft' && (
+                          <button
+                            type="button"
+                            className="btn btn-xs btn-primary"
+                            disabled={examActionId !== null}
+                            onClick={async () => {
+                              if (examActionId !== null) return;
+                              setExamActionId(e.id);
+                              try {
+                                await examsApi.publish(e.id);
+                                await fetchExams();
+                              } catch {
+                                alert('發放失敗');
+                              } finally {
+                                setExamActionId(null);
+                              }
+                            }}
+                          >
+                            {examActionId === e.id ? '發放中…' : '發放'}
+                          </button>
+                        )}
+                        {e.status === 'published' && (
+                          <button
+                            type="button"
+                            className="btn btn-xs btn-secondary"
+                            disabled={examActionId !== null}
+                            onClick={async () => {
+                              if (
+                                !window.confirm(
+                                  '確定取消發放？考卷將變回草稿，學生端將不顯示此測驗。僅在尚無任何學生進入考試時可執行。',
+                                )
+                              ) {
+                                return;
+                              }
+                              if (examActionId !== null) return;
+                              setExamActionId(e.id);
+                              try {
+                                await examsApi.unpublish(e.id);
+                                await fetchExams();
+                              } catch (err: unknown) {
+                                const ax = err as { response?: { data?: { message?: unknown } } };
+                                const m = ax.response?.data?.message;
+                                alert(typeof m === 'string' ? m : '取消發放失敗');
+                              } finally {
+                                setExamActionId(null);
+                              }
+                            }}
+                          >
+                            {examActionId === e.id ? '處理中…' : '取消發放'}
+                          </button>
+                        )}
                         <button className="btn btn-xs btn-danger" onClick={() => handleDelete(e.id)}>刪除</button>
                       </div>
                     </td>
@@ -334,8 +385,10 @@ const ExamManagement: React.FC = () => {
                 </div>
               </div>
               <div className="modal-actions mt-lg">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>取消</button>
-                <button type="submit" className="btn btn-primary">{editingExamId ? '儲存變更' : '確認'}</button>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)} disabled={saveSubmitting}>取消</button>
+                <button type="submit" className="btn btn-primary" disabled={saveSubmitting}>
+                  {saveSubmitting ? '處理中…' : editingExamId ? '儲存變更' : '確認'}
+                </button>
               </div>
             </form>
           </div>

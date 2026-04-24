@@ -658,6 +658,11 @@ textarea.form-input {
   white-space: normal;
 }
 
+.cell-student-id {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
 .text-truncate {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1053,6 +1058,24 @@ a.btn svg {
 
 .modal-card--lg {
   --modal-width: 45rem;
+}
+
+.modal-card--relative {
+  position: relative;
+}
+
+.modal-busy {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-lg);
+  background: rgba(255, 255, 255, 0.88);
+  border-radius: var(--radius-md);
+  pointer-events: auto;
 }
 
 .modal-scroll {

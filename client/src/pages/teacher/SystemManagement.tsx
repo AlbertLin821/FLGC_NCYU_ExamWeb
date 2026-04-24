@@ -60,7 +60,7 @@ const SystemManagement: React.FC = () => {
                 <tbody>
                   {students.map((s) => (
                     <tr key={s.id}>
-                      <td>{s.studentId}</td>
+                      <td className="cell-student-id">{s.studentId}</td>
                       <td>{s.name}</td>
                       <td>{s.schoolName}</td>
                       <td>{s.class?.name ?? s.classId}</td>

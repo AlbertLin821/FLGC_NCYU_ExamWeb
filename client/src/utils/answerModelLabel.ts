@@ -8,7 +8,7 @@ export function questionTypeLabel(type: string | undefined): string {
     case 'multiple_selection':
       return '多選題';
     case 'essay':
-      return '問答题';
+      return '問答題';
     default:
       return type ? String(type) : '題型未知';
   }

@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Param, Body, UseGuards, Request, ParseIntPipe, Query,
+  Controller, Get, Post, Param, UseGuards, Request, ParseIntPipe, Query,
 } from '@nestjs/common';
 import { CheatService } from './cheat.service';
 import { JwtAuthGuard, RolesGuard, Roles } from '../auth/guards';
