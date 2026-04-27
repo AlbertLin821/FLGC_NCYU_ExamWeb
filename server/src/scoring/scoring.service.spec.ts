@@ -387,13 +387,11 @@ describe('ScoringService', () => {
                   answerId: 12,
                   questionId: 102,
                   aiScore: 80,
-                  aiFeedback: 'Evaluation Report\nFinal Score: 4 / 5',
+                  aiFeedback: '結構完整，用字可更精準',
                   writingScore: 4,
                   cefrLevel: 'B2',
                 },
               ],
-              overallFeedbackEn: 'Good work.',
-              overallFeedbackZh: '整體表現良好。',
             },
             {
               sessionId: 8,
@@ -407,8 +405,6 @@ describe('ScoringService', () => {
                   cefrLevel: null,
                 },
               ],
-              overallFeedbackEn: 'Keep improving.',
-              overallFeedbackZh: '請持續加強。',
             },
           ],
         }),
@@ -440,7 +436,7 @@ describe('ScoringService', () => {
     expect(mockPrisma.examSession.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: 7 },
-        data: expect.objectContaining({ overallFeedbackZh: '整體表現良好。' }),
+        data: expect.objectContaining({ overallFeedbackZh: null, overallFeedbackEn: null }),
       }),
     );
   });

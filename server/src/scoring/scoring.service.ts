@@ -377,8 +377,10 @@ General rules:
 - Return valid JSON only. Do not use markdown.
 - Evaluate each student independently. Never compare one student with another.
 - Within each student, evaluate each item independently.
-- For type "essay", return aiScore on a 0-100 scale and concise Traditional Chinese feedback.
-- For type "paragraph_writing", use the TOEFL Academic Discussion Writing Evaluator rubric below. Return writingScore on a 0-5 scale, CEFR level, a full evaluation report, and aiScore converted to percentage by writingScore / 5 * 100.
+- Keep every aiFeedback in Traditional Chinese and within 30 Chinese characters.
+- Do not include analysis, revision samples, headings, or extra explanation.
+- For type "essay", return aiScore on a 0-100 scale and a short Traditional Chinese feedback.
+- For type "paragraph_writing", use the TOEFL Academic Discussion Writing Evaluator rubric below. Return writingScore on a 0-5 scale, CEFR level, a short Traditional Chinese feedback, and aiScore converted to percentage by writingScore / 5 * 100.
 - Blank answers receive 0.
 
 TOEFL Academic Discussion Writing Evaluator (with CEFR)
@@ -404,30 +406,19 @@ Output JSON shape:
           "answerId": <number>,
           "questionId": <number>,
           "aiScore": <number 0..100>,
-          "aiFeedback": "<string>",
+          "aiFeedback": "<Traditional Chinese, <=30 chars>",
           "writingScore": <number 0..5 or null>,
           "cefrLevel": "<string or null>"
         }
-      ],
-      "overallFeedbackEn": "<brief summary in English>",
-      "overallFeedbackZh": "<brief summary in Traditional Chinese>"
+      ]
     }
   ]
 }
 
-For paragraph_writing aiFeedback must use this report format:
-Evaluation Report
-Final Score: [X / 5]
-CEFR Level: [e.g., B2 - Upper Intermediate]
-1. Diagnostic Breakdown:
-Content & Development: ...
-Language Use (Vocabulary & Syntax): ...
-Grammatical Accuracy: ...
-2. Suggested Revision:
-...
-3. Overall Feedback:
-[English Feedback]
-[中文評語：請以專業、客觀的口吻進行評點]。
+Examples of valid aiFeedback:
+- "觀點清楚，細節可再補強"
+- "文法穩定，字數略少"
+- "結構完整，用字可更精準"
 
 Submitted writing sessions:
 
@@ -530,7 +521,8 @@ ${sessionBlocks}`;
         let aiScore = Number(row.aiScore);
         if (!Number.isFinite(aiScore)) aiScore = 0;
         aiScore = Math.min(100, Math.max(0, Math.round(aiScore * 100) / 100));
-        const aiFeedback = String(row.aiFeedback ?? '').trim() || 'AI 已完成批改。';
+        const aiFeedback =
+          (String(row.aiFeedback ?? '').trim() || 'AI 已完成批改。').slice(0, 30);
         let writingScore: number | null | undefined = null;
         if (row.writingScore !== null && row.writingScore !== undefined && row.writingScore !== '') {
           const rawScore = Number(row.writingScore);
@@ -549,8 +541,8 @@ ${sessionBlocks}`;
       sessions.push({
         sessionId,
         items,
-        overallFeedbackEn: String(sessionRow.overallFeedbackEn ?? '').trim(),
-        overallFeedbackZh: String(sessionRow.overallFeedbackZh ?? '').trim(),
+        overallFeedbackEn: '',
+        overallFeedbackZh: '',
       });
     }
     if (sessions.length !== expected.length) {
