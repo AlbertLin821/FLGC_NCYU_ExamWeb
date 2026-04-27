@@ -58,10 +58,7 @@ const HomePage: React.FC = () => {
             <h3 className="mb-sm">
               老師
               <span className="text-secondary text-base font-normal" lang="en" style={{ display: 'block', marginTop: 'var(--space-xs)' }}>
-                TEACHER
-              </span>
-              <span className="text-secondary text-base font-normal" style={{ display: 'block', marginTop: 'var(--space-xs)' }}>
-                / 管理端
+                TEACHER / 管理端
               </span>
             </h3>
             <p className="text-sm text-secondary mb-lg">出題管理、批改流程、班級與評測統計</p>
