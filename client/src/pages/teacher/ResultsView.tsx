@@ -128,7 +128,7 @@ const ResultsView: React.FC = () => {
           ? earnedPointsOnQuestion(a.aiScore, a.question?.maxPoints)
           : '';
       }
-      row['加權總分'] = calculateTotal(r.answers);
+      row['總分'] = calculateTotal(r.answers);
       return row;
     });
     const ws = XLSX.utils.json_to_sheet(data);
@@ -217,7 +217,7 @@ const ResultsView: React.FC = () => {
                   <th>姓名</th>
                   <th>考試項目</th>
                   <th>狀態</th>
-                  <th>加權得分</th>
+                  <th>總分</th>
                   <th>操作</th>
                 </tr>
               </thead>

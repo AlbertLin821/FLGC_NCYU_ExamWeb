@@ -66,7 +66,7 @@ const AnswerCard: React.FC<{
   const submitManual = async () => {
     const v = parseFloat(scoreIn.replace(',', '.'));
     if (!Number.isFinite(v) || v < 0 || v > 100) {
-      alert('請輸入 0 到 100 的百分制得分');
+      alert('請輸入 0 到 100 的占比');
       return;
     }
     await onSave(ans.id, v, fbIn.trim());
@@ -101,7 +101,7 @@ const AnswerCard: React.FC<{
             <span className="badge badge-primary">
               {teacherManual ? '教師評分 ' : ''}
               得分 {earnedPointsOnQuestion(ans.aiScore, ans.question?.maxPoints)} / {maxPts} 分
-              <span className="ml-xs opacity-90">（百分制 {Number(ans.aiScore)}）</span>
+              <span className="ml-xs opacity-90">（占比 {Number(ans.aiScore)}%）</span>
             </span>
           )}
           {pending && <span className="badge badge-warning">待教師複閱</span>}
@@ -237,7 +237,7 @@ const AnswerCard: React.FC<{
             <div className="flex flex-col gap-md sm:flex-row sm:flex-wrap sm:items-end">
               <div className="flex flex-col gap-xs w-full sm:w-[8rem] sm:shrink-0">
                 <label htmlFor={`teacher-score-${ans.id}`} className="text-sm leading-snug">
-                  百分制得分
+                  占比得分
                 </label>
                 <input
                   id={`teacher-score-${ans.id}`}
@@ -377,7 +377,7 @@ const StudentResultDetail: React.FC = () => {
                       <div
                         className="text-2xl font-bold text-primary tabular-nums"
                       >
-                        加權得分 {sessionScorePercent(session.answers)} 分
+                        總分 {sessionScorePercent(session.answers)} 分
                       </div>
                     )}
                   </div>
@@ -391,7 +391,7 @@ const StudentResultDetail: React.FC = () => {
                           <th>題號</th>
                           <th>題型</th>
                           <th>得分</th>
-                          <th>百分制</th>
+                          <th>占比</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -411,7 +411,7 @@ const StudentResultDetail: React.FC = () => {
                                 {hasScore && earned !== null ? `${earned} / ${maxPts} 分` : '—'}
                               </td>
                               <td className="text-secondary">
-                                {pct !== null && Number.isFinite(pct) ? `${pct} 分` : '—'}
+                                {pct !== null && Number.isFinite(pct) ? `${pct}%` : '—'}
                               </td>
                             </tr>
                           );

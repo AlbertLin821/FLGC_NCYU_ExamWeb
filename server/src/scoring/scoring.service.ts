@@ -46,6 +46,8 @@ type WritingAnswerForAi = {
   type: string;
   maxPoints: number;
   promptText: string | null;
+  word1: string | null;
+  word2: string | null;
   studentAnswer: string | null;
   writingDurationSeconds: number | null;
   wordCount: number | null;
@@ -352,12 +354,17 @@ export class ScoringService {
     const sessionBlocks = sessions.map((session, sessionIndex) => {
       const questionBlocks = session.items.map((item, index) => {
         const answer = String(item.studentAnswer ?? '').trim() || '(blank)';
+        const targetWords =
+          item.type === 'essay'
+            ? [item.word1, item.word2].filter(Boolean).join(', ') || '(not specified)'
+            : '(not applicable)';
         return [
           `Item ${index + 1}`,
           `answerId: ${item.answerId}`,
           `questionId: ${item.questionId}`,
           `questionType: ${item.type}`,
           `maxPoints: ${item.maxPoints}`,
+          `targetWords: ${targetWords}`,
           `Writing time: ${item.writingDurationSeconds ?? 0} seconds`,
           `Word count: ${item.wordCount ?? 0}`,
           `Prompt: ${String(item.promptText ?? '').trim() || '(none)'}`,
@@ -377,9 +384,18 @@ General rules:
 - Return valid JSON only. Do not use markdown.
 - Evaluate each student independently. Never compare one student with another.
 - Within each student, evaluate each item independently.
-- Keep every aiFeedback in Traditional Chinese and within 30 Chinese characters.
+- Keep every aiFeedback in Traditional Chinese, exactly 2 short sentences, and within 30 Chinese characters total.
 - Do not include analysis, revision samples, headings, or extra explanation.
-- For type "essay", return aiScore on a 0-100 scale and a short Traditional Chinese feedback.
+- For type "essay", treat it as a Two-Word Sentence Writing quiz item:
+  - The student must use the two target words to write exactly one coherent sentence.
+  - They may change word forms and use any order.
+  - Score 0 if the sentence is meaningless, misses one or both target words, or contains multiple sentences.
+  - First grade with a raw 20-point scale.
+  - Start from 20 and deduct 5 points per unique error type only once each: grammar, spelling, punctuation, capitalization.
+  - If the sentence is meaningful and error-free, give raw 20/20.
+  - Convert that final raw score to aiScore on a 0-100 scale.
+- Essay aiFeedback sentence 1: comment on sentence correctness.
+- Essay aiFeedback sentence 2: advise whether sentence pattern should be easier or harder.
 - For type "paragraph_writing", use the TOEFL Academic Discussion Writing Evaluator rubric below. Return writingScore on a 0-5 scale, CEFR level, a short Traditional Chinese feedback, and aiScore converted to percentage by writingScore / 5 * 100.
 - Blank answers receive 0.
 
@@ -416,9 +432,9 @@ Output JSON shape:
 }
 
 Examples of valid aiFeedback:
-- "觀點清楚，細節可再補強"
-- "文法穩定，字數略少"
-- "結構完整，用字可更精準"
+- "句型正確通順。可提升句型難度。"
+- "文法有誤需修正。先用較簡單句型。"
+- "拼字標點需加強。可逐步增加變化。"
 
 Submitted writing sessions:
 
@@ -1021,6 +1037,8 @@ ${sessionBlocks}`;
         type,
         maxPoints: Math.max(1, answer.question.maxPoints),
         promptText: answer.question.content,
+        word1: answer.question.word1 ?? null,
+        word2: answer.question.word2 ?? null,
         studentAnswer: answer.content,
         writingDurationSeconds: answer.writingDurationSeconds,
         wordCount: answer.wordCount,
