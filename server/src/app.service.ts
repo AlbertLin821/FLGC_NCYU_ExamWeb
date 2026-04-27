@@ -27,14 +27,17 @@ export class AppService {
           }
         : undefined;
     
-    // Active exams (currently running)
-    const activeExams = await this.prisma.exam.count({
+    // Active participants (currently taking exam)
+    const activeSessions = await this.prisma.examSession.count({
       where: {
-        deletedAt: null,
-        status: 'published',
-        startTime: { lte: now },
-        endTime: { gte: now },
-        ...(teacherExamScope ?? {}),
+        status: 'in_progress',
+        exam: {
+          deletedAt: null,
+          status: 'published',
+          startTime: { lte: now },
+          endTime: { gte: now },
+          ...(teacherExamScope ?? {}),
+        },
       },
     });
 
@@ -95,7 +98,7 @@ export class AppService {
     ];
 
     return {
-      activeExams,
+      activeSessions,
       pendingAlerts,
       totalSubmissions,
       sessionsAwaitingScore,

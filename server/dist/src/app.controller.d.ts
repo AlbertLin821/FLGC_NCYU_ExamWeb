@@ -4,7 +4,7 @@ export declare class AppController {
     constructor(appService: AppService);
     getHello(): string;
     getStats(req: any): Promise<{
-        activeExams: number;
+        activeSessions: number;
         pendingAlerts: number;
         totalSubmissions: number;
         sessionsAwaitingScore: number;

@@ -50,9 +50,9 @@ const DashboardOverview = () => {
   <div className="flex flex-col gap-lg">
     <div className="dashboard-grid">
       <div className="card" style={{ background: 'var(--color-primary)', color: 'white' }}>
-        <h4 style={{ opacity: 0.8 }}>目前活躍考場</h4>
-        <div className="numeric-display">{stats?.activeExams || 0}</div>
-        <p className="text-xs">即時進行中</p>
+        <h4 style={{ opacity: 0.8 }}>目前作答人數</h4>
+        <div className="numeric-display">{stats?.activeSessions || 0}</div>
+        <p className="text-xs">正在作答中的學生場次</p>
       </div>
       <div className="card" onClick={() => navigate('/teacher/cheat')} style={{ cursor: 'pointer' }}>
         <h4 className="text-secondary">待處理異常</h4>

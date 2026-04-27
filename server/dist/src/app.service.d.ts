@@ -5,7 +5,7 @@ export declare class AppService {
     constructor(prisma: PrismaService);
     getHello(): string;
     getDashboardStats(actor: TeacherActor): Promise<{
-        activeExams: number;
+        activeSessions: number;
         pendingAlerts: number;
         totalSubmissions: number;
         sessionsAwaitingScore: number;

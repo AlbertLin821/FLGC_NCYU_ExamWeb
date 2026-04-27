@@ -36,13 +36,16 @@ let AppService = class AppService {
                 },
             }
             : undefined;
-        const activeExams = await this.prisma.exam.count({
+        const activeSessions = await this.prisma.examSession.count({
             where: {
-                deletedAt: null,
-                status: 'published',
-                startTime: { lte: now },
-                endTime: { gte: now },
-                ...(teacherExamScope ?? {}),
+                status: 'in_progress',
+                exam: {
+                    deletedAt: null,
+                    status: 'published',
+                    startTime: { lte: now },
+                    endTime: { gte: now },
+                    ...(teacherExamScope ?? {}),
+                },
             },
         });
         const pendingAlerts = await this.prisma.cheatLog.count({
@@ -94,7 +97,7 @@ let AppService = class AppService {
             { id: 1, type: 'info', message: '系統運行正常', time: new Date() },
         ];
         return {
-            activeExams,
+            activeSessions,
             pendingAlerts,
             totalSubmissions,
             sessionsAwaitingScore,
