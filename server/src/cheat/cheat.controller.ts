@@ -10,7 +10,7 @@ export class CheatController {
   constructor(private cheatService: CheatService) {}
 
   @Get('alerts')
-  @Roles('admin', 'viewer')
+  @Roles('teacher', 'admin', 'viewer')
   getPendingAlerts(
     @Request() req: any,
     @Query('page') page?: string,
@@ -24,19 +24,19 @@ export class CheatController {
   }
 
   @Get('session/:sessionId')
-  @Roles('admin', 'viewer')
+  @Roles('teacher', 'admin', 'viewer')
   getSessionLogs(@Param('sessionId', ParseIntPipe) sessionId: number, @Request() req: any) {
     return this.cheatService.getLogsBySession(sessionId, req.user);
   }
 
   @Post(':logId/unlock')
-  @Roles('admin')
+  @Roles('teacher', 'admin')
   unlock(@Param('logId', ParseIntPipe) logId: number, @Request() req: any) {
     return this.cheatService.unlockSession(logId, req.user.id, req.user);
   }
 
   @Post(':logId/terminate')
-  @Roles('admin')
+  @Roles('teacher', 'admin')
   terminate(@Param('logId', ParseIntPipe) logId: number, @Request() req: any) {
     return this.cheatService.terminateSession(logId, req.user.id, req.user);
   }

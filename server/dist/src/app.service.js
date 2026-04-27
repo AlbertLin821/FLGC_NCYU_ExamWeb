@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("./prisma/prisma.service");
+const access_1 = require("./auth/access");
 let AppService = class AppService {
     prisma;
     constructor(prisma) {
@@ -20,18 +21,41 @@ let AppService = class AppService {
     getHello() {
         return 'NCYU Online English Exam API';
     }
-    async getDashboardStats() {
+    async getDashboardStats(actor) {
         const now = new Date();
+        const teacherExamScope = !(0, access_1.isAdminRole)(actor.role) && !(0, access_1.isViewerRole)(actor.role)
+            ? {
+                examClasses: {
+                    some: {
+                        class: {
+                            teachers: {
+                                some: { teacherId: actor.id },
+                            },
+                        },
+                    },
+                },
+            }
+            : undefined;
         const activeExams = await this.prisma.exam.count({
             where: {
                 deletedAt: null,
                 status: 'published',
                 startTime: { lte: now },
                 endTime: { gte: now },
+                ...(teacherExamScope ?? {}),
             },
         });
         const pendingAlerts = await this.prisma.cheatLog.count({
-            where: { resolution: null },
+            where: {
+                resolution: null,
+                ...(!(0, access_1.isAdminRole)(actor.role) && !(0, access_1.isViewerRole)(actor.role)
+                    ? {
+                        session: {
+                            exam: teacherExamScope,
+                        },
+                    }
+                    : {}),
+            },
         });
         const oneWeekAgo = new Date();
         oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
@@ -39,13 +63,30 @@ let AppService = class AppService {
             where: {
                 status: { in: ['submitted', 'graded'] },
                 submittedAt: { gte: oneWeekAgo },
+                ...(!(0, access_1.isAdminRole)(actor.role) && !(0, access_1.isViewerRole)(actor.role)
+                    ? {
+                        exam: teacherExamScope,
+                    }
+                    : {}),
             },
         });
         const sessionsAwaitingScore = await this.prisma.examSession.count({
-            where: { status: 'submitted' },
+            where: {
+                status: 'submitted',
+                ...(!(0, access_1.isAdminRole)(actor.role) && !(0, access_1.isViewerRole)(actor.role)
+                    ? {
+                        exam: teacherExamScope,
+                    }
+                    : {}),
+            },
         });
         const sessionsPendingReview = await this.prisma.examSession.count({
             where: {
+                ...(!(0, access_1.isAdminRole)(actor.role) && !(0, access_1.isViewerRole)(actor.role)
+                    ? {
+                        exam: teacherExamScope,
+                    }
+                    : {}),
                 answers: { some: { aiModel: 'pending_review' } },
             },
         });

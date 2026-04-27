@@ -43,6 +43,35 @@ const ExamRoom: React.FC = () => {
   const userAnswerRef = useRef(userAnswer);
   const student = JSON.parse(localStorage.getItem('student') || '{}');
 
+  const applyExamState = useCallback((payload: any) => {
+    const nextSession = payload?.session;
+    const nextQuestions = payload?.questions;
+    if (Array.isArray(nextQuestions) && nextQuestions.length > 0) {
+      setQuestions(nextQuestions);
+    }
+    if (nextSession) {
+      setSession(nextSession);
+      if (nextSession.status === 'paused') {
+        setIsPaused(true);
+        setPauseMessage('測驗暫停中，請等待老師處理');
+      } else {
+        setIsPaused(false);
+        setPauseMessage('');
+      }
+    }
+    if (typeof payload?.timeRemainingSeconds === 'number') {
+      setTimeLeft(payload.timeRemainingSeconds);
+    } else if (typeof payload?.timeLimit === 'number') {
+      setTimeLeft(payload.timeLimit * 60);
+    }
+  }, []);
+
+  const syncExamState = useCallback(async () => {
+    if (!examId || !student.id) return;
+    const response = await examsApi.start(Number(examId), student.id);
+    applyExamState(response.data);
+  }, [applyExamState, examId, student.id]);
+
   // Anti-cheat: Fullscreen, Visibility, Blur
   const reportCheat = useCallback((type: string, details?: any) => {
     if (socketRef.current && session) {
@@ -51,7 +80,9 @@ const ExamRoom: React.FC = () => {
         eventType: type,
         details
       });
+      setSession((prev: any) => (prev ? { ...prev, status: 'paused' } : prev));
       setIsPaused(true);
+      setPauseMessage('考試已被強制暫停，請等待處理');
     }
   }, [session]);
 
@@ -136,20 +167,8 @@ const ExamRoom: React.FC = () => {
     const initExam = async () => {
       try {
         const response = await examsApi.start(Number(examId), student.id);
-        const { session, questions, timeLimit, timeRemainingSeconds } = response.data;
-        setQuestions(questions);
-        setSession(session);
-        const initialSeconds =
-          typeof timeRemainingSeconds === 'number'
-            ? timeRemainingSeconds
-            : timeLimit * 60;
-        setTimeLeft(initialSeconds);
-
-        // Resume if already in progress
-        if (session.status === 'paused') {
-          setIsPaused(true);
-          setPauseMessage('測驗暫停中，請帶老師處理');
-        }
+        const { session } = response.data;
+        applyExamState(response.data);
 
         // Setup WebSocket（namespace /cheat 掛在 HTTP origin，非 /api 底下）
         const origin = getServerOrigin();
@@ -166,15 +185,19 @@ const ExamRoom: React.FC = () => {
 
         socket.on(`session:${session.id}:resume`, (data) => {
           setIsPaused(false);
+          setPauseMessage('');
+          setSession((prev: any) => (prev ? { ...prev, status: 'in_progress' } : prev));
           alert(data.message);
         });
 
         socket.on(`session:${session.id}:terminated`, (data) => {
+          setSession((prev: any) => (prev ? { ...prev, status: 'submitted' } : prev));
           alert(data.message);
           navigate('/student/exams');
         });
 
         socket.on('exam:paused', (data) => {
+          setSession((prev: any) => (prev ? { ...prev, status: 'paused' } : prev));
           setIsPaused(true);
           setPauseMessage(data.message);
         });
@@ -198,7 +221,21 @@ const ExamRoom: React.FC = () => {
       }
       setExamSocket(null);
     };
-  }, [examId, student.id, navigate]);
+  }, [applyExamState, examId, student.id, navigate]);
+
+  useEffect(() => {
+    if (!session?.id) return;
+
+    const handlePageShow = () => {
+      pageLeaveRef.current = false;
+      void syncExamState().catch(() => {
+        /* 狀態同步失敗時，維持既有畫面並交由後續請求處理 */
+      });
+    };
+
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
+  }, [session?.id, syncExamState]);
 
   const handleFullscreenChange = useCallback(() => {
     const nowFs = !!document.fullscreenElement;
@@ -265,6 +302,11 @@ const ExamRoom: React.FC = () => {
 
   const handleSubmitExam = useCallback(async () => {
     if (!session?.id || hasSubmittedRef.current) return;
+    if (isPaused || session.status === 'paused') {
+      setIsPaused(true);
+      setPauseMessage('測驗暫停中，請等待老師處理');
+      return;
+    }
     hasSubmittedRef.current = true;
     setSubmitting(true);
     try {
@@ -288,7 +330,7 @@ const ExamRoom: React.FC = () => {
     } finally {
       setSubmitting(false);
     }
-  }, [session, questions, currentIdx, userAnswer, navigate]);
+  }, [session, isPaused, questions, currentIdx, userAnswer, navigate]);
 
   // Timer：每秒遞減（與後端 timeRemainingSeconds 對齊後，仍以本地倒數顯示；重新進入頁面會再向後端取剩餘時間）
   useEffect(() => {
@@ -303,6 +345,11 @@ const ExamRoom: React.FC = () => {
   }, [timeLeft, session, loading, isPaused, handleSubmitExam]);
 
   const handleNext = async () => {
+    if (isPaused || session?.status === 'paused') {
+      setIsPaused(true);
+      setPauseMessage('測驗暫停中，請等待老師處理');
+      return;
+    }
     const q = questions[currentIdx];
     const isEssay = q?.type === 'essay';
     if (!isEssay && !userAnswer.trim()) {

@@ -3,7 +3,7 @@ export declare class AppController {
     private readonly appService;
     constructor(appService: AppService);
     getHello(): string;
-    getStats(): Promise<{
+    getStats(req: any): Promise<{
         activeExams: number;
         pendingAlerts: number;
         totalSubmissions: number;

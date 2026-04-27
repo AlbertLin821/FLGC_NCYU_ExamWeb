@@ -100,7 +100,7 @@ let CheatService = CheatService_1 = class CheatService {
     async getPendingAlerts(actor, page, limit) {
         const where = {
             resolution: null,
-            ...(!(0, access_1.isAdminRole)(actor.role)
+            ...(!(0, access_1.isAdminRole)(actor.role) && !(0, access_1.isViewerRole)(actor.role)
                 ? {
                     session: {
                         exam: {

@@ -4,6 +4,7 @@ import {
   ensureExamAccess,
   ensureStudentAccess,
   isAdminRole,
+  isViewerRole,
   type TeacherActor,
 } from '../auth/access';
 
@@ -111,7 +112,7 @@ export class CheatService {
   async getPendingAlerts(actor: TeacherActor, page?: number, limit?: number) {
     const where = {
       resolution: null,
-      ...(!isAdminRole(actor.role)
+      ...(!isAdminRole(actor.role) && !isViewerRole(actor.role)
         ? {
             session: {
               exam: {
