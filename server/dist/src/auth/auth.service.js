@@ -95,7 +95,14 @@ let AuthService = AuthService_1 = class AuthService {
     async validateStudent(studentId) {
         const student = await this.prisma.student.findUnique({
             where: { studentId: studentId.trim() },
-            include: { class: { select: { id: true, name: true } } },
+            include: {
+                classes: {
+                    include: {
+                        class: { select: { id: true, name: true } },
+                    },
+                    orderBy: { classId: 'asc' },
+                },
+            },
         });
         if (!student) {
             throw new common_1.UnauthorizedException('查無此學號，請確認後重新輸入');

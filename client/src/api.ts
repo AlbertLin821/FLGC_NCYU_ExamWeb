@@ -193,7 +193,7 @@ export const studentsApi = {
     invalidateGetCache(['/students', '/classes', '/dashboard']);
     return res;
   }),
-  delete: (id: number) => api.delete(`/students/${id}`).then((res) => {
+  delete: (id: number, classId?: number) => api.delete(`/students/${id}`, { params: { classId } }).then((res) => {
     invalidateGetCache(['/students', '/classes', '/dashboard']);
     return res;
   }),

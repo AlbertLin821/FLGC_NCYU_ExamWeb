@@ -39,14 +39,14 @@ let CheatService = CheatService_1 = class CheatService {
                 session: {
                     select: {
                         examId: true,
-                        student: { select: { classId: true } },
+                        student: { select: { id: true } },
                     },
                 },
             },
         });
         if (logBeforeUpdate) {
             await (0, access_1.ensureExamAccess)(this.prisma, actor, logBeforeUpdate.session.examId);
-            await (0, access_1.ensureClassAccess)(this.prisma, actor, logBeforeUpdate.session.student.classId);
+            await (0, access_1.ensureStudentAccess)(this.prisma, actor, logBeforeUpdate.session.student.id);
         }
         await this.prisma.cheatLog.update({
             where: { id: logId },
@@ -72,14 +72,14 @@ let CheatService = CheatService_1 = class CheatService {
                 session: {
                     select: {
                         examId: true,
-                        student: { select: { classId: true } },
+                        student: { select: { id: true } },
                     },
                 },
             },
         });
         if (logBeforeUpdate) {
             await (0, access_1.ensureExamAccess)(this.prisma, actor, logBeforeUpdate.session.examId);
-            await (0, access_1.ensureClassAccess)(this.prisma, actor, logBeforeUpdate.session.student.classId);
+            await (0, access_1.ensureStudentAccess)(this.prisma, actor, logBeforeUpdate.session.student.id);
         }
         await this.prisma.cheatLog.update({
             where: { id: logId },
@@ -103,10 +103,14 @@ let CheatService = CheatService_1 = class CheatService {
             ...(!(0, access_1.isAdminRole)(actor.role)
                 ? {
                     session: {
-                        student: {
-                            class: {
-                                teachers: {
-                                    some: { teacherId: actor.id },
+                        exam: {
+                            examClasses: {
+                                some: {
+                                    class: {
+                                        teachers: {
+                                            some: { teacherId: actor.id },
+                                        },
+                                    },
                                 },
                             },
                         },
@@ -144,11 +148,11 @@ let CheatService = CheatService_1 = class CheatService {
     async getLogsBySession(sessionId, actor) {
         const session = await this.prisma.examSession.findUnique({
             where: { id: sessionId },
-            select: { examId: true, student: { select: { classId: true } } },
+            select: { examId: true, student: { select: { id: true } } },
         });
         if (session) {
             await (0, access_1.ensureExamAccess)(this.prisma, actor, session.examId);
-            await (0, access_1.ensureClassAccess)(this.prisma, actor, session.student.classId);
+            await (0, access_1.ensureStudentAccess)(this.prisma, actor, session.student.id);
         }
         return this.prisma.cheatLog.findMany({
             where: { sessionId },

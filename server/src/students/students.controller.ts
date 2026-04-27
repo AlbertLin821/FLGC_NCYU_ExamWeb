@@ -106,7 +106,15 @@ export class StudentsController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('teacher', 'admin')
-  delete(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
-    return this.studentsService.delete(id, req.user);
+  delete(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req: any,
+    @Query('classId') classId?: string,
+  ) {
+    return this.studentsService.delete(
+      id,
+      req.user,
+      classId && classId !== '' ? parseInt(classId, 10) : undefined,
+    );
   }
 }

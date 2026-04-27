@@ -28,10 +28,15 @@ export declare class AuthService {
     }>;
     hashPassword(password: string): Promise<string>;
     validateStudent(studentId: string): Promise<{
-        class: {
-            name: string;
-            id: number;
-        };
+        classes: ({
+            class: {
+                name: string;
+                id: number;
+            };
+        } & {
+            studentId: number;
+            classId: number;
+        })[];
     } & {
         name: string;
         createdAt: Date;
@@ -40,7 +45,6 @@ export declare class AuthService {
         schoolName: string;
         loginAttempts: number;
         lockedUntil: Date | null;
-        classId: number;
     }>;
     requestPasswordReset(email: string): Promise<{
         message: string;

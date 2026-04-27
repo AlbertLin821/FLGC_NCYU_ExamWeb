@@ -24,10 +24,15 @@ export declare class StudentsController {
         };
     }, classIdStr: string | undefined, page?: string, limit?: string): Promise<{
         items: ({
-            class: {
-                name: string;
-                id: number;
-            };
+            classes: ({
+                class: {
+                    name: string;
+                    id: number;
+                };
+            } & {
+                studentId: number;
+                classId: number;
+            })[];
         } & {
             name: string;
             createdAt: Date;
@@ -36,13 +41,21 @@ export declare class StudentsController {
             schoolName: string;
             loginAttempts: number;
             lockedUntil: Date | null;
-            classId: number;
         })[];
         total: number;
         page: number;
         limit: number;
         totalPages: number;
     }> | Promise<({
+        classes: ({
+            class: {
+                name: string;
+                id: number;
+            };
+        } & {
+            studentId: number;
+            classId: number;
+        })[];
         sessions: ({
             answers: {
                 question: {
@@ -74,9 +87,17 @@ export declare class StudentsController {
         schoolName: string;
         loginAttempts: number;
         lockedUntil: Date | null;
-        classId: number;
     })[] | {
         items: ({
+            classes: ({
+                class: {
+                    name: string;
+                    id: number;
+                };
+            } & {
+                studentId: number;
+                classId: number;
+            })[];
             sessions: ({
                 answers: {
                     question: {
@@ -108,7 +129,6 @@ export declare class StudentsController {
             schoolName: string;
             loginAttempts: number;
             lockedUntil: Date | null;
-            classId: number;
         })[];
         total: number;
         page: number;
@@ -126,6 +146,15 @@ export declare class StudentsController {
         sessionStatus: string;
     }[]>;
     findOne(id: number, req: any): Promise<({
+        classes: ({
+            class: {
+                name: string;
+                id: number;
+            };
+        } & {
+            studentId: number;
+            classId: number;
+        })[];
         sessions: ({
             answers: ({
                 question: {
@@ -181,7 +210,6 @@ export declare class StudentsController {
         schoolName: string;
         loginAttempts: number;
         lockedUntil: Date | null;
-        classId: number;
     }) | null>;
     bulkImport(dto: BulkImportDto, req: any): Promise<{
         created: number;
@@ -189,6 +217,16 @@ export declare class StudentsController {
         errors: string[];
     }>;
     create(dto: CreateStudentDto, req: any): Promise<{
+        classes: ({
+            class: {
+                name: string;
+                id: number;
+            };
+        } & {
+            studentId: number;
+            classId: number;
+        })[];
+    } & {
         name: string;
         createdAt: Date;
         id: number;
@@ -196,7 +234,6 @@ export declare class StudentsController {
         schoolName: string;
         loginAttempts: number;
         lockedUntil: Date | null;
-        classId: number;
     }>;
     update(id: number, dto: Partial<CreateStudentDto>, req: any): Promise<{
         name: string;
@@ -206,9 +243,8 @@ export declare class StudentsController {
         schoolName: string;
         loginAttempts: number;
         lockedUntil: Date | null;
-        classId: number;
     }>;
-    delete(id: number, req: any): Promise<{
+    delete(id: number, req: any, classId?: string): Promise<{
         name: string;
         createdAt: Date;
         id: number;
@@ -216,7 +252,10 @@ export declare class StudentsController {
         schoolName: string;
         loginAttempts: number;
         lockedUntil: Date | null;
-        classId: number;
+    } | {
+        ok: boolean;
+        removedClassId: number;
+        deletedStudent: boolean;
     }>;
 }
 export {};

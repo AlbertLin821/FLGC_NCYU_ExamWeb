@@ -378,13 +378,13 @@ Respond in this exact JSON format only:
     async scoreSession(sessionId, actor) {
         const session = await this.prisma.examSession.findUnique({
             where: { id: sessionId },
-            select: { id: true, examId: true, student: { select: { classId: true } } },
+            select: { id: true, examId: true, student: { select: { id: true } } },
         });
         if (!session) {
             throw new common_1.NotFoundException('考試工作階段不存在');
         }
         await (0, access_1.ensureExamAccess)(this.prisma, actor, session.examId);
-        await (0, access_1.ensureClassAccess)(this.prisma, actor, session.student.classId);
+        await (0, access_1.ensureStudentAccess)(this.prisma, actor, session.student.id);
         return this.scoreObjectiveOnly(sessionId);
     }
     async batchGradeEssaysForExamAndClass(examId, classId, actor) {
@@ -420,7 +420,7 @@ Respond in this exact JSON format only:
         const sessions = await this.prisma.examSession.findMany({
             where: {
                 examId,
-                student: { classId },
+                student: { classes: { some: { classId } } },
                 OR: [
                     { status: 'submitted' },
                     {
@@ -547,7 +547,7 @@ Respond in this exact JSON format only:
                 session: {
                     select: {
                         examId: true,
-                        student: { select: { classId: true } },
+                        student: { select: { id: true } },
                     },
                 },
             },
@@ -556,7 +556,7 @@ Respond in this exact JSON format only:
             throw new common_1.NotFoundException('找不到答案');
         }
         await (0, access_1.ensureExamAccess)(this.prisma, actor, existing.session.examId);
-        await (0, access_1.ensureClassAccess)(this.prisma, actor, existing.session.student.classId);
+        await (0, access_1.ensureStudentAccess)(this.prisma, actor, existing.session.student.id);
         const data = {
             aiScore: score,
             aiModel: 'teacher_manual',

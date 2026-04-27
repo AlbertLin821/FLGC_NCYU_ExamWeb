@@ -48,7 +48,11 @@ let ClassesService = class ClassesService {
         return this.prisma.class.findUnique({
             where: { id },
             include: {
-                students: true,
+                students: {
+                    include: {
+                        student: true,
+                    },
+                },
                 _count: { select: { students: true } },
             },
         });

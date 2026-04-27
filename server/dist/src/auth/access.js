@@ -46,13 +46,32 @@ async function ensureClassAccess(prisma, actor, classId) {
 async function ensureStudentAccess(prisma, actor, studentId) {
     const student = await prisma.student.findUnique({
         where: { id: studentId },
-        select: { id: true, classId: true },
+        select: { id: true, classes: { select: { classId: true } } },
     });
     if (!student) {
         throw new common_1.NotFoundException('學生不存在');
     }
-    await ensureClassAccess(prisma, actor, student.classId);
-    return student.classId;
+    const classIds = student.classes.map((row) => row.classId);
+    if (classIds.length === 0) {
+        if (isAdminRole(actor.role)) {
+            return [];
+        }
+        throw new common_1.ForbiddenException('此學生尚未加入任何班級');
+    }
+    if (isAdminRole(actor.role)) {
+        return classIds;
+    }
+    const membership = await prisma.teacherClass.findFirst({
+        where: {
+            teacherId: actor.id,
+            classId: { in: classIds },
+        },
+        select: { teacherId: true },
+    });
+    if (!membership) {
+        throw new common_1.ForbiddenException('無權存取此學生');
+    }
+    return classIds;
 }
 async function ensureExamAccess(prisma, actor, examId) {
     const exam = await prisma.exam.findFirst({

@@ -8,7 +8,8 @@ type VerifiedStudent = {
   studentId: string;
   name: string;
   schoolName: string;
-  classId: number;
+  classIds: number[];
+  classNames: string[];
   className: string;
 };
 
@@ -90,7 +91,7 @@ const StudentLogin: React.FC = () => {
                 <strong>{verifiedStudent.schoolName}</strong>
               </div>
               <div>
-                <span className="text-sm text-secondary">班級名稱</span>
+                <span className="text-sm text-secondary">所屬班級</span>
                 <strong>{verifiedStudent.className}</strong>
               </div>
               <div>

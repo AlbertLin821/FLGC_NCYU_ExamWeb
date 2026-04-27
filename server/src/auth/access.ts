@@ -56,16 +56,35 @@ export async function ensureStudentAccess(
   prisma: PrismaService,
   actor: TeacherActor,
   studentId: number,
-): Promise<number> {
+): Promise<number[]> {
   const student = await prisma.student.findUnique({
     where: { id: studentId },
-    select: { id: true, classId: true },
+    select: { id: true, classes: { select: { classId: true } } },
   });
   if (!student) {
     throw new NotFoundException('學生不存在');
   }
-  await ensureClassAccess(prisma, actor, student.classId);
-  return student.classId;
+  const classIds = student.classes.map((row) => row.classId);
+  if (classIds.length === 0) {
+    if (isAdminRole(actor.role)) {
+      return [];
+    }
+    throw new ForbiddenException('此學生尚未加入任何班級');
+  }
+  if (isAdminRole(actor.role)) {
+    return classIds;
+  }
+  const membership = await prisma.teacherClass.findFirst({
+    where: {
+      teacherId: actor.id,
+      classId: { in: classIds },
+    },
+    select: { teacherId: true },
+  });
+  if (!membership) {
+    throw new ForbiddenException('無權存取此學生');
+  }
+  return classIds;
 }
 
 export async function ensureExamAccess(

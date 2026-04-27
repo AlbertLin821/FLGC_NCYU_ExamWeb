@@ -3,12 +3,18 @@ import { type TeacherActor } from '../auth/access';
 export declare class StudentsService {
     private prisma;
     constructor(prisma: PrismaService);
+    private getActorVisibleClassIds;
     findAllPaginated(page?: number, limit?: number): Promise<{
         items: ({
-            class: {
-                name: string;
-                id: number;
-            };
+            classes: ({
+                class: {
+                    name: string;
+                    id: number;
+                };
+            } & {
+                studentId: number;
+                classId: number;
+            })[];
         } & {
             name: string;
             createdAt: Date;
@@ -17,7 +23,6 @@ export declare class StudentsService {
             schoolName: string;
             loginAttempts: number;
             lockedUntil: Date | null;
-            classId: number;
         })[];
         total: number;
         page: number;
@@ -25,6 +30,15 @@ export declare class StudentsService {
         totalPages: number;
     }>;
     findByClass(classId: number, actor: TeacherActor, page?: number, limit?: number): Promise<({
+        classes: ({
+            class: {
+                name: string;
+                id: number;
+            };
+        } & {
+            studentId: number;
+            classId: number;
+        })[];
         sessions: ({
             answers: {
                 question: {
@@ -56,9 +70,17 @@ export declare class StudentsService {
         schoolName: string;
         loginAttempts: number;
         lockedUntil: Date | null;
-        classId: number;
     })[] | {
         items: ({
+            classes: ({
+                class: {
+                    name: string;
+                    id: number;
+                };
+            } & {
+                studentId: number;
+                classId: number;
+            })[];
             sessions: ({
                 answers: {
                     question: {
@@ -90,7 +112,6 @@ export declare class StudentsService {
             schoolName: string;
             loginAttempts: number;
             lockedUntil: Date | null;
-            classId: number;
         })[];
         total: number;
         page: number;
@@ -98,6 +119,15 @@ export declare class StudentsService {
         totalPages: number;
     }>;
     findById(id: number, actor: TeacherActor): Promise<({
+        classes: ({
+            class: {
+                name: string;
+                id: number;
+            };
+        } & {
+            studentId: number;
+            classId: number;
+        })[];
         sessions: ({
             answers: ({
                 question: {
@@ -153,7 +183,6 @@ export declare class StudentsService {
         schoolName: string;
         loginAttempts: number;
         lockedUntil: Date | null;
-        classId: number;
     }) | null>;
     bulkImport(students: {
         studentId: string;
@@ -170,6 +199,16 @@ export declare class StudentsService {
         schoolName: string;
         classId: number;
     }, actor: TeacherActor): Promise<{
+        classes: ({
+            class: {
+                name: string;
+                id: number;
+            };
+        } & {
+            studentId: number;
+            classId: number;
+        })[];
+    } & {
         name: string;
         createdAt: Date;
         id: number;
@@ -177,12 +216,10 @@ export declare class StudentsService {
         schoolName: string;
         loginAttempts: number;
         lockedUntil: Date | null;
-        classId: number;
     }>;
     update(id: number, data: {
         name?: string;
         schoolName?: string;
-        classId?: number;
     }, actor: TeacherActor): Promise<{
         name: string;
         createdAt: Date;
@@ -191,9 +228,8 @@ export declare class StudentsService {
         schoolName: string;
         loginAttempts: number;
         lockedUntil: Date | null;
-        classId: number;
     }>;
-    delete(id: number, actor: TeacherActor): Promise<{
+    delete(id: number, actor: TeacherActor, classId?: number): Promise<{
         name: string;
         createdAt: Date;
         id: number;
@@ -201,7 +237,10 @@ export declare class StudentsService {
         schoolName: string;
         loginAttempts: number;
         lockedUntil: Date | null;
-        classId: number;
+    } | {
+        ok: boolean;
+        removedClassId: number;
+        deletedStudent: boolean;
     }>;
     getStudentExams(studentId: number): Promise<{
         id: number;

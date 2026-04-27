@@ -34,6 +34,9 @@ const SystemManagement: React.FC = () => {
     return <Navigate to="/teacher/overview" replace />;
   }
 
+  const classNames = (student: any) =>
+    student.classes?.map((row: any) => row.class?.name).filter(Boolean).join('、') || '—';
+
   return (
     <div className="fade-in">
       <div className="mb-lg">
@@ -63,7 +66,7 @@ const SystemManagement: React.FC = () => {
                       <td className="cell-student-id">{s.studentId}</td>
                       <td>{s.name}</td>
                       <td>{s.schoolName}</td>
-                      <td>{s.class?.name ?? s.classId}</td>
+                      <td>{classNames(s)}</td>
                     </tr>
                   ))}
                 </tbody>

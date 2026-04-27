@@ -114,8 +114,8 @@ let StudentsController = class StudentsController {
     update(id, dto, req) {
         return this.studentsService.update(id, dto, req.user);
     }
-    delete(id, req) {
-        return this.studentsService.delete(id, req.user);
+    delete(id, req, classId) {
+        return this.studentsService.delete(id, req.user, classId && classId !== '' ? parseInt(classId, 10) : undefined);
     }
 };
 exports.StudentsController = StudentsController;
@@ -185,8 +185,9 @@ __decorate([
     (0, guards_1.Roles)('teacher', 'admin'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Request)()),
+    __param(2, (0, common_1.Query)('classId')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, Object]),
+    __metadata("design:paramtypes", [Number, Object, String]),
     __metadata("design:returntype", void 0)
 ], StudentsController.prototype, "delete", null);
 exports.StudentsController = StudentsController = __decorate([

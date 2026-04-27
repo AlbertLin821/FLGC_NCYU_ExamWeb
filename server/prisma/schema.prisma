@@ -39,7 +39,7 @@ model Class {
 
   creator     Teacher          @relation("ClassCreator", fields: [createdBy], references: [id])
   teachers    TeacherClass[]
-  students    Student[]
+  students    StudentClass[]
   examClasses ExamClass[]
 
   @@index([createdBy])
@@ -66,16 +66,27 @@ model Student {
   studentId     String    @unique @map("student_id")
   name          String
   schoolName    String    @default("國立嘉義大學") @map("school_name")
-  classId       Int       @map("class_id")
   loginAttempts Int       @default(0) @map("login_attempts")
   lockedUntil   DateTime? @map("locked_until")
   createdAt     DateTime  @default(now()) @map("created_at")
 
-  class         Class         @relation(fields: [classId], references: [id], onDelete: Cascade)
+  classes       StudentClass[]
   sessions      ExamSession[]
 
-  @@index([classId])
   @@map("students")
+}
+
+// ============ 學生-班級 多對多 ============ 
+model StudentClass {
+  studentId Int @map("student_id")
+  classId   Int @map("class_id")
+
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  class     Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@id([studentId, classId])
+  @@index([classId])
+  @@map("student_classes")
 }
 
 // ============ 考卷 ↔ 班級（多對多） ============

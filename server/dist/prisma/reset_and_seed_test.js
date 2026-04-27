@@ -50,6 +50,7 @@ async function main() {
     await prisma.examSession.deleteMany();
     await prisma.question.deleteMany();
     await prisma.exam.deleteMany();
+    await prisma.studentClass.deleteMany();
     await prisma.student.deleteMany();
     await prisma.teacherClass.deleteMany();
     await prisma.class.deleteMany();
@@ -79,13 +80,20 @@ async function main() {
             teachers: {
                 create: { teacherId: admin.id, role: 'owner' },
             },
-            students: {
-                create: [
-                    { studentId: 'TEST001', name: '測試生甲', schoolName: '國立嘉義大學' },
-                    { studentId: 'TEST002', name: '測試生乙', schoolName: '國立嘉義大學' },
-                ],
-            },
         },
+    });
+    const studentA = await prisma.student.create({
+        data: { studentId: 'TEST001', name: '測試生甲', schoolName: '國立嘉義大學' },
+    });
+    const studentB = await prisma.student.create({
+        data: { studentId: 'TEST002', name: '測試生乙', schoolName: '國立嘉義大學' },
+    });
+    await prisma.studentClass.createMany({
+        data: [
+            { studentId: studentA.id, classId: testClass.id },
+            { studentId: studentB.id, classId: testClass.id },
+        ],
+        skipDuplicates: true,
     });
     const exam = await prisma.exam.create({
         data: {

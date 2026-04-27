@@ -253,9 +253,9 @@ const ClassManagement: React.FC = () => {
   };
 
   const deleteStudent = async (id: number) => {
-    if (!confirm('確認刪除此學生？')) return;
+    if (!confirm('確認將此學生移出目前班級？若該生已不屬於任何班級，系統會一併刪除學生資料。')) return;
     try {
-      await studentsApi.delete(id);
+      await studentsApi.delete(id, selectedClass.id);
       fetchStudents(selectedClass.id);
     } catch { alert('刪除失敗'); }
   };

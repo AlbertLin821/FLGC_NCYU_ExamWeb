@@ -44,14 +44,17 @@ export class AuthController {
   @Post('student/verify')
   async studentVerify(@Body() dto: StudentLoginDto) {
     const student = await this.authService.validateStudent(dto.studentId);
+    const classIds = student.classes.map((row) => row.class.id);
+    const classNames = student.classes.map((row) => row.class.name);
     return {
       student: {
         id: student.id,
         studentId: student.studentId,
         name: student.name,
         schoolName: student.schoolName,
-        classId: student.classId,
-        className: student.class.name,
+        classIds,
+        classNames,
+        className: classNames.join('、'),
       },
     };
   }

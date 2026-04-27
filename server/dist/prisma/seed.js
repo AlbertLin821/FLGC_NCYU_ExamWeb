@@ -95,18 +95,33 @@ async function main() {
                         skipDuplicates: true,
                     },
                 },
-                students: {
-                    createMany: {
-                        data: [
-                            { studentId: '411200001', name: '王小明', schoolName: '國立嘉義大學' },
-                            { studentId: '411200002', name: '李小華', schoolName: '國立嘉義大學' },
-                            { studentId: '411200003', name: '張測試', schoolName: '國立嘉義大學' },
-                        ],
-                        skipDuplicates: true,
-                    },
-                },
             },
         }));
+    const demoStudents = [
+        { studentId: '411200001', name: '王小明', schoolName: '國立嘉義大學' },
+        { studentId: '411200002', name: '李小華', schoolName: '國立嘉義大學' },
+        { studentId: '411200003', name: '張測試', schoolName: '國立嘉義大學' },
+    ];
+    for (const row of demoStudents) {
+        const student = await prisma.student.upsert({
+            where: { studentId: row.studentId },
+            update: { name: row.name, schoolName: row.schoolName },
+            create: row,
+        });
+        await prisma.studentClass.upsert({
+            where: {
+                studentId_classId: {
+                    studentId: student.id,
+                    classId: classA.id,
+                },
+            },
+            update: {},
+            create: {
+                studentId: student.id,
+                classId: classA.id,
+            },
+        });
+    }
     const existingExam = await prisma.exam.findFirst({
         where: { title: '英文能力鑑定 - 造句測驗 (初級)' },
     });

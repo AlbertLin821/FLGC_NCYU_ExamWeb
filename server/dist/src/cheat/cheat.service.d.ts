@@ -23,12 +23,12 @@ export declare class CheatService {
     }>;
     getPendingAlerts(actor: TeacherActor, page?: number, limit?: number): Promise<({
         session: {
-            exam: {
-                title: string;
-            };
             student: {
                 name: string;
                 studentId: string;
+            };
+            exam: {
+                title: string;
             };
         } & {
             id: number;
@@ -52,12 +52,12 @@ export declare class CheatService {
     })[] | {
         items: ({
             session: {
-                exam: {
-                    title: string;
-                };
                 student: {
                     name: string;
                     studentId: string;
+                };
+                exam: {
+                    title: string;
                 };
             } & {
                 id: number;

@@ -81,6 +81,11 @@ export declare class ExamsController {
         totalPages: number;
     }>;
     getResults(req: any, classId: number, examId?: string, page?: string, limit?: string): Promise<({
+        student: {
+            name: string;
+            id: number;
+            studentId: string;
+        };
         answers: ({
             question: {
                 id: number;
@@ -102,11 +107,6 @@ export declare class ExamsController {
         exam: {
             title: string;
         };
-        student: {
-            name: string;
-            id: number;
-            studentId: string;
-        };
     } & {
         id: number;
         studentId: number;
@@ -121,6 +121,11 @@ export declare class ExamsController {
         hasPendingReview: boolean;
     })[] | {
         items: ({
+            student: {
+                name: string;
+                id: number;
+                studentId: string;
+            };
             answers: ({
                 question: {
                     id: number;
@@ -141,11 +146,6 @@ export declare class ExamsController {
             })[];
             exam: {
                 title: string;
-            };
-            student: {
-                name: string;
-                id: number;
-                studentId: string;
             };
         } & {
             id: number;

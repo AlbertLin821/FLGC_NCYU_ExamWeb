@@ -59,16 +59,20 @@ export declare class ClassesController {
         totalPages: number;
     }>;
     findOne(id: number, req: any): Promise<({
-        students: {
-            name: string;
-            createdAt: Date;
-            id: number;
-            studentId: string;
-            schoolName: string;
-            loginAttempts: number;
-            lockedUntil: Date | null;
+        students: ({
+            student: {
+                name: string;
+                createdAt: Date;
+                id: number;
+                studentId: string;
+                schoolName: string;
+                loginAttempts: number;
+                lockedUntil: Date | null;
+            };
+        } & {
+            studentId: number;
             classId: number;
-        }[];
+        })[];
         _count: {
             students: number;
         };

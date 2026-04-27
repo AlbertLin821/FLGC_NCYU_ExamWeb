@@ -58,7 +58,14 @@ export class AuthService {
   async validateStudent(studentId: string) {
     const student = await this.prisma.student.findUnique({
       where: { studentId: studentId.trim() },
-      include: { class: { select: { id: true, name: true } } },
+      include: {
+        classes: {
+          include: {
+            class: { select: { id: true, name: true } },
+          },
+          orderBy: { classId: 'asc' },
+        },
+      },
     });
 
     if (!student) {

@@ -245,6 +245,11 @@ export declare class ExamsService {
         overallFeedbackZh: string | null;
     }>;
     getResults(actor: TeacherActor, classId: number, examId?: number, page?: number, limit?: number): Promise<({
+        student: {
+            name: string;
+            id: number;
+            studentId: string;
+        };
         answers: ({
             question: {
                 id: number;
@@ -266,11 +271,6 @@ export declare class ExamsService {
         exam: {
             title: string;
         };
-        student: {
-            name: string;
-            id: number;
-            studentId: string;
-        };
     } & {
         id: number;
         studentId: number;
@@ -285,6 +285,11 @@ export declare class ExamsService {
         hasPendingReview: boolean;
     })[] | {
         items: ({
+            student: {
+                name: string;
+                id: number;
+                studentId: string;
+            };
             answers: ({
                 question: {
                     id: number;
@@ -305,11 +310,6 @@ export declare class ExamsService {
             })[];
             exam: {
                 title: string;
-            };
-            student: {
-                name: string;
-                id: number;
-                studentId: string;
             };
         } & {
             id: number;

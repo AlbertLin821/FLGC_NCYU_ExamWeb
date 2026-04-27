@@ -4,12 +4,12 @@ export declare class CheatController {
     constructor(cheatService: CheatService);
     getPendingAlerts(req: any, page?: string, limit?: string): Promise<({
         session: {
-            exam: {
-                title: string;
-            };
             student: {
                 name: string;
                 studentId: string;
+            };
+            exam: {
+                title: string;
             };
         } & {
             id: number;
@@ -33,12 +33,12 @@ export declare class CheatController {
     })[] | {
         items: ({
             session: {
-                exam: {
-                    title: string;
-                };
                 student: {
                     name: string;
                     studentId: string;
+                };
+                exam: {
+                    title: string;
                 };
             } & {
                 id: number;

@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
-  ensureClassAccess,
   ensureExamAccess,
+  ensureStudentAccess,
   isAdminRole,
   type TeacherActor,
 } from '../auth/access';
@@ -38,14 +38,14 @@ export class CheatService {
         session: {
           select: {
             examId: true,
-            student: { select: { classId: true } },
+            student: { select: { id: true } },
           },
         },
       },
     });
     if (logBeforeUpdate) {
       await ensureExamAccess(this.prisma, actor, logBeforeUpdate.session.examId);
-      await ensureClassAccess(this.prisma, actor, logBeforeUpdate.session.student.classId);
+      await ensureStudentAccess(this.prisma, actor, logBeforeUpdate.session.student.id);
     }
     // Update the cheat log
     await this.prisma.cheatLog.update({
@@ -77,14 +77,14 @@ export class CheatService {
         session: {
           select: {
             examId: true,
-            student: { select: { classId: true } },
+            student: { select: { id: true } },
           },
         },
       },
     });
     if (logBeforeUpdate) {
       await ensureExamAccess(this.prisma, actor, logBeforeUpdate.session.examId);
-      await ensureClassAccess(this.prisma, actor, logBeforeUpdate.session.student.classId);
+      await ensureStudentAccess(this.prisma, actor, logBeforeUpdate.session.student.id);
     }
     // Update the cheat log
     await this.prisma.cheatLog.update({
@@ -114,10 +114,14 @@ export class CheatService {
       ...(!isAdminRole(actor.role)
         ? {
             session: {
-              student: {
-                class: {
-                  teachers: {
-                    some: { teacherId: actor.id },
+              exam: {
+                examClasses: {
+                  some: {
+                    class: {
+                      teachers: {
+                        some: { teacherId: actor.id },
+                      },
+                    },
                   },
                 },
               },
@@ -160,11 +164,11 @@ export class CheatService {
   async getLogsBySession(sessionId: number, actor: TeacherActor) {
     const session = await this.prisma.examSession.findUnique({
       where: { id: sessionId },
-      select: { examId: true, student: { select: { classId: true } } },
+      select: { examId: true, student: { select: { id: true } } },
     });
     if (session) {
       await ensureExamAccess(this.prisma, actor, session.examId);
-      await ensureClassAccess(this.prisma, actor, session.student.classId);
+      await ensureStudentAccess(this.prisma, actor, session.student.id);
     }
     return this.prisma.cheatLog.findMany({
       where: { sessionId },

@@ -68,7 +68,7 @@ const StudentExams: React.FC = () => {
       <div className="mb-xl">
         <h2 className="mb-xs">Hi，{student?.name}</h2>
         <p className="text-secondary text-sm">
-          校名: {student?.schoolName ?? '—'} | 班級: {student?.className ?? '—'} | 學號: {student?.studentId} | 姓名: {student?.name}
+          校名: {student?.schoolName ?? '—'} | 所屬班級: {student?.className ?? '—'} | 學號: {student?.studentId} | 姓名: {student?.name}
         </p>
         <p className="text-secondary text-sm">以下是目前可參加的測驗</p>
       </div>

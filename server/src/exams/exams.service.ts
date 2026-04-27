@@ -226,14 +226,18 @@ export class ExamsService {
   async startSession(studentId: number, examId: number) {
     const student = await this.prisma.student.findUnique({
       where: { id: studentId },
-      select: { id: true, classId: true },
+      select: { id: true, classes: { select: { classId: true } } },
     });
     if (!student) throw new NotFoundException('學生不存在');
+    const classIds = student.classes.map((row) => row.classId);
+    if (classIds.length === 0) {
+      throw new BadRequestException('學生尚未加入任何班級');
+    }
     const exam = await this.prisma.exam.findFirst({
       where: {
         id: examId,
         deletedAt: null,
-        examClasses: { some: { classId: student.classId } },
+        examClasses: { some: { classId: { in: classIds } } },
       },
       include: { questions: { orderBy: { orderNum: 'asc' } } },
     });

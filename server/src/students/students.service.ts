@@ -6,6 +6,17 @@ import { ensureClassAccess, ensureStudentAccess, type TeacherActor } from '../au
 export class StudentsService {
   constructor(private prisma: PrismaService) {}
 
+  private async getActorVisibleClassIds(actor: TeacherActor): Promise<number[] | null> {
+    if (actor.role === 'admin') {
+      return null;
+    }
+    const memberships = await this.prisma.teacherClass.findMany({
+      where: { teacherId: actor.id },
+      select: { classId: true },
+    });
+    return memberships.map((row) => row.classId);
+  }
+
   /** 管理員：跨班學生列表（分頁） */
   async findAllPaginated(page?: number, limit?: number) {
     const p = page || 1;
@@ -17,7 +28,12 @@ export class StudentsService {
       this.prisma.student.findMany({
         where,
         include: {
-          class: { select: { id: true, name: true } },
+          classes: {
+            include: {
+              class: { select: { id: true, name: true } },
+            },
+            orderBy: { classId: 'asc' },
+          },
         },
         orderBy,
         skip,
@@ -36,10 +52,17 @@ export class StudentsService {
 
   async findByClass(classId: number, actor: TeacherActor, page?: number, limit?: number) {
     await ensureClassAccess(this.prisma, actor, classId);
-    const where = { classId };
+    const where = { classes: { some: { classId } } };
     /** 班級學生列表僅需分數權重與場次狀態，精簡 query 以降低大量學生時延遲 */
     const include = {
       sessions: {
+        where: {
+          exam: {
+            examClasses: {
+              some: { classId },
+            },
+          },
+        },
         orderBy: { id: 'desc' as const },
         include: {
           exam: {
@@ -52,6 +75,12 @@ export class StudentsService {
             },
           },
         },
+      },
+      classes: {
+        include: {
+          class: { select: { id: true, name: true } },
+        },
+        orderBy: { classId: 'asc' as const },
       },
     };
     const orderBy: any = { studentId: 'asc' };
@@ -80,10 +109,31 @@ export class StudentsService {
 
   async findById(id: number, actor: TeacherActor) {
     await ensureStudentAccess(this.prisma, actor, id);
+    const visibleClassIds = await this.getActorVisibleClassIds(actor);
     return this.prisma.student.findUnique({
       where: { id },
       include: {
-        sessions: { include: { exam: true, answers: { include: { question: true } } } },
+        classes: {
+          where: visibleClassIds ? { classId: { in: visibleClassIds } } : undefined,
+          include: {
+            class: { select: { id: true, name: true } },
+          },
+          orderBy: { classId: 'asc' },
+        },
+        sessions: {
+          where: visibleClassIds
+            ? {
+                exam: {
+                  examClasses: {
+                    some: {
+                      classId: { in: visibleClassIds },
+                    },
+                  },
+                },
+              }
+            : undefined,
+          include: { exam: true, answers: { include: { question: true } } },
+        },
       },
     });
   }
@@ -105,15 +155,29 @@ export class StudentsService {
             studentId: s.studentId.trim(),
             name: s.name.trim(),
             schoolName: s.schoolName.trim(),
-            classId,
           };
           try {
-            await this.prisma.student.upsert({
-              where: { studentId: data.studentId },
-              update: { name: data.name, schoolName: data.schoolName, classId },
-              create: data,
+            await this.prisma.$transaction(async (tx) => {
+              const student = await tx.student.upsert({
+                where: { studentId: data.studentId },
+                update: { name: data.name, schoolName: data.schoolName },
+                create: data,
+              });
+              await tx.studentClass.upsert({
+                where: {
+                  studentId_classId: {
+                    studentId: student.id,
+                    classId,
+                  },
+                },
+                update: {},
+                create: {
+                  studentId: student.id,
+                  classId,
+                },
+              });
             });
-            return { ok: true as const, studentId: data.studentId };
+            return { ok: true as const, studentId: data.studentId, created: true };
           } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);
             return { ok: false as const, studentId: s.studentId, message };
@@ -134,47 +198,98 @@ export class StudentsService {
     actor: TeacherActor,
   ) {
     await ensureClassAccess(this.prisma, actor, data.classId);
-    return this.prisma.student.create({
-      data: {
-        studentId: data.studentId.trim(),
-        name: data.name.trim(),
-        schoolName: data.schoolName.trim(),
-        classId: data.classId,
-      },
+    return this.prisma.$transaction(async (tx) => {
+      const student = await tx.student.upsert({
+        where: { studentId: data.studentId.trim() },
+        update: {
+          name: data.name.trim(),
+          schoolName: data.schoolName.trim(),
+        },
+        create: {
+          studentId: data.studentId.trim(),
+          name: data.name.trim(),
+          schoolName: data.schoolName.trim(),
+        },
+      });
+      await tx.studentClass.upsert({
+        where: {
+          studentId_classId: {
+            studentId: student.id,
+            classId: data.classId,
+          },
+        },
+        update: {},
+        create: {
+          studentId: student.id,
+          classId: data.classId,
+        },
+      });
+      return tx.student.findUniqueOrThrow({
+        where: { id: student.id },
+        include: {
+          classes: {
+            include: {
+              class: { select: { id: true, name: true } },
+            },
+            orderBy: { classId: 'asc' },
+          },
+        },
+      });
     });
   }
 
-  async update(id: number, data: { name?: string; schoolName?: string; classId?: number }, actor: TeacherActor) {
-    const currentClassId = await ensureStudentAccess(this.prisma, actor, id);
-    if (data.classId !== undefined && data.classId !== currentClassId) {
-      await ensureClassAccess(this.prisma, actor, data.classId);
-    }
+  async update(id: number, data: { name?: string; schoolName?: string }, actor: TeacherActor) {
+    await ensureStudentAccess(this.prisma, actor, id);
     return this.prisma.student.update({
       where: { id },
       data: {
         ...(data.name !== undefined ? { name: data.name.trim() } : {}),
         ...(data.schoolName !== undefined ? { schoolName: data.schoolName.trim() } : {}),
-        ...(data.classId !== undefined ? { classId: data.classId } : {}),
       },
     });
   }
 
-  async delete(id: number, actor: TeacherActor) {
-    await ensureStudentAccess(this.prisma, actor, id);
+  async delete(id: number, actor: TeacherActor, classId?: number) {
+    const classIds = await ensureStudentAccess(this.prisma, actor, id);
+    if (classId !== undefined) {
+      if (!classIds.includes(classId)) {
+        return { ok: true, removedClassId: classId, deletedStudent: false };
+      }
+      await ensureClassAccess(this.prisma, actor, classId);
+      await this.prisma.studentClass.delete({
+        where: {
+          studentId_classId: {
+            studentId: id,
+            classId,
+          },
+        },
+      });
+      const remaining = await this.prisma.studentClass.count({ where: { studentId: id } });
+      if (remaining === 0) {
+        await this.prisma.student.delete({ where: { id } });
+        return { ok: true, removedClassId: classId, deletedStudent: true };
+      }
+      return { ok: true, removedClassId: classId, deletedStudent: false };
+    }
     return this.prisma.student.delete({ where: { id } });
   }
 
   async getStudentExams(studentId: number) {
     const student = await this.prisma.student.findUnique({
       where: { id: studentId },
+      include: {
+        classes: { select: { classId: true } },
+      },
     });
     if (!student) return [];
+    const classIds = student.classes.map((row) => row.classId);
+    if (classIds.length === 0) return [];
 
     const now = new Date();
     const exams = await this.prisma.exam.findMany({
       where: {
         deletedAt: null,
-        examClasses: { some: { classId: student.classId } },
+        examClasses: { some: { classId: { in: classIds } } },
         status: 'published',
         startTime: { lte: now },
         endTime: { gte: now },

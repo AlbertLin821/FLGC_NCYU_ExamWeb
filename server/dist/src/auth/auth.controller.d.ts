@@ -31,7 +31,8 @@ export declare class AuthController {
             studentId: string;
             name: string;
             schoolName: string;
-            classId: number;
+            classIds: number[];
+            classNames: string[];
             className: string;
         };
     }>;
