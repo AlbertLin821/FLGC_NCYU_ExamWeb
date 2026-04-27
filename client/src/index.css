@@ -192,7 +192,10 @@ a:hover {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
+  background: #fff;
+  padding: 2px;
   border: 1px solid rgba(117, 81, 45, 0.18);
   box-shadow: var(--shadow-sm);
 }
@@ -1009,7 +1012,10 @@ a.btn svg {
   width: 108px;
   height: 108px;
   border-radius: 50%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
+  background: #fff;
+  padding: 6px;
   border: 2px solid rgba(117, 81, 45, 0.16);
   box-shadow: var(--shadow-md);
 }

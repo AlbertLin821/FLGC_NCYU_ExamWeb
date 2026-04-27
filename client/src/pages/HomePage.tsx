@@ -14,10 +14,10 @@ const HomePage: React.FC = () => {
     <Layout>
       <div className="text-center mt-3xl mb-3xl px-sm">
         <img className="home-brand-seal mb-lg" src="/school.jpg" alt="國立嘉義大學校徽" />
-        <p className="text-sm text-secondary mb-sm">{BRAND_EN}</p>
         <h1 className="mb-md home-hero-title">
           {BRAND_ZH}
         </h1>
+        <p className="text-sm text-secondary mb-sm">{BRAND_EN}</p>
         <p
           className="text-secondary text-lg mb-2xl mx-auto home-hero-copy"
         >

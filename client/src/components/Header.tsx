@@ -21,8 +21,8 @@ const Header: React.FC = () => {
         <Link to="/" className="header-logo">
           <img className="logo-badge" src="/school.jpg" alt="國立嘉義大學校徽" />
           <span>
-            <strong>{BRAND_EN}</strong>
-            <small>{BRAND_ZH}</small>
+            <strong>{BRAND_ZH}</strong>
+            <small>{BRAND_EN}</small>
           </span>
         </Link>
         <nav>
