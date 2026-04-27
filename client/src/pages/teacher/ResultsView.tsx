@@ -62,7 +62,6 @@ const ResultsView: React.FC = () => {
   const handleTriggerScoring = async (sessionId: number) => {
     try {
       await scoringApi.scoreSession(sessionId);
-      alert('已將該場次送入 AI 批改佇列');
       if (selectedClassId) {
         const res = await examsApi.getResults(selectedClassId, selectedExamId ?? undefined);
         setResults(res.data);
@@ -77,7 +76,7 @@ const ResultsView: React.FC = () => {
       alert('請先選擇班級與單一考卷');
       return;
     }
-    if (!window.confirm('將對此班、此考卷所有「已交卷」學生重新排入 AI 批改佇列，可能耗時較久。確定繼續？')) {
+    if (!window.confirm('將批次送出此班、此考卷所有已交卷學生的非選擇題給 AI 批改，可能耗時較久。確定繼續？')) {
       return;
     }
     setBatchGrading(true);
@@ -156,7 +155,7 @@ const ResultsView: React.FC = () => {
               }
               onClick={handleBatchEssayGrade}
             >
-              {batchGrading ? '排隊中…' : '重新排隊 AI 批改非選擇題'}
+              {batchGrading ? '批次送出中…' : '批次AI批改'}
             </button>
           )}
           <button className="btn btn-secondary" onClick={handleExport} disabled={results.length === 0}>

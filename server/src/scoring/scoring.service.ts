@@ -39,7 +39,7 @@ export function classifyAiScoringError(err: unknown): 'rate_limit' | 'provider' 
   if (/429|RESOURCE_EXHAUSTED|quota|rate|limit: 0|too many requests/i.test(msg)) {
     return 'rate_limit';
   }
-  if (/500|502|503|504|INTERNAL|UNAVAILABLE/i.test(msg)) {
+  if (/500|502|503|504|INTERNAL|UNAVAILABLE|high demand|try again later/i.test(msg)) {
     return 'provider';
   }
   return 'other';
@@ -223,6 +223,37 @@ Output must be valid JSON only:
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
+  private isRetryableAiError(err: unknown): boolean {
+    const kind = classifyAiScoringError(err);
+    return kind === 'rate_limit' || kind === 'provider';
+  }
+
+  private async retryTransientAi<T>(
+    label: string,
+    fn: () => Promise<T>,
+    maxAttempts = 4,
+  ): Promise<T> {
+    let last: unknown;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        return await fn();
+      } catch (err) {
+        last = err;
+        if (!this.isRetryableAiError(err) || attempt >= maxAttempts - 1) {
+          throw err;
+        }
+        const wait =
+          this.parseRetryAfterMsFromError(err) ??
+          Math.min(120_000, 8_000 * Math.pow(2, attempt) + Math.floor(Math.random() * 2000));
+        this.logger.warn(
+          `${label} temporary failure, waiting ${wait}ms (attempt ${attempt + 1}/${maxAttempts}): ${this.stringifyAiErr(err).slice(0, 300)}`,
+        );
+        await this.delay(wait);
+      }
+    }
+    throw last;
+  }
+
   /** 集體批閱 JSON：OpenAI 使用 json_object；遇 429 時短暫重試 */
   private async callBatchGradingOpenAI(model: string, prompt: string): Promise<string> {
     if (!this.openai) {
@@ -242,7 +273,7 @@ Output must be valid JSON only:
         return response.choices[0]?.message?.content || '';
       } catch (err) {
         last = err;
-        const retryable = classifyAiScoringError(err) === 'rate_limit';
+        const retryable = this.isRetryableAiError(err);
         if (attempt < maxAttempts - 1 && retryable) {
           const wait = this.parseRetryAfterMsFromError(err) ?? 4000 * (attempt + 1);
           this.logger.warn(
@@ -278,7 +309,7 @@ Output must be valid JSON only:
         if (this.isHardGeminiQuotaExhausted(err)) {
           throw err;
         }
-        if (!this.isBatchRetryableQuotaError(err)) {
+        if (!this.isBatchRetryableQuotaError(err) && !this.isRetryableAiError(err)) {
           throw err;
         }
         if (attempt >= maxSoftRetries) {
@@ -328,17 +359,17 @@ Output must be valid JSON only:
 
     try {
       if (aiModel.startsWith('gpt') || aiModel.startsWith('o')) {
-        return await this.scoreWithOpenAI(prompt);
+        return await this.retryTransientAi('OpenAI scoring', () => this.scoreWithOpenAI(prompt));
       } else {
-        return await this.scoreWithGemini(prompt);
+        return await this.retryTransientAi('Gemini scoring', () => this.scoreWithGemini(prompt));
       }
     } catch (error) {
       this.logger.warn(`Primary AI scoring failed, trying fallback: ${error}`);
       try {
         if (aiModel.startsWith('gpt') && this.gemini) {
-          return await this.scoreWithGemini(prompt);
+          return await this.retryTransientAi('Gemini fallback scoring', () => this.scoreWithGemini(prompt), 3);
         } else if (!aiModel.startsWith('gpt') && this.openai) {
-          return await this.scoreWithOpenAI(prompt);
+          return await this.retryTransientAi('OpenAI fallback scoring', () => this.scoreWithOpenAI(prompt), 3);
         }
       } catch (fallbackError) {
         this.logger.warn(`Fallback scoring also failed: ${fallbackError}`);
@@ -648,8 +679,23 @@ Output must be valid JSON only:
         },
       });
     } catch (err) {
-      await this.markEssayPendingReview(answer.id, err);
+      await this.handleWritingAiFailure(answer.id, err);
     }
+  }
+
+  private async handleWritingAiFailure(answerId: number, err: unknown): Promise<void> {
+    if (this.isRetryableAiError(err)) {
+      await this.prisma.answer.update({
+        where: { id: answerId },
+        data: {
+          aiScore: null,
+          aiFeedback: 'AI 服務忙碌，已保留於批改中。請稍後按「批次AI批改」或單筆「啟動 AI 批改」重試。',
+          aiModel: 'ai_grading',
+        },
+      });
+      return;
+    }
+    await this.markEssayPendingReview(answerId, err);
   }
 
   /**
