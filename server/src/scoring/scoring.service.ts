@@ -33,6 +33,27 @@ type ParagraphScoringResult = {
   report: string;
 };
 
+type WritingAnswerForAi = {
+  answerId: number;
+  questionId: number;
+  orderNum: number;
+  type: string;
+  maxPoints: number;
+  promptText: string | null;
+  studentAnswer: string | null;
+  writingDurationSeconds: number | null;
+  wordCount: number | null;
+};
+
+type ParsedWritingAiItem = {
+  answerId: number;
+  questionId: number;
+  aiScore: number;
+  aiFeedback: string;
+  writingScore?: number | null;
+  cefrLevel?: string | null;
+};
+
 /** 供測試與日誌分類：是否為配額／速率限制類錯誤 */
 export function classifyAiScoringError(err: unknown): 'rate_limit' | 'provider' | 'other' {
   const msg = err instanceof Error ? err.message : String(err);
@@ -71,24 +92,35 @@ export class ScoringService {
     return this.config.get<string>('GEMINI_MODEL', DEFAULT_GEMINI_MODEL);
   }
 
-  private buildEssayPrompt(prompt: string, answer: string): string {
-    return `You are an English language teacher grading a student's short answer or essay.
+  private buildWritingBatchPrompt(items: WritingAnswerForAi[]): string {
+    const questionBlocks = items.map((item, index) => {
+      const answer = String(item.studentAnswer ?? '').trim() || '(blank)';
+      const metadata =
+        item.type === 'paragraph_writing'
+          ? `Writing time: ${item.writingDurationSeconds ?? 0} seconds\nWord count: ${item.wordCount ?? 0}`
+          : `Writing time: ${item.writingDurationSeconds ?? 0} seconds\nWord count: ${item.wordCount ?? 0}`;
+      return [
+        `Item ${index + 1}`,
+        `answerId: ${item.answerId}`,
+        `questionId: ${item.questionId}`,
+        `questionType: ${item.type}`,
+        `maxPoints: ${item.maxPoints}`,
+        metadata,
+        `Prompt: ${String(item.promptText ?? '').trim() || '(none)'}`,
+        `Student answer: ${answer}`,
+      ].join('\n');
+    }).join('\n\n');
 
-Question Prompt: "${prompt}"
-Student's Answer: "${answer}"
+    return `You are an English writing evaluator. Grade all submitted writing items for ONE student in ONE response.
 
-Please evaluate the answer for correctness, grammar, and relevance to the prompt.
+General rules:
+- Return valid JSON only. Do not use markdown.
+- Evaluate each item independently.
+- For type "essay", return aiScore on a 0-100 scale and concise Traditional Chinese feedback.
+- For type "paragraph_writing", use the TOEFL Academic Discussion Writing Evaluator rubric below. Return writingScore on a 0-5 scale, CEFR level, a full evaluation report, and aiScore converted to percentage by writingScore / 5 * 100.
+- Blank answers receive 0.
 
-Respond with valid JSON only. Do not use markdown.
-Use this exact shape:
-{
-  "score": 0,
-  "feedback": "brief explanation in Traditional Chinese, max 80 characters"
-}`;
-  }
-
-  private buildParagraphWritingPrompt(prompt: string, answer: string): string {
-    return `TOEFL Academic Discussion Writing Evaluator (with CEFR)
+TOEFL Academic Discussion Writing Evaluator (with CEFR)
 Role: You are an expert TOEFL writing rater and an ESL specialist. Your goal is to provide a rigorous, professional diagnostic of a student's response using the 0-5 TOEFL scale and the corresponding CEFR level.
 Instructions:
 Strict Grading: Evaluate the response based on the provided 0-5 rubric. Do not be overly lenient; ensure the score reflects professional academic standards.
@@ -101,18 +133,39 @@ Scoring & CEFR Reference:
 2 (A2/B1): Mostly unsuccessful; limited range, accumulation of errors, hard to follow.
 1 (A1/A2): Unsuccessful; incoherent, serious/frequent errors.
 
-Writing Prompt:
-${prompt || '(none)'}
-
-Student Response:
-${answer || '(blank)'}
-
-Output must be valid JSON only:
+Output JSON shape:
 {
-  "score": <number 0..5>,
-  "cefrLevel": "<A1|A2|B1|B2|C1|C2 with optional descriptor>",
-  "report": "Evaluation Report\\nFinal Score: [X / 5]\\nCEFR Level: [...]\\n1. Diagnostic Breakdown:\\nContent & Development: ...\\nLanguage Use (Vocabulary & Syntax): ...\\nGrammatical Accuracy: ...\\n2. Suggested Revision:\\n...\\n3. Overall Feedback:\\n[English Feedback]\\n[中文評語：...]"
-}`;
+  "items": [
+    {
+      "answerId": <number>,
+      "questionId": <number>,
+      "aiScore": <number 0..100>,
+      "aiFeedback": "<string>",
+      "writingScore": <number 0..5 or null>,
+      "cefrLevel": "<string or null>"
+    }
+  ],
+  "overallFeedbackEn": "<brief summary in English>",
+  "overallFeedbackZh": "<brief summary in Traditional Chinese>"
+}
+
+For paragraph_writing aiFeedback must use this report format:
+Evaluation Report
+Final Score: [X / 5]
+CEFR Level: [e.g., B2 - Upper Intermediate]
+1. Diagnostic Breakdown:
+Content & Development: ...
+Language Use (Vocabulary & Syntax): ...
+Grammatical Accuracy: ...
+2. Suggested Revision:
+...
+3. Overall Feedback:
+[English Feedback]
+[中文評語：請以專業、客觀的口吻進行評點]。
+
+Submitted writing items:
+
+${questionBlocks}`;
   }
 
   private extractJsonObject(raw: string): Record<string, unknown> {
@@ -181,17 +234,49 @@ Output must be valid JSON only:
     }
   }
 
-  private parseParagraphWritingResponse(raw: string): ParagraphScoringResult {
+  private parseWritingBatchResponse(raw: string, expected: WritingAnswerForAi[]): {
+    items: ParsedWritingAiItem[];
+    overallFeedbackEn: string;
+    overallFeedbackZh: string;
+  } {
     const parsed = this.extractJsonObject(raw);
-    let score = Number(parsed.score);
-    if (!Number.isFinite(score)) score = 0;
-    score = Math.min(5, Math.max(0, Math.round(score * 100) / 100));
-    const cefrLevel = String(parsed.cefrLevel ?? '').trim() || '未提供';
-    const report = String(parsed.report ?? '').trim();
-    if (!report) {
-      throw new Error('Paragraph writing response missing report');
+    const rows = parsed.items;
+    if (!Array.isArray(rows)) {
+      throw new Error('AI writing response missing items array');
     }
-    return { score, cefrLevel, report };
+    const expectedByAnswerId = new Map(expected.map((item) => [item.answerId, item]));
+    const items: ParsedWritingAiItem[] = [];
+    for (const row of rows as Record<string, unknown>[]) {
+      const answerId = Number(row.answerId);
+      const questionId = Number(row.questionId);
+      const expectedItem = expectedByAnswerId.get(answerId);
+      if (!expectedItem || expectedItem.questionId !== questionId) {
+        throw new Error(`AI writing response item mismatch answerId=${answerId} questionId=${questionId}`);
+      }
+      let aiScore = Number(row.aiScore);
+      if (!Number.isFinite(aiScore)) aiScore = 0;
+      aiScore = Math.min(100, Math.max(0, Math.round(aiScore * 100) / 100));
+      const aiFeedback = String(row.aiFeedback ?? '').trim() || 'AI 已完成批改。';
+      let writingScore: number | null | undefined = null;
+      if (row.writingScore !== null && row.writingScore !== undefined && row.writingScore !== '') {
+        const rawScore = Number(row.writingScore);
+        writingScore = Number.isFinite(rawScore)
+          ? Math.min(5, Math.max(0, Math.round(rawScore * 100) / 100))
+          : null;
+      }
+      const cefrLevel = row.cefrLevel !== null && row.cefrLevel !== undefined
+        ? String(row.cefrLevel).trim() || null
+        : null;
+      items.push({ answerId, questionId, aiScore, aiFeedback, writingScore, cefrLevel });
+    }
+    if (items.length !== expected.length) {
+      throw new Error(`AI writing response returned ${items.length} items, expected ${expected.length}`);
+    }
+    return {
+      items,
+      overallFeedbackEn: String(parsed.overallFeedbackEn ?? '').trim(),
+      overallFeedbackZh: String(parsed.overallFeedbackZh ?? '').trim(),
+    };
   }
 
   /** 可重試的節流／配額（短暫）；若為免費額度用盡等硬限制，改由 isHardGeminiQuotaExhausted 判斷 */
@@ -618,75 +703,87 @@ Output must be valid JSON only:
   }
 
   private async gradeWritingAnswersForSession(sessionId: number, answerIds: number[]) {
-    for (const answerId of answerIds) {
-      await this.gradeSingleWritingAnswer(answerId);
+    const answers = await this.prisma.answer.findMany({
+      where: { id: { in: answerIds } },
+      include: { question: true },
+      orderBy: { question: { orderNum: 'asc' } },
+    });
+
+    const writingItems: WritingAnswerForAi[] = [];
+    for (const answer of answers) {
+      const type = answer.question.type;
+      if (!WRITING_QUESTION_TYPES.includes(type as WritingQuestionType)) continue;
+      const content = String(answer.content ?? '').trim();
+      if (!content) {
+        await this.prisma.answer.update({
+          where: { id: answer.id },
+          data: {
+            aiScore: 0,
+            aiFeedback: '未作答',
+            aiModel: 'system',
+            writingScore: type === 'paragraph_writing' ? 0 : null,
+            cefrLevel: null,
+          },
+        });
+        continue;
+      }
+      writingItems.push({
+        answerId: answer.id,
+        questionId: answer.questionId,
+        orderNum: answer.question.orderNum,
+        type,
+        maxPoints: Math.max(1, answer.question.maxPoints),
+        promptText: answer.question.content,
+        studentAnswer: answer.content,
+        writingDurationSeconds: answer.writingDurationSeconds,
+        wordCount: answer.wordCount,
+      });
+    }
+
+    if (writingItems.length > 0) {
+      await this.gradeWritingItemsInOneAiRequest(sessionId, writingItems);
     }
     await this.finalizeSessionStatusAfterScoring(sessionId);
   }
 
-  private async gradeSingleWritingAnswer(answerId: number): Promise<void> {
-    const answer = await this.prisma.answer.findUnique({
-      where: { id: answerId },
-      include: { question: true },
-    });
-    if (!answer) return;
-
-    const type = answer.question.type;
-    if (!WRITING_QUESTION_TYPES.includes(type as WritingQuestionType)) return;
-    const content = String(answer.content ?? '').trim();
-    if (!content) {
-      await this.prisma.answer.update({
-        where: { id: answer.id },
-        data: {
-          aiScore: 0,
-          aiFeedback: '未作答',
-          aiModel: 'system',
-          writingScore: type === 'paragraph_writing' ? 0 : null,
-          cefrLevel: null,
-        },
-      });
-      return;
-    }
-
+  private async gradeWritingItemsInOneAiRequest(
+    sessionId: number,
+    items: WritingAnswerForAi[],
+  ): Promise<void> {
+    const prompt = this.buildWritingBatchPrompt(items);
     try {
-      if (type === 'paragraph_writing') {
-        const prompt = this.buildParagraphWritingPrompt(answer.question.content ?? '', content);
-        const { raw, modelUsed } = await this.callBatchGradingModel(prompt);
-        const parsed = this.parseParagraphWritingResponse(raw);
-        await this.prisma.answer.update({
-          where: { id: answer.id },
+      const { raw, modelUsed } = await this.callBatchGradingModel(prompt);
+      const parsed = this.parseWritingBatchResponse(raw, items);
+      await this.prisma.$transaction([
+        ...parsed.items.map((item) =>
+          this.prisma.answer.update({
+            where: { id: item.answerId },
+            data: {
+              aiScore: item.aiScore,
+              aiFeedback: item.aiFeedback,
+              aiModel: modelUsed,
+              writingScore: item.writingScore ?? null,
+              cefrLevel: item.cefrLevel ?? null,
+            },
+          }),
+        ),
+        this.prisma.examSession.update({
+          where: { id: sessionId },
           data: {
-            aiScore: Math.round((parsed.score / 5) * 10000) / 100,
-            aiFeedback: parsed.report,
-            aiModel: modelUsed,
-            writingScore: parsed.score,
-            cefrLevel: parsed.cefrLevel,
+            overallFeedbackEn: parsed.overallFeedbackEn || null,
+            overallFeedbackZh: parsed.overallFeedbackZh || null,
           },
-        });
-        return;
-      }
-
-      const prompt = this.buildEssayPrompt(answer.question.content ?? '', content);
-      const result = await this.scoreAI(prompt);
-      await this.prisma.answer.update({
-        where: { id: answer.id },
-        data: {
-          aiScore: result.score,
-          aiFeedback: result.feedback,
-          aiModel: result.model,
-          writingScore: null,
-          cefrLevel: null,
-        },
-      });
+        }),
+      ]);
     } catch (err) {
-      await this.handleWritingAiFailure(answer.id, err);
+      await this.handleWritingAiFailure(items.map((item) => item.answerId), err);
     }
   }
 
-  private async handleWritingAiFailure(answerId: number, err: unknown): Promise<void> {
+  private async handleWritingAiFailure(answerIds: number[], err: unknown): Promise<void> {
     if (this.isRetryableAiError(err)) {
-      await this.prisma.answer.update({
-        where: { id: answerId },
+      await this.prisma.answer.updateMany({
+        where: { id: { in: answerIds } },
         data: {
           aiScore: null,
           aiFeedback: 'AI 服務忙碌，已保留於批改中。請稍後按「批次AI批改」或單筆「啟動 AI 批改」重試。',
@@ -695,7 +792,9 @@ Output must be valid JSON only:
       });
       return;
     }
-    await this.markEssayPendingReview(answerId, err);
+    for (const answerId of answerIds) {
+      await this.markEssayPendingReview(answerId, err);
+    }
   }
 
   /**

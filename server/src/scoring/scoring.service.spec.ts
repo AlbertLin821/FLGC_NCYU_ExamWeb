@@ -26,12 +26,14 @@ describe('ScoringService', () => {
       findMany: jest.fn(),
       findUnique: jest.fn(),
       update: jest.fn().mockResolvedValue({}),
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       upsert: jest.fn().mockResolvedValue({}),
     },
     examSession: {
       update: jest.fn().mockResolvedValue({}),
       findUnique: jest.fn(),
     },
+    $transaction: jest.fn((ops: unknown[]) => Promise.all(ops)),
     exam: {
       findFirst: jest.fn().mockResolvedValue({ id: 1, examClasses: [] }),
     },
@@ -186,5 +188,122 @@ describe('ScoringService', () => {
       }),
     );
     expect(out).toEqual(expect.objectContaining({ id: 3 }));
+  });
+
+  it('scoreSubmittedSession sends all writing answers in one AI request', async () => {
+    mockPrisma.answer.findMany.mockImplementation((args: { where?: any }) => {
+      if (args.where?.sessionId && args.where?.aiScore === null) {
+        return Promise.resolve([]);
+      }
+      if (args.where?.questionId?.in) {
+        return Promise.resolve([]);
+      }
+      if (args.where?.id?.in) {
+        return Promise.resolve([
+          {
+            id: 11,
+            questionId: 101,
+            content: 'This is my short answer.',
+            writingDurationSeconds: 30,
+            wordCount: 5,
+            question: {
+              id: 101,
+              orderNum: 1,
+              type: 'essay',
+              maxPoints: 50,
+              content: 'Write one sentence.',
+            },
+          },
+          {
+            id: 12,
+            questionId: 102,
+            content: 'I agree because academic discussion improves communication.',
+            writingDurationSeconds: 120,
+            wordCount: 8,
+            question: {
+              id: 102,
+              orderNum: 2,
+              type: 'paragraph_writing',
+              maxPoints: 50,
+              content: 'Discuss your opinion.',
+            },
+          },
+        ]);
+      }
+      return Promise.resolve([]);
+    });
+    mockPrisma.answer.upsert
+      .mockResolvedValueOnce({ id: 11 })
+      .mockResolvedValueOnce({ id: 12 });
+    mockPrisma.examSession.findUnique.mockImplementation((args: { include?: any }) => {
+      if (args.include?.answers) {
+        return Promise.resolve({
+          id: 7,
+          exam: {
+            questions: [
+              { id: 101, orderNum: 1, type: 'essay' },
+              { id: 102, orderNum: 2, type: 'paragraph_writing' },
+            ],
+          },
+          answers: [],
+        });
+      }
+      return Promise.resolve({
+        id: 7,
+        exam: {
+          questions: [
+            { id: 101, type: 'essay' },
+            { id: 102, type: 'paragraph_writing' },
+          ],
+        },
+      });
+    });
+    const callSpy = jest
+      .spyOn(service as any, 'callBatchGradingModel')
+      .mockResolvedValue({
+        modelUsed: 'gemini-test',
+        raw: JSON.stringify({
+          items: [
+            {
+              answerId: 11,
+              questionId: 101,
+              aiScore: 90,
+              aiFeedback: '句子自然。',
+              writingScore: null,
+              cefrLevel: null,
+            },
+            {
+              answerId: 12,
+              questionId: 102,
+              aiScore: 80,
+              aiFeedback: 'Evaluation Report\nFinal Score: 4 / 5',
+              writingScore: 4,
+              cefrLevel: 'B2',
+            },
+          ],
+          overallFeedbackEn: 'Good work.',
+          overallFeedbackZh: '整體表現良好。',
+        }),
+      });
+
+    await service.scoreSubmittedSession(7, true);
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(callSpy).toHaveBeenCalledTimes(1);
+    const prompt = callSpy.mock.calls[0][0] as string;
+    expect(prompt).toContain('answerId: 11');
+    expect(prompt).toContain('answerId: 12');
+    expect(mockPrisma.answer.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 11 },
+        data: expect.objectContaining({ aiScore: 90, aiModel: 'gemini-test' }),
+      }),
+    );
+    expect(mockPrisma.answer.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 12 },
+        data: expect.objectContaining({ aiScore: 80, writingScore: 4, cefrLevel: 'B2' }),
+      }),
+    );
   });
 });
