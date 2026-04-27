@@ -94,12 +94,26 @@ export class TeachersService {
       );
     }
 
-    const examCount = await this.prisma.exam.count({ where: { createdBy: targetId } });
+    const examCount = await this.prisma.exam.count({
+      where: {
+        createdBy: targetId,
+        deletedAt: null,
+      },
+    });
     if (examCount > 0) {
       throw new ConflictException(
         `此帳號為 ${examCount} 份考卷的建立者，請先刪除或處理相關考卷後再刪除帳號`,
       );
     }
+
+    // 已軟刪除的考卷仍保留外鍵到建立者；刪除帳號前改掛到目前操作的管理者。
+    await this.prisma.exam.updateMany({
+      where: {
+        createdBy: targetId,
+        deletedAt: { not: null },
+      },
+      data: { createdBy: actorId },
+    });
 
     await this.prisma.cheatLog.updateMany({
       where: { resolvedBy: targetId },
