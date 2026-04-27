@@ -17,7 +17,8 @@ import {
 
 /** 單題與集體批閱使用之 Gemini 模型；可於環境變數 GEMINI_MODEL 覆寫 */
 const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
-const MAX_GEMINI_REQUESTS_PER_MINUTE = 15;
+const DEFAULT_OPENAI_MODEL = 'gpt-4o';
+const MAX_AI_REQUESTS_PER_MINUTE = 15;
 const MAX_WRITING_QUEUE_RETRIES = 3;
 const MAX_WRITING_SESSIONS_PER_BATCH = 5;
 const WRITING_BATCH_WAIT_MS = 8_000;
@@ -128,13 +129,16 @@ export class ScoringService {
     if (configured && /^(gpt-|o\d)/i.test(configured)) {
       return configured;
     }
-    return 'gpt-4o-mini';
+    return DEFAULT_OPENAI_MODEL;
   }
 
   private resolvePrimaryAiProvider(): 'openai' | 'gemini' {
     const configured = this.config.get<string>('AI_MODEL');
     if (configured) {
       return /^(gpt-|o\d)/i.test(configured) ? 'openai' : 'gemini';
+    }
+    if (this.openai) {
+      return 'openai';
     }
     if (this.gemini) {
       return 'gemini';
@@ -187,7 +191,7 @@ export class ScoringService {
     const feedback =
       attempts > 0
         ? 'AI 服務暫時忙碌，已重新排入佇列，系統將於下一分鐘繼續批改。'
-        : `已進入 AI 批改佇列，系統會依每分鐘 ${MAX_GEMINI_REQUESTS_PER_MINUTE} 筆上限分批送出。`;
+        : `已進入 AI 批改佇列，系統會依每分鐘 ${MAX_AI_REQUESTS_PER_MINUTE} 筆上限分批送出。`;
     await this.prisma.answer.updateMany({
       where: { id: { in: answerIds } },
       data: {
@@ -318,7 +322,7 @@ export class ScoringService {
       this.resetWritingMinuteBucketIfNeeded();
       while (
         this.writingJobs.length > 0 &&
-        this.writingRequestsStartedThisMinute < MAX_GEMINI_REQUESTS_PER_MINUTE
+        this.writingRequestsStartedThisMinute < MAX_AI_REQUESTS_PER_MINUTE
       ) {
         const jobs = this.buildWritingBatchJobs();
         if (jobs.length === 0) {
@@ -334,7 +338,7 @@ export class ScoringService {
         const oldest = this.writingJobs[0];
         const waitForBatch = Math.max(0, WRITING_BATCH_WAIT_MS - (Date.now() - oldest.queuedAt) + 50);
         const waitForMinute =
-          this.writingRequestsStartedThisMinute >= MAX_GEMINI_REQUESTS_PER_MINUTE
+          this.writingRequestsStartedThisMinute >= MAX_AI_REQUESTS_PER_MINUTE
             ? this.msUntilNextMinute()
             : waitForBatch;
         this.scheduleWritingPump(waitForMinute);
@@ -690,7 +694,7 @@ ${sessionBlocks}`;
 
   /**
    * 集體批閱：回傳原始 JSON 字串與實際呼叫的模型名（供寫入 answer.aiModel）。
-   * AI_MODEL 為 gpt／o 系列時走 OpenAI；否則先 Gemini（遇節流可短暫重試），仍失敗且已設定 OPENAI_API_KEY 時改走 gpt-4o-mini。
+   * 若 AI_MODEL 明確設定則依其供應商；未設定時優先使用 OpenAI，否則退回 Gemini。
    */
   private async callBatchGradingModel(
     prompt: string,
@@ -706,10 +710,10 @@ ${sessionBlocks}`;
     } catch (err) {
       if (this.openai) {
         this.logger.warn(
-          `Gemini batch grading failed, using OpenAI fallback (gpt-4o-mini): ${this.stringifyAiErr(err).slice(0, 500)}`,
+          `Gemini batch grading failed, using OpenAI fallback (${DEFAULT_OPENAI_MODEL}): ${this.stringifyAiErr(err).slice(0, 500)}`,
         );
-        const raw = await this.callBatchGradingOpenAI('gpt-4o-mini', prompt);
-        return { raw, modelUsed: 'gpt-4o-mini' };
+        const raw = await this.callBatchGradingOpenAI(DEFAULT_OPENAI_MODEL, prompt);
+        return { raw, modelUsed: DEFAULT_OPENAI_MODEL };
       }
       throw err;
     }
@@ -951,7 +955,7 @@ ${sessionBlocks}`;
     const pendingAnswerIds: number[] = [];
     const estimateInputs: Array<{ promptText?: string | null; content?: string | null }> = [];
     const inFlight = this.writingJobsInFlight.has(sessionId);
-    const queuedFeedback = `已進入 AI 批改佇列，系統會依每分鐘 ${MAX_GEMINI_REQUESTS_PER_MINUTE} 筆上限分批送出。`;
+    const queuedFeedback = `已進入 AI 批改佇列，系統會依每分鐘 ${MAX_AI_REQUESTS_PER_MINUTE} 筆上限分批送出。`;
     const targetAiModel = inFlight ? 'ai_grading' : 'ai_queued';
     const targetFeedback = inFlight ? 'AI 批改中，請稍後重新整理。' : queuedFeedback;
     for (const question of session.exam.questions) {
