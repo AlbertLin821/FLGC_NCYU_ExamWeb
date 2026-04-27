@@ -391,7 +391,7 @@ const ClassManagement: React.FC = () => {
                     <th>姓名</th>
                     <th>校名</th>
                     <th>各場次狀況</th>
-                    <th>加權得分</th>
+                    <th>總分</th>
                     <th>操作</th>
                   </tr>
                 </thead>
