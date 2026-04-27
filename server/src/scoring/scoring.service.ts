@@ -19,6 +19,9 @@ import {
 const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
 const MAX_GEMINI_REQUESTS_PER_MINUTE = 15;
 const MAX_WRITING_QUEUE_RETRIES = 3;
+const MAX_WRITING_SESSIONS_PER_BATCH = 5;
+const WRITING_BATCH_WAIT_MS = 8_000;
+const MAX_WRITING_BATCH_ESTIMATED_CHARS = 24_000;
 
 interface ScoringResult {
   score: number;
@@ -56,10 +59,24 @@ type ParsedWritingAiItem = {
   cefrLevel?: string | null;
 };
 
+type WritingSessionBatchPayload = {
+  sessionId: number;
+  items: WritingAnswerForAi[];
+};
+
+type ParsedWritingAiSession = {
+  sessionId: number;
+  items: ParsedWritingAiItem[];
+  overallFeedbackEn: string;
+  overallFeedbackZh: string;
+};
+
 type WritingQueueJob = {
   sessionId: number;
   answerIds: number[];
   attempts: number;
+  queuedAt: number;
+  estimatedChars: number;
 };
 
 /** 供測試與日誌分類：是否為配額／速率限制類錯誤 */
@@ -152,6 +169,20 @@ export class ScoringService {
     }, delayMs);
   }
 
+  private estimateWritingJobChars(items: Array<{
+    promptText?: string | null;
+    content?: string | null;
+  }>): number {
+    return items.reduce((sum, item) => {
+      return (
+        sum +
+        String(item.promptText ?? '').length +
+        String(item.content ?? '').length +
+        250
+      );
+    }, 0);
+  }
+
   private async markWritingAnswersQueued(answerIds: number[], attempts: number): Promise<void> {
     const feedback =
       attempts > 0
@@ -178,46 +209,102 @@ export class ScoringService {
     });
   }
 
-  private upsertWritingQueueJob(sessionId: number, answerIds: number[], attempts = 0): void {
+  private upsertWritingQueueJob(
+    sessionId: number,
+    answerIds: number[],
+    estimatedChars: number,
+    attempts = 0,
+  ): void {
     const existing = this.writingJobsBySession.get(sessionId);
     if (existing) {
       existing.answerIds = Array.from(new Set([...existing.answerIds, ...answerIds]));
       existing.attempts = Math.max(existing.attempts, attempts);
+      existing.estimatedChars = Math.max(existing.estimatedChars, estimatedChars);
       return;
     }
     if (this.writingJobsInFlight.has(sessionId)) {
       return;
     }
-    const job: WritingQueueJob = { sessionId, answerIds: Array.from(new Set(answerIds)), attempts };
+    const job: WritingQueueJob = {
+      sessionId,
+      answerIds: Array.from(new Set(answerIds)),
+      attempts,
+      queuedAt: Date.now(),
+      estimatedChars,
+    };
     this.writingJobs.push(job);
     this.writingJobsBySession.set(sessionId, job);
   }
 
   private async requeueWritingJob(job: WritingQueueJob): Promise<void> {
     await this.markWritingAnswersQueued(job.answerIds, job.attempts);
-    this.upsertWritingQueueJob(job.sessionId, job.answerIds, job.attempts);
+    this.upsertWritingQueueJob(job.sessionId, job.answerIds, job.estimatedChars, job.attempts);
     this.scheduleWritingPump(this.msUntilNextMinute());
   }
 
-  private async runWritingQueueJob(job: WritingQueueJob): Promise<void> {
+  private buildWritingBatchJobs(): WritingQueueJob[] {
+    if (this.writingJobs.length === 0) {
+      return [];
+    }
+    const now = Date.now();
+    const oldest = this.writingJobs[0];
+    const waitedLongEnough =
+      this.writingJobs.length >= MAX_WRITING_SESSIONS_PER_BATCH ||
+      now - oldest.queuedAt >= WRITING_BATCH_WAIT_MS;
+    if (!waitedLongEnough) {
+      this.scheduleWritingPump(WRITING_BATCH_WAIT_MS - (now - oldest.queuedAt) + 50);
+      return [];
+    }
+
+    const batch: WritingQueueJob[] = [];
+    let totalChars = 0;
+    while (this.writingJobs.length > 0 && batch.length < MAX_WRITING_SESSIONS_PER_BATCH) {
+      const next = this.writingJobs[0];
+      const nextChars = totalChars + next.estimatedChars;
+      if (batch.length > 0 && nextChars > MAX_WRITING_BATCH_ESTIMATED_CHARS) {
+        break;
+      }
+      this.writingJobs.shift();
+      const latest = this.writingJobsBySession.get(next.sessionId);
+      if (latest !== next) {
+        continue;
+      }
+      this.writingJobsBySession.delete(next.sessionId);
+      totalChars = nextChars;
+      batch.push(next);
+    }
+    return batch;
+  }
+
+  private async runWritingQueueBatch(jobs: WritingQueueJob[]): Promise<void> {
     try {
-      await this.markWritingAnswersGrading(job.answerIds);
-      await this.gradeWritingAnswersForSession(job.sessionId, job.answerIds);
+      await this.markWritingAnswersGrading(jobs.flatMap((job) => job.answerIds));
+      await this.gradeWritingAnswersBatch(jobs);
     } catch (err) {
-      if (this.isRetryableAiError(err) && job.attempts < MAX_WRITING_QUEUE_RETRIES) {
+      const retryableJobs = jobs.filter((job) => job.attempts < MAX_WRITING_QUEUE_RETRIES);
+      if (this.isRetryableAiError(err) && retryableJobs.length > 0) {
         this.logger.warn(
-          `writing grading retry queued session=${job.sessionId} attempt=${job.attempts + 1}: ${this.stringifyAiErr(err).slice(0, 300)}`,
+          `writing batch grading retry queued sessions=${jobs.map((job) => job.sessionId).join(',')} : ${this.stringifyAiErr(err).slice(0, 300)}`,
         );
-        await this.requeueWritingJob({
-          sessionId: job.sessionId,
-          answerIds: job.answerIds,
-          attempts: job.attempts + 1,
-        });
+        for (const job of jobs) {
+          if (job.attempts < MAX_WRITING_QUEUE_RETRIES) {
+            await this.requeueWritingJob({
+              ...job,
+              attempts: job.attempts + 1,
+            });
+          } else {
+            await this.handleWritingAiFailure(job.answerIds, err);
+          }
+        }
         return;
       }
-      await this.handleWritingAiFailure(job.answerIds, err);
+      for (const job of jobs) {
+        await this.handleWritingAiFailure(job.answerIds, err);
+      }
     } finally {
-      this.writingJobsInFlight.delete(job.sessionId);
+      for (const job of jobs) {
+        this.writingJobsInFlight.delete(job.sessionId);
+      }
       void this.pumpWritingQueue();
     }
   }
@@ -233,51 +320,59 @@ export class ScoringService {
         this.writingJobs.length > 0 &&
         this.writingRequestsStartedThisMinute < MAX_GEMINI_REQUESTS_PER_MINUTE
       ) {
-        const job = this.writingJobs.shift();
-        if (!job) {
+        const jobs = this.buildWritingBatchJobs();
+        if (jobs.length === 0) {
           break;
         }
-        const latest = this.writingJobsBySession.get(job.sessionId);
-        if (latest !== job) {
-          continue;
+        for (const job of jobs) {
+          this.writingJobsInFlight.add(job.sessionId);
         }
-        this.writingJobsBySession.delete(job.sessionId);
-        this.writingJobsInFlight.add(job.sessionId);
         this.writingRequestsStartedThisMinute += 1;
-        void this.runWritingQueueJob(job);
+        void this.runWritingQueueBatch(jobs);
       }
       if (this.writingJobs.length > 0) {
-        this.scheduleWritingPump(this.msUntilNextMinute());
+        const oldest = this.writingJobs[0];
+        const waitForBatch = Math.max(0, WRITING_BATCH_WAIT_MS - (Date.now() - oldest.queuedAt) + 50);
+        const waitForMinute =
+          this.writingRequestsStartedThisMinute >= MAX_GEMINI_REQUESTS_PER_MINUTE
+            ? this.msUntilNextMinute()
+            : waitForBatch;
+        this.scheduleWritingPump(waitForMinute);
       }
     } finally {
       this.writingPumpActive = false;
     }
   }
 
-  private buildWritingBatchPrompt(items: WritingAnswerForAi[]): string {
-    const questionBlocks = items.map((item, index) => {
-      const answer = String(item.studentAnswer ?? '').trim() || '(blank)';
-      const metadata =
-        item.type === 'paragraph_writing'
-          ? `Writing time: ${item.writingDurationSeconds ?? 0} seconds\nWord count: ${item.wordCount ?? 0}`
-          : `Writing time: ${item.writingDurationSeconds ?? 0} seconds\nWord count: ${item.wordCount ?? 0}`;
+  private buildWritingBatchPrompt(sessions: WritingSessionBatchPayload[]): string {
+    const sessionBlocks = sessions.map((session, sessionIndex) => {
+      const questionBlocks = session.items.map((item, index) => {
+        const answer = String(item.studentAnswer ?? '').trim() || '(blank)';
+        return [
+          `Item ${index + 1}`,
+          `answerId: ${item.answerId}`,
+          `questionId: ${item.questionId}`,
+          `questionType: ${item.type}`,
+          `maxPoints: ${item.maxPoints}`,
+          `Writing time: ${item.writingDurationSeconds ?? 0} seconds`,
+          `Word count: ${item.wordCount ?? 0}`,
+          `Prompt: ${String(item.promptText ?? '').trim() || '(none)'}`,
+          `Student answer: ${answer}`,
+        ].join('\n');
+      }).join('\n\n');
       return [
-        `Item ${index + 1}`,
-        `answerId: ${item.answerId}`,
-        `questionId: ${item.questionId}`,
-        `questionType: ${item.type}`,
-        `maxPoints: ${item.maxPoints}`,
-        metadata,
-        `Prompt: ${String(item.promptText ?? '').trim() || '(none)'}`,
-        `Student answer: ${answer}`,
+        `Session ${sessionIndex + 1}`,
+        `sessionId: ${session.sessionId}`,
+        questionBlocks,
       ].join('\n');
-    }).join('\n\n');
+    }).join('\n\n====\n\n');
 
-    return `You are an English writing evaluator. Grade all submitted writing items for ONE student in ONE response.
+    return `You are an English writing evaluator. Grade all submitted writing items for MULTIPLE students in ONE response.
 
 General rules:
 - Return valid JSON only. Do not use markdown.
-- Evaluate each item independently.
+- Evaluate each student independently. Never compare one student with another.
+- Within each student, evaluate each item independently.
 - For type "essay", return aiScore on a 0-100 scale and concise Traditional Chinese feedback.
 - For type "paragraph_writing", use the TOEFL Academic Discussion Writing Evaluator rubric below. Return writingScore on a 0-5 scale, CEFR level, a full evaluation report, and aiScore converted to percentage by writingScore / 5 * 100.
 - Blank answers receive 0.
@@ -297,18 +392,23 @@ Scoring & CEFR Reference:
 
 Output JSON shape:
 {
-  "items": [
+  "sessions": [
     {
-      "answerId": <number>,
-      "questionId": <number>,
-      "aiScore": <number 0..100>,
-      "aiFeedback": "<string>",
-      "writingScore": <number 0..5 or null>,
-      "cefrLevel": "<string or null>"
+      "sessionId": <number>,
+      "items": [
+        {
+          "answerId": <number>,
+          "questionId": <number>,
+          "aiScore": <number 0..100>,
+          "aiFeedback": "<string>",
+          "writingScore": <number 0..5 or null>,
+          "cefrLevel": "<string or null>"
+        }
+      ],
+      "overallFeedbackEn": "<brief summary in English>",
+      "overallFeedbackZh": "<brief summary in Traditional Chinese>"
     }
-  ],
-  "overallFeedbackEn": "<brief summary in English>",
-  "overallFeedbackZh": "<brief summary in Traditional Chinese>"
+  ]
 }
 
 For paragraph_writing aiFeedback must use this report format:
@@ -325,9 +425,9 @@ Grammatical Accuracy: ...
 [English Feedback]
 [中文評語：請以專業、客觀的口吻進行評點]。
 
-Submitted writing items:
+Submitted writing sessions:
 
-${questionBlocks}`;
+${sessionBlocks}`;
   }
 
   private extractJsonObject(raw: string): Record<string, unknown> {
@@ -396,49 +496,63 @@ ${questionBlocks}`;
     }
   }
 
-  private parseWritingBatchResponse(raw: string, expected: WritingAnswerForAi[]): {
-    items: ParsedWritingAiItem[];
-    overallFeedbackEn: string;
-    overallFeedbackZh: string;
-  } {
+  private parseWritingBatchResponse(raw: string, expected: WritingSessionBatchPayload[]): ParsedWritingAiSession[] {
     const parsed = this.extractJsonObject(raw);
-    const rows = parsed.items;
-    if (!Array.isArray(rows)) {
-      throw new Error('AI writing response missing items array');
+    const sessionRows = parsed.sessions;
+    if (!Array.isArray(sessionRows)) {
+      throw new Error('AI writing response missing sessions array');
     }
-    const expectedByAnswerId = new Map(expected.map((item) => [item.answerId, item]));
-    const items: ParsedWritingAiItem[] = [];
-    for (const row of rows as Record<string, unknown>[]) {
-      const answerId = Number(row.answerId);
-      const questionId = Number(row.questionId);
-      const expectedItem = expectedByAnswerId.get(answerId);
-      if (!expectedItem || expectedItem.questionId !== questionId) {
-        throw new Error(`AI writing response item mismatch answerId=${answerId} questionId=${questionId}`);
+    const expectedBySessionId = new Map(expected.map((session) => [session.sessionId, session]));
+    const sessions: ParsedWritingAiSession[] = [];
+    for (const sessionRow of sessionRows as Record<string, unknown>[]) {
+      const sessionId = Number(sessionRow.sessionId);
+      const expectedSession = expectedBySessionId.get(sessionId);
+      if (!expectedSession) {
+        throw new Error(`AI writing response session mismatch sessionId=${sessionId}`);
       }
-      let aiScore = Number(row.aiScore);
-      if (!Number.isFinite(aiScore)) aiScore = 0;
-      aiScore = Math.min(100, Math.max(0, Math.round(aiScore * 100) / 100));
-      const aiFeedback = String(row.aiFeedback ?? '').trim() || 'AI 已完成批改。';
-      let writingScore: number | null | undefined = null;
-      if (row.writingScore !== null && row.writingScore !== undefined && row.writingScore !== '') {
-        const rawScore = Number(row.writingScore);
-        writingScore = Number.isFinite(rawScore)
-          ? Math.min(5, Math.max(0, Math.round(rawScore * 100) / 100))
+      const rows = sessionRow.items;
+      if (!Array.isArray(rows)) {
+        throw new Error(`AI writing response missing items array for sessionId=${sessionId}`);
+      }
+      const expectedByAnswerId = new Map(expectedSession.items.map((item) => [item.answerId, item]));
+      const items: ParsedWritingAiItem[] = [];
+      for (const row of rows as Record<string, unknown>[]) {
+        const answerId = Number(row.answerId);
+        const questionId = Number(row.questionId);
+        const expectedItem = expectedByAnswerId.get(answerId);
+        if (!expectedItem || expectedItem.questionId !== questionId) {
+          throw new Error(`AI writing response item mismatch sessionId=${sessionId} answerId=${answerId} questionId=${questionId}`);
+        }
+        let aiScore = Number(row.aiScore);
+        if (!Number.isFinite(aiScore)) aiScore = 0;
+        aiScore = Math.min(100, Math.max(0, Math.round(aiScore * 100) / 100));
+        const aiFeedback = String(row.aiFeedback ?? '').trim() || 'AI 已完成批改。';
+        let writingScore: number | null | undefined = null;
+        if (row.writingScore !== null && row.writingScore !== undefined && row.writingScore !== '') {
+          const rawScore = Number(row.writingScore);
+          writingScore = Number.isFinite(rawScore)
+            ? Math.min(5, Math.max(0, Math.round(rawScore * 100) / 100))
+            : null;
+        }
+        const cefrLevel = row.cefrLevel !== null && row.cefrLevel !== undefined
+          ? String(row.cefrLevel).trim() || null
           : null;
+        items.push({ answerId, questionId, aiScore, aiFeedback, writingScore, cefrLevel });
       }
-      const cefrLevel = row.cefrLevel !== null && row.cefrLevel !== undefined
-        ? String(row.cefrLevel).trim() || null
-        : null;
-      items.push({ answerId, questionId, aiScore, aiFeedback, writingScore, cefrLevel });
+      if (items.length !== expectedSession.items.length) {
+        throw new Error(`AI writing response returned ${items.length} items, expected ${expectedSession.items.length} for sessionId=${sessionId}`);
+      }
+      sessions.push({
+        sessionId,
+        items,
+        overallFeedbackEn: String(sessionRow.overallFeedbackEn ?? '').trim(),
+        overallFeedbackZh: String(sessionRow.overallFeedbackZh ?? '').trim(),
+      });
     }
-    if (items.length !== expected.length) {
-      throw new Error(`AI writing response returned ${items.length} items, expected ${expected.length}`);
+    if (sessions.length !== expected.length) {
+      throw new Error(`AI writing response returned ${sessions.length} sessions, expected ${expected.length}`);
     }
-    return {
-      items,
-      overallFeedbackEn: String(parsed.overallFeedbackEn ?? '').trim(),
-      overallFeedbackZh: String(parsed.overallFeedbackZh ?? '').trim(),
-    };
+    return sessions;
   }
 
   /** 可重試的節流／配額（短暫）；若為免費額度用盡等硬限制，改由 isHardGeminiQuotaExhausted 判斷 */
@@ -804,17 +918,20 @@ ${questionBlocks}`;
   }
 
   private async queueWritingAiGradingForSession(sessionId: number, force = false) {
-    const pendingAnswerIds = await this.prepareWritingAnswersForAiGrading(sessionId, force);
-    if (pendingAnswerIds.length === 0) {
+    const prep = await this.prepareWritingAnswersForAiGrading(sessionId, force);
+    if (prep.answerIds.length === 0) {
       await this.finalizeSessionStatusAfterScoring(sessionId);
       return { queued: 0 };
     }
-    this.upsertWritingQueueJob(sessionId, pendingAnswerIds);
+    this.upsertWritingQueueJob(sessionId, prep.answerIds, prep.estimatedChars);
     void this.pumpWritingQueue();
-    return { queued: pendingAnswerIds.length };
+    return { queued: prep.answerIds.length };
   }
 
-  private async prepareWritingAnswersForAiGrading(sessionId: number, force: boolean): Promise<number[]> {
+  private async prepareWritingAnswersForAiGrading(
+    sessionId: number,
+    force: boolean,
+  ): Promise<{ answerIds: number[]; estimatedChars: number }> {
     const session = await this.prisma.examSession.findUnique({
       where: { id: sessionId },
       include: {
@@ -829,9 +946,10 @@ ${questionBlocks}`;
         answers: true,
       },
     });
-    if (!session) return [];
+    if (!session) return { answerIds: [], estimatedChars: 0 };
 
     const pendingAnswerIds: number[] = [];
+    const estimateInputs: Array<{ promptText?: string | null; content?: string | null }> = [];
     const inFlight = this.writingJobsInFlight.has(sessionId);
     const queuedFeedback = `已進入 AI 批改佇列，系統會依每分鐘 ${MAX_GEMINI_REQUESTS_PER_MINUTE} 筆上限分批送出。`;
     const targetAiModel = inFlight ? 'ai_grading' : 'ai_queued';
@@ -861,11 +979,21 @@ ${questionBlocks}`;
         },
       });
       pendingAnswerIds.push(row.id);
+      estimateInputs.push({
+        promptText: question.content,
+        content: existing?.content ?? row.content,
+      });
     }
-    return pendingAnswerIds;
+    return {
+      answerIds: pendingAnswerIds,
+      estimatedChars: this.estimateWritingJobChars(estimateInputs),
+    };
   }
 
-  private async gradeWritingAnswersForSession(sessionId: number, answerIds: number[]) {
+  private async loadWritingSessionBatchPayload(
+    sessionId: number,
+    answerIds: number[],
+  ): Promise<WritingSessionBatchPayload | null> {
     const answers = await this.prisma.answer.findMany({
       where: { id: { in: answerIds } },
       include: { question: true },
@@ -903,40 +1031,49 @@ ${questionBlocks}`;
       });
     }
 
-    if (writingItems.length > 0) {
-      await this.gradeWritingItemsInOneAiRequest(sessionId, writingItems);
+    if (writingItems.length === 0) {
+      await this.finalizeSessionStatusAfterScoring(sessionId);
+      return null;
     }
-    await this.finalizeSessionStatusAfterScoring(sessionId);
+    return { sessionId, items: writingItems };
   }
 
-  private async gradeWritingItemsInOneAiRequest(
-    sessionId: number,
-    items: WritingAnswerForAi[],
-  ): Promise<void> {
-    const prompt = this.buildWritingBatchPrompt(items);
+  private async gradeWritingAnswersBatch(jobs: WritingQueueJob[]): Promise<void> {
+    const sessions = (await Promise.all(
+      jobs.map((job) => this.loadWritingSessionBatchPayload(job.sessionId, job.answerIds)),
+    )).filter((session): session is WritingSessionBatchPayload => Boolean(session));
+    if (sessions.length === 0) {
+      return;
+    }
+    const prompt = this.buildWritingBatchPrompt(sessions);
     const { raw, modelUsed } = await this.callBatchGradingModel(prompt);
-    const parsed = this.parseWritingBatchResponse(raw, items);
-    await this.prisma.$transaction([
-      ...parsed.items.map((item) =>
-        this.prisma.answer.update({
-          where: { id: item.answerId },
+    const parsed = this.parseWritingBatchResponse(raw, sessions);
+    await this.prisma.$transaction(async (tx) => {
+      for (const session of parsed) {
+        for (const item of session.items) {
+          await tx.answer.update({
+            where: { id: item.answerId },
+            data: {
+              aiScore: item.aiScore,
+              aiFeedback: item.aiFeedback,
+              aiModel: modelUsed,
+              writingScore: item.writingScore ?? null,
+              cefrLevel: item.cefrLevel ?? null,
+            },
+          });
+        }
+        await tx.examSession.update({
+          where: { id: session.sessionId },
           data: {
-            aiScore: item.aiScore,
-            aiFeedback: item.aiFeedback,
-            aiModel: modelUsed,
-            writingScore: item.writingScore ?? null,
-            cefrLevel: item.cefrLevel ?? null,
+            overallFeedbackEn: session.overallFeedbackEn || null,
+            overallFeedbackZh: session.overallFeedbackZh || null,
           },
-        }),
-      ),
-      this.prisma.examSession.update({
-        where: { id: sessionId },
-        data: {
-          overallFeedbackEn: parsed.overallFeedbackEn || null,
-          overallFeedbackZh: parsed.overallFeedbackZh || null,
-        },
-      }),
-    ]);
+        });
+      }
+    });
+    for (const session of sessions) {
+      await this.finalizeSessionStatusAfterScoring(session.sessionId);
+    }
   }
 
   private async handleWritingAiFailure(answerIds: number[], err: unknown): Promise<void> {

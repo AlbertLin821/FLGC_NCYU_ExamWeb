@@ -33,7 +33,12 @@ describe('ScoringService', () => {
       update: jest.fn().mockResolvedValue({}),
       findUnique: jest.fn(),
     },
-    $transaction: jest.fn((ops: unknown[]) => Promise.all(ops)),
+    $transaction: jest.fn((arg: unknown) => {
+      if (typeof arg === 'function') {
+        return arg(mockPrisma);
+      }
+      return Promise.all(arg as unknown[]);
+    }),
     exam: {
       findFirst: jest.fn().mockResolvedValue({ id: 1, examClasses: [] }),
     },
@@ -61,6 +66,14 @@ describe('ScoringService', () => {
     }).compile();
 
     service = module.get(ScoringService);
+  });
+
+  afterEach(() => {
+    const timer = (service as any).writingQueueTimer as ReturnType<typeof setTimeout> | null;
+    if (timer) {
+      clearTimeout(timer);
+      (service as any).writingQueueTimer = null;
+    }
   });
 
   it('scoreObjectiveOnly skips essay answers (no AI, no answer update)', async () => {
@@ -190,7 +203,7 @@ describe('ScoringService', () => {
     expect(out).toEqual(expect.objectContaining({ id: 3 }));
   });
 
-  it('scoreSubmittedSession sends all writing answers in one AI request', async () => {
+  it('scoreSubmittedSession queues writing answers before AI batch starts', async () => {
     mockPrisma.answer.findMany.mockImplementation((args: { where?: any }) => {
       if (args.where?.sessionId && args.where?.aiScore === null) {
         return Promise.resolve([]);
@@ -262,37 +275,156 @@ describe('ScoringService', () => {
       .spyOn(service as any, 'callBatchGradingModel')
       .mockResolvedValue({
         modelUsed: 'gemini-test',
+        raw: JSON.stringify({ sessions: [] }),
+      });
+
+    const out = await service.scoreSubmittedSession(7, true);
+
+    expect(out.writing).toEqual({ queued: 2 });
+    expect(callSpy).not.toHaveBeenCalled();
+    expect(mockPrisma.answer.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        update: expect.objectContaining({ aiModel: 'ai_queued' }),
+      }),
+    );
+  });
+
+  it('gradeWritingAnswersBatch sends multiple sessions in one AI request', async () => {
+    mockPrisma.answer.findMany.mockImplementation((args: { where?: any }) => {
+      if (args.where?.id?.in?.includes(11)) {
+        return Promise.resolve([
+          {
+            id: 11,
+            sessionId: 7,
+            questionId: 101,
+            content: 'This is my short answer.',
+            writingDurationSeconds: 30,
+            wordCount: 5,
+            question: {
+              id: 101,
+              orderNum: 1,
+              type: 'essay',
+              maxPoints: 50,
+              content: 'Write one sentence.',
+            },
+          },
+          {
+            id: 12,
+            sessionId: 7,
+            questionId: 102,
+            content: 'I agree because academic discussion improves communication.',
+            writingDurationSeconds: 120,
+            wordCount: 8,
+            question: {
+              id: 102,
+              orderNum: 2,
+              type: 'paragraph_writing',
+              maxPoints: 50,
+              content: 'Discuss your opinion.',
+            },
+          },
+        ]);
+      }
+      if (args.where?.id?.in?.includes(21)) {
+        return Promise.resolve([
+          {
+            id: 21,
+            sessionId: 8,
+            questionId: 201,
+            content: 'Second student answer.',
+            writingDurationSeconds: 45,
+            wordCount: 3,
+            question: {
+              id: 201,
+              orderNum: 1,
+              type: 'essay',
+              maxPoints: 50,
+              content: 'Say something.',
+            },
+          },
+        ]);
+      }
+      if (args.where?.questionId?.in) {
+        return Promise.resolve([]);
+      }
+      return Promise.resolve([]);
+    });
+    mockPrisma.examSession.findUnique.mockImplementation((args: { where?: any; include?: any }) => {
+      const sessionId = args.where?.id;
+      if (args.include?.exam?.include?.questions) {
+        return Promise.resolve({
+          id: sessionId,
+          exam: {
+            questions: sessionId === 7
+              ? [
+                  { id: 101, type: 'essay' },
+                  { id: 102, type: 'paragraph_writing' },
+                ]
+              : [{ id: 201, type: 'essay' }],
+          },
+        });
+      }
+      return Promise.resolve(null);
+    });
+    const callSpy = jest
+      .spyOn(service as any, 'callBatchGradingModel')
+      .mockResolvedValue({
+        modelUsed: 'gemini-test',
         raw: JSON.stringify({
-          items: [
+          sessions: [
             {
-              answerId: 11,
-              questionId: 101,
-              aiScore: 90,
-              aiFeedback: '句子自然。',
-              writingScore: null,
-              cefrLevel: null,
+              sessionId: 7,
+              items: [
+                {
+                  answerId: 11,
+                  questionId: 101,
+                  aiScore: 90,
+                  aiFeedback: '句子自然。',
+                  writingScore: null,
+                  cefrLevel: null,
+                },
+                {
+                  answerId: 12,
+                  questionId: 102,
+                  aiScore: 80,
+                  aiFeedback: 'Evaluation Report\nFinal Score: 4 / 5',
+                  writingScore: 4,
+                  cefrLevel: 'B2',
+                },
+              ],
+              overallFeedbackEn: 'Good work.',
+              overallFeedbackZh: '整體表現良好。',
             },
             {
-              answerId: 12,
-              questionId: 102,
-              aiScore: 80,
-              aiFeedback: 'Evaluation Report\nFinal Score: 4 / 5',
-              writingScore: 4,
-              cefrLevel: 'B2',
+              sessionId: 8,
+              items: [
+                {
+                  answerId: 21,
+                  questionId: 201,
+                  aiScore: 70,
+                  aiFeedback: '內容基本清楚。',
+                  writingScore: null,
+                  cefrLevel: null,
+                },
+              ],
+              overallFeedbackEn: 'Keep improving.',
+              overallFeedbackZh: '請持續加強。',
             },
           ],
-          overallFeedbackEn: 'Good work.',
-          overallFeedbackZh: '整體表現良好。',
         }),
       });
 
-    await service.scoreSubmittedSession(7, true);
-    await new Promise((resolve) => setImmediate(resolve));
+    await (service as any).gradeWritingAnswersBatch([
+      { sessionId: 7, answerIds: [11, 12], attempts: 0, queuedAt: Date.now(), estimatedChars: 1500 },
+      { sessionId: 8, answerIds: [21], attempts: 0, queuedAt: Date.now(), estimatedChars: 900 },
+    ]);
 
     expect(callSpy).toHaveBeenCalledTimes(1);
     const prompt = callSpy.mock.calls[0][0] as string;
+    expect(prompt).toContain('sessionId: 7');
+    expect(prompt).toContain('sessionId: 8');
     expect(prompt).toContain('answerId: 11');
-    expect(prompt).toContain('answerId: 12');
+    expect(prompt).toContain('answerId: 21');
     expect(mockPrisma.answer.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: 11 },
@@ -301,8 +433,14 @@ describe('ScoringService', () => {
     );
     expect(mockPrisma.answer.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: 12 },
-        data: expect.objectContaining({ aiScore: 80, writingScore: 4, cefrLevel: 'B2' }),
+        where: { id: 21 },
+        data: expect.objectContaining({ aiScore: 70, aiModel: 'gemini-test' }),
+      }),
+    );
+    expect(mockPrisma.examSession.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 7 },
+        data: expect.objectContaining({ overallFeedbackZh: '整體表現良好。' }),
       }),
     );
   });
