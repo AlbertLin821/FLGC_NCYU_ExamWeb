@@ -298,6 +298,8 @@ export const scoringApi = {
 
 // Cheat
 export const cheatApi = {
+  report: (sessionId: number, eventType: string, details?: unknown) =>
+    api.post('/cheat/report', { sessionId, eventType, details }),
   getAlerts: () => cachedGet('/cheat/alerts', undefined, 10_000),
   getSessionLogs: (sessionId: number) => cachedGet(`/cheat/session/${sessionId}`, undefined, 10_000),
   unlock: (logId: number) => api.post(`/cheat/${logId}/unlock`).then((res) => {

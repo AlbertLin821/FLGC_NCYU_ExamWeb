@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
-import { examsApi, getServerOrigin } from '../../api';
+import { cheatApi, examsApi, getServerOrigin } from '../../api';
 import { cheatSocketStatusMessage, useCheatSocketStatus } from '../../hooks/useCheatSocketStatus';
 
 interface Question {
@@ -41,6 +41,7 @@ const ExamRoom: React.FC = () => {
   /** 問答題週期性自動儲存：不早於 45 秒重複寫入同一草稿 */
   const lastEssaySavedContentRef = useRef<string>('');
   const userAnswerRef = useRef(userAnswer);
+  const cheatReportedRef = useRef(false);
   const student = JSON.parse(localStorage.getItem('student') || '{}');
 
   const applyExamState = useCallback((payload: any) => {
@@ -74,16 +75,22 @@ const ExamRoom: React.FC = () => {
 
   // Anti-cheat: Fullscreen, Visibility, Blur
   const reportCheat = useCallback((type: string, details?: any) => {
-    if (socketRef.current && session) {
-      socketRef.current.emit('cheat:report', {
-        sessionId: session.id,
-        eventType: type,
-        details
-      });
-      setSession((prev: any) => (prev ? { ...prev, status: 'paused' } : prev));
-      setIsPaused(true);
-      setPauseMessage('考試已被強制暫停，請等待處理');
+    if (!session || cheatReportedRef.current) return;
+    cheatReportedRef.current = true;
+    const payload = {
+      sessionId: session.id,
+      eventType: type,
+      details,
+    };
+    if (socketRef.current?.connected) {
+      socketRef.current.emit('cheat:report', payload);
     }
+    void cheatApi.report(payload.sessionId, payload.eventType, payload.details).catch(() => {
+      /* WebSocket 已盡量即時送出；HTTP fallback 失敗時保留暫停畫面，待重新同步 */
+    });
+    setSession((prev: any) => (prev ? { ...prev, status: 'paused' } : prev));
+    setIsPaused(true);
+    setPauseMessage('考試已被強制暫停，請等待處理');
   }, [session]);
 
   useEffect(() => {
@@ -155,6 +162,11 @@ const ExamRoom: React.FC = () => {
   }, [examId]);
 
   useEffect(() => {
+    if (!session?.id) return;
+    cheatReportedRef.current = false;
+  }, [session?.id]);
+
+  useEffect(() => {
     if (!student.id) {
       navigate('/student/login');
       return;
@@ -184,6 +196,7 @@ const ExamRoom: React.FC = () => {
         });
 
         socket.on(`session:${session.id}:resume`, (data) => {
+          cheatReportedRef.current = false;
           setIsPaused(false);
           setPauseMessage('');
           setSession((prev: any) => (prev ? { ...prev, status: 'in_progress' } : prev));
@@ -236,6 +249,21 @@ const ExamRoom: React.FC = () => {
     window.addEventListener('pageshow', handlePageShow);
     return () => window.removeEventListener('pageshow', handlePageShow);
   }, [session?.id, syncExamState]);
+
+  useEffect(() => {
+    if (!session?.id) return;
+
+    window.history.pushState({ examRoom: true }, '', window.location.href);
+    const handlePopState = () => {
+      if (!hasSubmittedRef.current && session.status !== 'submitted' && session.status !== 'graded') {
+        reportCheat('browser_back');
+        window.history.pushState({ examRoom: true }, '', window.location.href);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [reportCheat, session]);
 
   const handleFullscreenChange = useCallback(() => {
     const nowFs = !!document.fullscreenElement;

@@ -17,6 +17,21 @@ export class CheatService {
   async logCheatEvent(sessionId: number, eventType: string, details?: any) {
     this.logger.warn(`Cheat event: session=${sessionId}, type=${eventType}`);
 
+    const existing = await this.prisma.cheatLog.findFirst({
+      where: {
+        sessionId,
+        resolution: null,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (existing) {
+      await this.prisma.examSession.update({
+        where: { id: sessionId },
+        data: { status: 'paused' },
+      });
+      return existing;
+    }
+
     // Log the event
     const log = await this.prisma.cheatLog.create({
       data: { sessionId, eventType, details },

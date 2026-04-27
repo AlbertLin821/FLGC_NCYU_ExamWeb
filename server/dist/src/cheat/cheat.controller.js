@@ -21,6 +21,9 @@ let CheatController = class CheatController {
     constructor(cheatService) {
         this.cheatService = cheatService;
     }
+    reportCheat(body) {
+        return this.cheatService.logCheatEvent(body.sessionId, body.eventType, body.details);
+    }
     getPendingAlerts(req, page, limit) {
         return this.cheatService.getPendingAlerts(req.user, page ? parseInt(page) : undefined, limit ? parseInt(limit) : undefined);
     }
@@ -36,7 +39,15 @@ let CheatController = class CheatController {
 };
 exports.CheatController = CheatController;
 __decorate([
+    (0, common_1.Post)('report'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], CheatController.prototype, "reportCheat", null);
+__decorate([
     (0, common_1.Get)('alerts'),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
     (0, guards_1.Roles)('teacher', 'admin', 'viewer'),
     __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.Query)('page')),
@@ -47,6 +58,7 @@ __decorate([
 ], CheatController.prototype, "getPendingAlerts", null);
 __decorate([
     (0, common_1.Get)('session/:sessionId'),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
     (0, guards_1.Roles)('teacher', 'admin', 'viewer'),
     __param(0, (0, common_1.Param)('sessionId', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Request)()),
@@ -56,6 +68,7 @@ __decorate([
 ], CheatController.prototype, "getSessionLogs", null);
 __decorate([
     (0, common_1.Post)(':logId/unlock'),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
     (0, guards_1.Roles)('teacher', 'admin'),
     __param(0, (0, common_1.Param)('logId', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Request)()),
@@ -65,6 +78,7 @@ __decorate([
 ], CheatController.prototype, "unlock", null);
 __decorate([
     (0, common_1.Post)(':logId/terminate'),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
     (0, guards_1.Roles)('teacher', 'admin'),
     __param(0, (0, common_1.Param)('logId', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Request)()),
@@ -74,7 +88,6 @@ __decorate([
 ], CheatController.prototype, "terminate", null);
 exports.CheatController = CheatController = __decorate([
     (0, common_1.Controller)('api/cheat'),
-    (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
     __metadata("design:paramtypes", [cheat_service_1.CheatService])
 ], CheatController);
 //# sourceMappingURL=cheat.controller.js.map

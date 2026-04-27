@@ -2,6 +2,19 @@ import { CheatService } from './cheat.service';
 export declare class CheatController {
     private cheatService;
     constructor(cheatService: CheatService);
+    reportCheat(body: {
+        sessionId: number;
+        eventType: string;
+        details?: unknown;
+    }): Promise<{
+        createdAt: Date;
+        id: number;
+        sessionId: number;
+        resolution: string | null;
+        resolvedBy: number | null;
+        eventType: string;
+        details: import("@prisma/client/runtime/client").JsonValue | null;
+    }>;
     getPendingAlerts(req: any, page?: string, limit?: string): Promise<({
         session: {
             student: {

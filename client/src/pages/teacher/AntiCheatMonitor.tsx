@@ -83,8 +83,15 @@ const AntiCheatMonitor: React.FC = () => {
                 <div className="min-w-0">
                   <div className="action-group mb-sm">
                     <span className="badge badge-danger">異常：{
-                      alert.eventType === 'tab_switch' ? '切換分頁' :
-                      alert.eventType === 'window_blur' ? '視窗失焦' : '退出全螢幕'
+                      alert.eventType === 'tab_switch'
+                        ? '切換分頁'
+                        : alert.eventType === 'window_blur'
+                          ? '視窗失焦'
+                          : alert.eventType === 'exit_fullscreen'
+                            ? '退出全螢幕'
+                            : alert.eventType === 'browser_back'
+                              ? '瀏覽器返回'
+                              : '異常操作'
                     }</span>
                     <span className="text-xs text-secondary">{new Date(alert.createdAt).toLocaleTimeString()}</span>
                   </div>
