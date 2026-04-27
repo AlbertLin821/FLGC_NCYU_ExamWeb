@@ -200,6 +200,48 @@ a:hover {
   box-shadow: var(--shadow-sm);
 }
 
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-md) var(--space-lg);
+  min-width: 0;
+}
+
+.student-lang-switch {
+  display: inline-flex;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-bg-alt);
+}
+
+.student-lang-switch--compact {
+  flex-shrink: 0;
+}
+
+.student-lang-btn {
+  font-size: var(--font-size-xs);
+  padding: var(--space-xs) var(--space-sm);
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.student-lang-btn:hover {
+  color: var(--color-text);
+  background: rgba(0, 119, 182, 0.08);
+}
+
+.student-lang-btn--active {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
 .header-nav {
   display: flex;
   flex-wrap: wrap;

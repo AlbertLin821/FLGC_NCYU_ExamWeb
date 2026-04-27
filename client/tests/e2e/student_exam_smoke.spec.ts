@@ -52,7 +52,7 @@ test('學生：考試頁計時與交卷最小流程', async ({ page }) => {
   expect(parseSec(after!)).toBeLessThanOrEqual(parseSec(before!) + 5);
 
   await expect(page.getByText(/第 1 題/)).toBeVisible();
-  await expect(page.getByPlaceholder('在這邊輸入您的答案...')).toBeVisible();
+  await expect(page.getByPlaceholder(/在這邊輸入/)).toBeVisible();
 
   await page.fill('textarea.form-input', 'E2E answer one.');
   await page.getByRole('button', { name: '下一題' }).click();

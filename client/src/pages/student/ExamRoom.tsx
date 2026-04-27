@@ -3,7 +3,10 @@ import { AlertTriangle } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
 import { cheatApi, examsApi, getServerOrigin } from '../../api';
-import { cheatSocketStatusMessage, useCheatSocketStatus } from '../../hooks/useCheatSocketStatus';
+import { useCheatSocketStatus } from '../../hooks/useCheatSocketStatus';
+import { useStudentLocale } from '../../i18n/StudentLocaleContext';
+import { getStudentExamSocketLine, getStudentString } from '../../i18n/studentMessages';
+import StudentLanguageSwitch from '../../components/StudentLanguageSwitch';
 
 interface Question {
   id: number;
@@ -16,6 +19,7 @@ interface Question {
 const ExamRoom: React.FC = () => {
   const { examId } = useParams<{ examId: string }>();
   const navigate = useNavigate();
+  const { locale, t } = useStudentLocale();
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -54,7 +58,7 @@ const ExamRoom: React.FC = () => {
       setSession(nextSession);
       if (nextSession.status === 'paused') {
         setIsPaused(true);
-        setPauseMessage('測驗暫停中，請等待老師處理');
+        setPauseMessage(getStudentString(locale, 'exam.pauseWaitTeacher'));
       } else {
         setIsPaused(false);
         setPauseMessage('');
@@ -65,7 +69,7 @@ const ExamRoom: React.FC = () => {
     } else if (typeof payload?.timeLimit === 'number') {
       setTimeLeft(payload.timeLimit * 60);
     }
-  }, []);
+  }, [locale]);
 
   const syncExamState = useCallback(async () => {
     if (!examId || !student.id) return;
@@ -90,8 +94,8 @@ const ExamRoom: React.FC = () => {
     });
     setSession((prev: any) => (prev ? { ...prev, status: 'paused' } : prev));
     setIsPaused(true);
-    setPauseMessage('考試已被強制暫停，請等待處理');
-  }, [session]);
+    setPauseMessage(getStudentString(locale, 'exam.pauseForced'));
+  }, [session, locale]);
 
   useEffect(() => {
     userAnswerRef.current = userAnswer;
@@ -219,7 +223,7 @@ const ExamRoom: React.FC = () => {
         if (err?.response?.status !== 404) {
           console.error('initExam error:', err);
         }
-        alert(err.response?.data?.message || '進入考場失敗');
+        alert(err.response?.data?.message || getStudentString(locale, 'exam.alertEnterFail'));
         navigate('/student/exams');
       } finally {
         setLoading(false);
@@ -234,7 +238,7 @@ const ExamRoom: React.FC = () => {
       }
       setExamSocket(null);
     };
-  }, [applyExamState, examId, student.id, navigate]);
+  }, [applyExamState, examId, student.id, navigate, locale]);
 
   useEffect(() => {
     if (!session?.id) return;
@@ -332,7 +336,7 @@ const ExamRoom: React.FC = () => {
     if (!session?.id || hasSubmittedRef.current) return;
     if (isPaused || session.status === 'paused') {
       setIsPaused(true);
-      setPauseMessage('測驗暫停中，請等待老師處理');
+      setPauseMessage(getStudentString(locale, 'exam.pauseWaitTeacher'));
       return;
     }
     hasSubmittedRef.current = true;
@@ -354,11 +358,11 @@ const ExamRoom: React.FC = () => {
       navigate('/student/result');
     } catch {
       hasSubmittedRef.current = false;
-      alert('交卷失敗，請聯繫監考老師');
+      alert(getStudentString(locale, 'exam.alertSubmitFail'));
     } finally {
       setSubmitting(false);
     }
-  }, [session, isPaused, questions, currentIdx, userAnswer, navigate]);
+  }, [session, isPaused, questions, currentIdx, userAnswer, navigate, locale]);
 
   // Timer：每秒遞減（與後端 timeRemainingSeconds 對齊後，仍以本地倒數顯示；重新進入頁面會再向後端取剩餘時間）
   useEffect(() => {
@@ -375,13 +379,13 @@ const ExamRoom: React.FC = () => {
   const handleNext = async () => {
     if (isPaused || session?.status === 'paused') {
       setIsPaused(true);
-      setPauseMessage('測驗暫停中，請等待老師處理');
+      setPauseMessage(getStudentString(locale, 'exam.pauseWaitTeacher'));
       return;
     }
     const q = questions[currentIdx];
     const isEssay = q?.type === 'essay';
     if (!isEssay && !userAnswer.trim()) {
-      alert('請先選擇或填寫答案');
+      alert(getStudentString(locale, 'exam.alertAnswerFirst'));
       return;
     }
 
@@ -398,7 +402,7 @@ const ExamRoom: React.FC = () => {
         await handleSubmitExam();
       }
     } catch {
-      alert('儲存答案失敗，請檢查網路');
+      alert(getStudentString(locale, 'exam.alertSaveFail'));
     } finally {
       setSubmitting(false);
     }
@@ -422,7 +426,14 @@ const ExamRoom: React.FC = () => {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  if (loading) return <div className="spinner"></div>;
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-md">
+        <div className="spinner" />
+        <span className="text-secondary text-sm">{t('exam.loading')}</span>
+      </div>
+    );
+  }
 
   if (isPaused) {
     return (
@@ -431,9 +442,9 @@ const ExamRoom: React.FC = () => {
           <div className="flex justify-center text-warning mb-lg">
             <AlertTriangle size={64} />
           </div>
-          <h2 className="mb-md">測驗已暫停</h2>
-          <p className="mb-lg text-secondary">{pauseMessage || '系統偵測到異常操作，請等待老師解除鎖定'}</p>
-          <div className="alert alert-warning">請保持本頁面開啟，不要關閉</div>
+          <h2 className="mb-md">{t('exam.pausedTitle')}</h2>
+          <p className="mb-lg text-secondary">{pauseMessage || t('exam.pauseDefault')}</p>
+          <div className="alert alert-warning">{t('exam.pauseKeepOpen')}</div>
         </div>
       </div>
     );
@@ -449,27 +460,28 @@ const ExamRoom: React.FC = () => {
           data-testid="exam-ws-status"
           className={`text-sm ${wsStatus === 'connected' ? 'text-secondary' : 'alert alert-warning'}`}
         >
-          {cheatSocketStatusMessage(wsStatus, 'exam')}
+          {getStudentExamSocketLine(locale, wsStatus)}
         </div>
       </div>
       <div className="header" style={{ position: 'relative' }}>
         <div className="container header-inner exam-room-bar">
           <div className="flex items-center gap-lg min-w-0">
-            <span className="badge badge-primary">正在測驗</span>
+            <StudentLanguageSwitch variant="compact" />
+            <span className="badge badge-primary">{t('exam.inProgress')}</span>
             {session ? (
               <span className="min-w-0" style={{ fontWeight: 600, lineHeight: 1.35 }}>
-                {session.exam?.title || '載入中...'}
+                {session.exam?.title || t('exam.loading')}
               </span>
             ) : (
-              <span style={{ fontWeight: 600 }}>載入中...</span>
+              <span style={{ fontWeight: 600 }}>{t('exam.loading')}</span>
             )}
           </div>
           <div className="flex flex-wrap items-center gap-md shrink-0">
             <div className={`text-lg font-bold ${timeLeft < 60 ? 'text-danger' : ''}`}>
-              剩餘時間: {formatTime(timeLeft)}
+              {t('exam.timeLeft')}: {formatTime(timeLeft)}
             </div>
             <div className="text-secondary text-sm">
-              進度: {currentIdx + 1} / {questions.length}
+              {t('exam.progress')}: {currentIdx + 1} / {questions.length}
             </div>
           </div>
         </div>
@@ -478,7 +490,7 @@ const ExamRoom: React.FC = () => {
       <div className="container content py-xl" style={{ paddingBottom: 'max(var(--space-xl), env(safe-area-inset-bottom, 0px))' }}>
         <div className="card mx-auto w-full exam-panel">
           <div className="mb-2xl">
-            <h3 className="mb-lg">第 {currentIdx + 1} 題</h3>
+            <h3 className="mb-lg">{t('exam.question', { n: currentIdx + 1 })}</h3>
             
             <div className="mb-xl text-lg font-medium text-pre-wrap">
               {q?.content}
@@ -512,7 +524,7 @@ const ExamRoom: React.FC = () => {
             ) : (
               <textarea
                 className="form-input answer-textarea"
-                placeholder="在這邊輸入您的答案（問答題可留白，按下一題即視為不作答）"
+                placeholder={t('exam.essayPlaceholder')}
                 value={userAnswer}
                 onChange={(e) => setUserAnswer(e.target.value)}
                 disabled={submitting}
@@ -522,16 +534,14 @@ const ExamRoom: React.FC = () => {
 
           <div className="flex flex-col-reverse gap-md sm:flex-row sm:flex-wrap justify-between items-stretch sm:items-center">
             <div className="text-xs text-secondary self-center sm:self-auto text-center sm:text-left">
-              {q?.type === 'essay'
-                ? '* 選擇／多選於按「下一題」時儲存；問答題另約每 45 秒自動儲存一次（內容有變更時才寫入）'
-                : '* 按「下一題」時儲存該題答案'}
+              {q?.type === 'essay' ? t('exam.hintEssay') : t('exam.hintChoice')}
             </div>
             <button
               className="btn btn-primary btn-lg w-full sm:w-auto shrink-0"
               onClick={handleNext}
               disabled={submitting}
             >
-              {submitting ? <div className="spinner"></div> : currentIdx === questions.length - 1 ? '確認交卷' : '下一題'}
+              {submitting ? <div className="spinner"></div> : currentIdx === questions.length - 1 ? t('exam.submit') : t('exam.next')}
             </button>
           </div>
         </div>

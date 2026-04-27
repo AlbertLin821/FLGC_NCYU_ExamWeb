@@ -1,6 +1,14 @@
 import { Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import './index.css';
+import { StudentLocaleProvider } from './i18n/StudentLocaleContext';
+import { useStudentDocumentLang } from './i18n/useStudentDocumentLang';
+
+function DocumentLangBridge() {
+  const { pathname } = useLocation();
+  useStudentDocumentLang(pathname);
+  return null;
+}
 
 // Lazy-loaded Pages
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -16,7 +24,9 @@ const ResetPassword = lazy(() => import('./pages/teacher/ResetPassword'));
 function App() {
   return (
     <BrowserRouter>
-      <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="spinner"></div></div>}>
+      <StudentLocaleProvider>
+        <DocumentLangBridge />
+        <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="spinner"></div></div>}>
         <Routes>
           {/* Public */}
           <Route path="/" element={<HomePage />} />
@@ -36,7 +46,8 @@ function App() {
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </Suspense>
+        </Suspense>
+      </StudentLocaleProvider>
     </BrowserRouter>
   );
 }
