@@ -1,6 +1,9 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
+const BRAND_EN = 'NCYU Language Center AI English Write';
+const BRAND_ZH = '國立嘉義大學語言中心AI英文寫作評測系統';
+
 const Header: React.FC = () => {
   const navigate = useNavigate();
   const teacherData = localStorage.getItem('teacher');
@@ -16,8 +19,11 @@ const Header: React.FC = () => {
     <header className="header">
       <div className="container header-inner header-inner--responsive">
         <Link to="/" className="header-logo">
-          <div className="logo-icon">NCYU</div>
-          <span>線上英文考試平台</span>
+          <img className="logo-badge" src="/school.jpg" alt="國立嘉義大學校徽" />
+          <span>
+            <strong>{BRAND_EN}</strong>
+            <small>{BRAND_ZH}</small>
+          </span>
         </Link>
         <nav>
           <ul className="header-nav">

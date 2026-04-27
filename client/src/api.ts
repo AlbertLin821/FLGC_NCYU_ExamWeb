@@ -5,11 +5,27 @@ import axios, { type AxiosRequestConfig, type AxiosResponse } from 'axios';
  * `.env` 可能寫成 `http://localhost:3000` 或誤帶 `/api` 後綴，需正規化避免 `/api/api`。
  */
 export function normalizeServerOrigin(raw: string | undefined): string {
-  const trimmed = String(raw ?? 'http://localhost:3000')
+  const browserOrigin =
+    typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+  const fallback =
+    raw === undefined || raw === null || String(raw).trim() === ''
+      ? browserOrigin
+      : raw;
+  const trimmed = String(fallback)
     .trim()
     .replace(/\/$/, '');
   const withoutApi = trimmed.replace(/\/api\/?$/, '');
-  return withoutApi || 'http://localhost:3000';
+  if (
+    typeof window !== 'undefined' &&
+    /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(withoutApi) &&
+    !/^(localhost|127\.0\.0\.1)$/i.test(window.location.hostname)
+  ) {
+    return browserOrigin;
+  }
+  if (withoutApi) {
+    return withoutApi;
+  }
+  return browserOrigin;
 }
 
 export function getServerOrigin(): string {
