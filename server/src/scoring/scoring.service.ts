@@ -79,8 +79,12 @@ Student's Answer: "${answer}"
 
 Please evaluate the answer for correctness, grammar, and relevance to the prompt.
 
-Respond in this exact JSON format only:
-{"score": <0-100>, "feedback": "<brief explanation in Traditional Chinese, max 50 characters>"}`;
+Respond with valid JSON only. Do not use markdown.
+Use this exact shape:
+{
+  "score": 0,
+  "feedback": "brief explanation in Traditional Chinese, max 80 characters"
+}`;
   }
 
   private buildParagraphWritingPrompt(prompt: string, answer: string): string {
@@ -111,6 +115,34 @@ Output must be valid JSON only:
 }`;
   }
 
+  private extractJsonObject(raw: string): Record<string, unknown> {
+    const trimmed = String(raw || '').trim();
+    if (!trimmed) {
+      throw new Error('Empty AI response');
+    }
+    try {
+      return JSON.parse(trimmed) as Record<string, unknown>;
+    } catch {
+      const start = trimmed.indexOf('{');
+      const end = trimmed.lastIndexOf('}');
+      if (start < 0 || end <= start) {
+        throw new Error(`No JSON object in AI response: ${trimmed.slice(0, 200)}`);
+      }
+      return JSON.parse(trimmed.slice(start, end + 1)) as Record<string, unknown>;
+    }
+  }
+
+  private normalizeScoreResult(parsed: Record<string, unknown>, model: string): ScoringResult {
+    let score = Number(parsed.score);
+    if (!Number.isFinite(score)) score = 0;
+    const feedback = String(parsed.feedback ?? '').trim();
+    return {
+      score: Math.min(100, Math.max(0, Math.round(score * 100) / 100)),
+      feedback: feedback || 'AI 已完成評分。',
+      model,
+    };
+  }
+
   async scoreWithOpenAI(prompt: string): Promise<ScoringResult> {
     if (!this.openai) throw new Error('OpenAI API key not configured');
 
@@ -119,17 +151,12 @@ Output must be valid JSON only:
       model,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.3,
-      max_tokens: 200,
+      max_tokens: 600,
+      response_format: { type: 'json_object' },
     });
 
     const content = response.choices[0]?.message?.content || '';
-    const parsed = JSON.parse(content);
-
-    return {
-      score: Math.min(100, Math.max(0, parsed.score)),
-      feedback: parsed.feedback,
-      model,
-    };
+    return this.normalizeScoreResult(this.extractJsonObject(content), model);
   }
 
   async scoreWithGemini(prompt: string): Promise<ScoringResult> {
@@ -138,19 +165,11 @@ Output must be valid JSON only:
     const model = this.resolveGeminiModel();
     const response = await this.gemini.models.generateContent({
       model,
-      contents: prompt,
+      contents: `${prompt}\n\nReturn valid JSON only. No markdown fences, no explanation outside JSON.`,
     });
 
     const content = response.text || '';
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('Failed to parse Gemini response');
-    const parsed = JSON.parse(jsonMatch[0]);
-
-    return {
-      score: Math.min(100, Math.max(0, parsed.score)),
-      feedback: parsed.feedback,
-      model,
-    };
+    return this.normalizeScoreResult(this.extractJsonObject(content), model);
   }
 
   private stringifyAiErr(err: unknown): string {
@@ -163,9 +182,7 @@ Output must be valid JSON only:
   }
 
   private parseParagraphWritingResponse(raw: string): ParagraphScoringResult {
-    const t = raw.trim();
-    const match = t.match(/\{[\s\S]*\}/);
-    const parsed = JSON.parse(match ? match[0] : t) as Record<string, unknown>;
+    const parsed = this.extractJsonObject(raw);
     let score = Number(parsed.score);
     if (!Number.isFinite(score)) score = 0;
     score = Math.min(5, Math.max(0, Math.round(score * 100) / 100));
@@ -355,7 +372,7 @@ Output must be valid JSON only:
         aiFeedback:
           kind === 'rate_limit'
             ? 'AI 評分服務目前配額不足，已暫以 0 分記錄並標記為待人工複閱。'
-            : 'AI 評分暫時無法完成，已暫以 0 分記錄並標記為待人工複閱。',
+            : `AI 評分暫時無法完成，已暫以 0 分記錄並標記為待人工複閱。原因：${detail.slice(0, 160)}`,
         aiModel: 'pending_review',
       },
     });

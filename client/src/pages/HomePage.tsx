@@ -32,15 +32,15 @@ const HomePage: React.FC = () => {
             </div>
             {locale === 'en' ? (
               <h3 className="mb-sm">
-                {t('home.studentTitleEn')}{' '}
-                <span className="text-secondary text-base font-normal" lang="zh-Hant">
+                {t('home.studentTitleEn')}
+                <span className="text-secondary text-base font-normal" lang="zh-Hant" style={{ display: 'block', marginTop: 'var(--space-xs)' }}>
                   {t('home.studentTitle')}
                 </span>
               </h3>
             ) : (
               <h3 className="mb-sm">
-                {t('home.studentTitle')}{' '}
-                <span className="text-secondary text-base font-normal" lang="en">
+                {t('home.studentTitle')}
+                <span className="text-secondary text-base font-normal" lang="en" style={{ display: 'block', marginTop: 'var(--space-xs)' }}>
                   STUDENT
                 </span>
               </h3>
@@ -56,12 +56,13 @@ const HomePage: React.FC = () => {
               <Users size={56} className="home-role-icon" />
             </div>
             <h3 className="mb-sm">
-              老師{' '}
-              <span className="text-secondary text-base font-normal" lang="en">
+              老師
+              <span className="text-secondary text-base font-normal" lang="en" style={{ display: 'block', marginTop: 'var(--space-xs)' }}>
                 TEACHER
               </span>
-              {' '}
-              / 管理端
+              <span className="text-secondary text-base font-normal" style={{ display: 'block', marginTop: 'var(--space-xs)' }}>
+                / 管理端
+              </span>
             </h3>
             <p className="text-sm text-secondary mb-lg">出題管理、批改流程、班級與評測統計</p>
             <span className="btn btn-secondary w-full">{teacher ? '進入管理端' : '管理登入'}</span>
