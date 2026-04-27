@@ -16,47 +16,54 @@ exports.ScoringController = void 0;
 const common_1 = require("@nestjs/common");
 const scoring_service_1 = require("./scoring.service");
 const guards_1 = require("../auth/guards");
+const access_1 = require("../auth/access");
 let ScoringController = class ScoringController {
     scoringService;
     constructor(scoringService) {
         this.scoringService = scoringService;
     }
-    scoreSession(sessionId) {
-        return this.scoringService.scoreSession(sessionId);
+    scoreSession(sessionId, req) {
+        (0, access_1.ensureRoleCanGrade)(req.user.role);
+        return this.scoringService.scoreSession(sessionId, req.user);
     }
-    batchEssayGrade(examId, body) {
+    batchEssayGrade(examId, body, req) {
+        (0, access_1.ensureRoleCanGrade)(req.user.role);
         const classId = Number(body?.classId);
         if (!Number.isInteger(classId) || classId <= 0) {
             throw new common_1.BadRequestException('classId 必填且須為正整數');
         }
-        return this.scoringService.batchGradeEssaysForExamAndClass(examId, classId);
+        return this.scoringService.batchGradeEssaysForExamAndClass(examId, classId, req.user);
     }
-    manualGradeAnswer(answerId, body) {
-        return this.scoringService.manualGradeAnswer(answerId, body.aiScore, body.aiFeedback);
+    manualGradeAnswer(answerId, body, req) {
+        (0, access_1.ensureRoleCanGrade)(req.user.role);
+        return this.scoringService.manualGradeAnswer(answerId, body.aiScore, body.aiFeedback, req.user);
     }
 };
 exports.ScoringController = ScoringController;
 __decorate([
     (0, common_1.Post)('session/:sessionId'),
     __param(0, (0, common_1.Param)('sessionId', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number]),
+    __metadata("design:paramtypes", [Number, Object]),
     __metadata("design:returntype", void 0)
 ], ScoringController.prototype, "scoreSession", null);
 __decorate([
     (0, common_1.Post)('exams/:examId/batch-essay-grade'),
     __param(0, (0, common_1.Param)('examId', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, Object]),
+    __metadata("design:paramtypes", [Number, Object, Object]),
     __metadata("design:returntype", void 0)
 ], ScoringController.prototype, "batchEssayGrade", null);
 __decorate([
     (0, common_1.Patch)('answers/:answerId'),
     __param(0, (0, common_1.Param)('answerId', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, Object]),
+    __metadata("design:paramtypes", [Number, Object, Object]),
     __metadata("design:returntype", void 0)
 ], ScoringController.prototype, "manualGradeAnswer", null);
 exports.ScoringController = ScoringController = __decorate([

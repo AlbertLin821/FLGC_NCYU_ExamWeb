@@ -6,6 +6,16 @@ function toDatetimeLocalValue(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+function toDatetimeLocalInput(value: string): string {
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? '' : toDatetimeLocalValue(parsed);
+}
+
+function toApiDatetime(value: string): string {
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? value : parsed.toISOString();
+}
+
 /** 依開放時間 + 作答分鐘數得到截止時間（datetime-local 字串），無效則回傳 null */
 function computeEndFromStartAndLimit(startTime: string, timeLimitMinutes: number): string | null {
   if (!startTime || !Number.isFinite(timeLimitMinutes) || timeLimitMinutes <= 0) return null;
@@ -86,8 +96,8 @@ const ExamManagement: React.FC = () => {
       classIds: ids.length ? ids : (classes[0]?.id ? [classes[0].id] : []),
       difficulty: exam.difficulty || 'medium',
       timeLimit: exam.timeLimit,
-      startTime: exam.startTime.substring(0, 16),
-      endTime: exam.endTime.substring(0, 16)
+      startTime: toDatetimeLocalInput(exam.startTime),
+      endTime: toDatetimeLocalInput(exam.endTime)
     });
     setShowModal(true);
   };
@@ -128,8 +138,8 @@ const ExamManagement: React.FC = () => {
       classIds: newExam.classIds as number[],
       difficulty: newExam.difficulty,
       timeLimit: newExam.timeLimit,
-      startTime: newExam.startTime,
-      endTime: newExam.endTime,
+      startTime: toApiDatetime(newExam.startTime),
+      endTime: toApiDatetime(newExam.endTime),
     };
 
     setSaveSubmitting(true);

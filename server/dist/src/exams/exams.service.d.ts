@@ -1,11 +1,12 @@
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScoringService } from '../scoring/scoring.service';
+import { type TeacherActor } from '../auth/access';
 export declare class ExamsService {
     private prisma;
     private scoringService;
     constructor(prisma: PrismaService, scoringService: ScoringService);
-    findAll(classId?: number, page?: number, limit?: number): Promise<({
+    findAll(actor: TeacherActor, classId?: number, page?: number, limit?: number): Promise<({
         examClasses: ({
             class: {
                 name: string;
@@ -62,7 +63,7 @@ export declare class ExamsService {
         limit: number;
         totalPages: number;
     }>;
-    findById(id: number): Promise<({
+    findById(id: number, actor: TeacherActor): Promise<({
         examClasses: ({
             class: {
                 name: string;
@@ -104,7 +105,7 @@ export declare class ExamsService {
         startTime: string;
         endTime: string;
         createdBy: number;
-    }): Promise<{
+    }, actor: TeacherActor): Promise<{
         examClasses: ({
             class: {
                 name: string;
@@ -134,7 +135,7 @@ export declare class ExamsService {
         startTime: string;
         endTime: string;
         status: string;
-    }>): Promise<{
+    }>, actor: TeacherActor): Promise<{
         createdAt: Date;
         id: number;
         createdBy: number;
@@ -146,7 +147,7 @@ export declare class ExamsService {
         status: string;
         deletedAt: Date | null;
     }>;
-    delete(id: number): Promise<{
+    delete(id: number, actor: TeacherActor): Promise<{
         createdAt: Date;
         id: number;
         createdBy: number;
@@ -158,7 +159,7 @@ export declare class ExamsService {
         status: string;
         deletedAt: Date | null;
     }>;
-    publish(id: number): Promise<{
+    publish(id: number, actor: TeacherActor): Promise<{
         createdAt: Date;
         id: number;
         createdBy: number;
@@ -170,7 +171,7 @@ export declare class ExamsService {
         status: string;
         deletedAt: Date | null;
     }>;
-    unpublish(id: number): Promise<{
+    unpublish(id: number, actor: TeacherActor): Promise<{
         createdAt: Date;
         id: number;
         createdBy: number;
@@ -243,7 +244,7 @@ export declare class ExamsService {
         overallFeedbackEn: string | null;
         overallFeedbackZh: string | null;
     }>;
-    getResults(classId: number, examId?: number, page?: number, limit?: number): Promise<({
+    getResults(actor: TeacherActor, classId: number, examId?: number, page?: number, limit?: number): Promise<({
         answers: ({
             question: {
                 id: number;

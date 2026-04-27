@@ -1,8 +1,9 @@
 import { PrismaService } from '../prisma/prisma.service';
+import { type TeacherActor } from '../auth/access';
 export declare class QuestionsService {
     private prisma;
     constructor(prisma: PrismaService);
-    findByExam(examId: number): Promise<{
+    findByExam(examId: number, actor: TeacherActor): Promise<{
         id: number;
         type: string;
         content: string | null;
@@ -24,7 +25,7 @@ export declare class QuestionsService {
         word2?: string;
         orderNum: number;
         maxPoints?: number;
-    }): Promise<{
+    }, actor: TeacherActor): Promise<{
         id: number;
         type: string;
         content: string | null;
@@ -45,7 +46,7 @@ export declare class QuestionsService {
         word2?: string;
         orderNum?: number;
         maxPoints?: number;
-    }): Promise<{
+    }, actor: TeacherActor): Promise<{
         id: number;
         type: string;
         content: string | null;
@@ -57,7 +58,7 @@ export declare class QuestionsService {
         maxPoints: number;
         examId: number;
     }>;
-    delete(id: number): Promise<{
+    delete(id: number, actor: TeacherActor): Promise<{
         id: number;
         type: string;
         content: string | null;
@@ -73,11 +74,11 @@ export declare class QuestionsService {
         word1?: string;
         word2?: string;
         [key: string]: any;
-    }[]): Promise<import("@prisma/client").Prisma.BatchPayload>;
+    }[], actor: TeacherActor): Promise<import("@prisma/client").Prisma.BatchPayload>;
     reorder(questions: {
         id: number;
         orderNum: number;
-    }[]): Promise<{
+    }[], actor: TeacherActor): Promise<{
         id: number;
         type: string;
         content: string | null;

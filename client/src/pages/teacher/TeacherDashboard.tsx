@@ -120,11 +120,11 @@ const TeacherDashboard: React.FC = () => {
 
   const menuItems = [
     { path: '/teacher/overview', label: '儀表板', icon: <LayoutDashboard size={18} />, show: true },
-    { path: '/teacher/classes', label: '班級與學生', icon: <Users size={18} />, show: role !== 'viewer' },
+    { path: '/teacher/classes', label: '班級與學生', icon: <Users size={18} />, show: role === 'teacher' || role === 'admin' },
     { path: '/teacher/teachers', label: '教師帳號', icon: <UserCog size={18} />, show: role === 'admin' },
-    { path: '/teacher/exams', label: '考卷管理', icon: <ClipboardList size={18} />, show: role !== 'viewer' },
-    { path: '/teacher/results', label: '成績後台', icon: <Trophy size={18} />, show: true },
-    { path: '/teacher/cheat', label: '防弊監控', icon: <ShieldAlert size={18} />, show: true },
+    { path: '/teacher/exams', label: '考卷管理', icon: <ClipboardList size={18} />, show: role === 'teacher' || role === 'admin' },
+    { path: '/teacher/results', label: '成績後台', icon: <Trophy size={18} />, show: role === 'admin' || role === 'viewer' },
+    { path: '/teacher/cheat', label: '防弊監控', icon: <ShieldAlert size={18} />, show: role === 'admin' || role === 'viewer' },
     { path: '/teacher/system', label: '系統管理', icon: <Settings size={18} />, show: role === 'admin' },
   ].filter((i) => i.show);
   const activeItem = menuItems.find(

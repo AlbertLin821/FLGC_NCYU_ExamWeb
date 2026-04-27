@@ -46,28 +46,28 @@ let ClassesController = class ClassesController {
         this.classesService = classesService;
     }
     findAll(req, page, limit) {
-        return this.classesService.findAll(req.user.id, page ? parseInt(page) : undefined, limit ? parseInt(limit) : undefined);
+        return this.classesService.findAll(req.user, page ? parseInt(page) : undefined, limit ? parseInt(limit) : undefined);
     }
-    findOne(id) {
-        return this.classesService.findById(id);
+    findOne(id, req) {
+        return this.classesService.findById(id, req.user);
     }
-    getStats(id) {
-        return this.classesService.getClassStats(id);
+    getStats(id, req) {
+        return this.classesService.getClassStats(id, req.user);
     }
     create(dto, req) {
         return this.classesService.create(dto, req.user.id);
     }
-    update(id, dto) {
-        return this.classesService.update(id, dto);
+    update(id, dto, req) {
+        return this.classesService.update(id, dto, req.user);
     }
-    delete(id) {
-        return this.classesService.delete(id);
+    delete(id, req) {
+        return this.classesService.delete(id, req.user);
     }
-    addTeacher(id, dto) {
-        return this.classesService.addTeacher(id, dto.teacherId);
+    addTeacher(id, dto, req) {
+        return this.classesService.addTeacher(id, dto.teacherId, req.user);
     }
-    removeTeacher(id, teacherId) {
-        return this.classesService.removeTeacher(id, teacherId);
+    removeTeacher(id, teacherId, req) {
+        return this.classesService.removeTeacher(id, teacherId, req.user);
     }
 };
 exports.ClassesController = ClassesController;
@@ -85,16 +85,18 @@ __decorate([
     (0, common_1.Get)(':id'),
     (0, guards_1.Roles)('teacher', 'admin', 'viewer'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number]),
+    __metadata("design:paramtypes", [Number, Object]),
     __metadata("design:returntype", void 0)
 ], ClassesController.prototype, "findOne", null);
 __decorate([
     (0, common_1.Get)(':id/stats'),
     (0, guards_1.Roles)('teacher', 'admin', 'viewer'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number]),
+    __metadata("design:paramtypes", [Number, Object]),
     __metadata("design:returntype", void 0)
 ], ClassesController.prototype, "getStats", null);
 __decorate([
@@ -111,16 +113,18 @@ __decorate([
     (0, guards_1.Roles)('teacher', 'admin'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, CreateClassDto]),
+    __metadata("design:paramtypes", [Number, CreateClassDto, Object]),
     __metadata("design:returntype", void 0)
 ], ClassesController.prototype, "update", null);
 __decorate([
     (0, common_1.Delete)(':id'),
     (0, guards_1.Roles)('teacher', 'admin'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number]),
+    __metadata("design:paramtypes", [Number, Object]),
     __metadata("design:returntype", void 0)
 ], ClassesController.prototype, "delete", null);
 __decorate([
@@ -128,8 +132,9 @@ __decorate([
     (0, guards_1.Roles)('teacher', 'admin'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, AddTeacherDto]),
+    __metadata("design:paramtypes", [Number, AddTeacherDto, Object]),
     __metadata("design:returntype", void 0)
 ], ClassesController.prototype, "addTeacher", null);
 __decorate([
@@ -137,8 +142,9 @@ __decorate([
     (0, guards_1.Roles)('teacher', 'admin'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Param)('teacherId', common_1.ParseIntPipe)),
+    __param(2, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, Number]),
+    __metadata("design:paramtypes", [Number, Number, Object]),
     __metadata("design:returntype", void 0)
 ], ClassesController.prototype, "removeTeacher", null);
 exports.ClassesController = ClassesController = __decorate([

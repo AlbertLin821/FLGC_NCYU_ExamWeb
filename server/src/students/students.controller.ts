@@ -49,7 +49,7 @@ export class StudentsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('teacher', 'admin', 'viewer')
   list(
-    @Request() req: { user: { role: string } },
+    @Request() req: { user: { id: number; role: string } },
     @Query('classId') classIdStr: string | undefined,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
@@ -66,7 +66,7 @@ export class StudentsController {
     if (Number.isNaN(classId)) {
       throw new BadRequestException('classId 無效');
     }
-    return this.studentsService.findByClass(classId, p, l);
+    return this.studentsService.findByClass(classId, req.user, p, l);
   }
 
   /** 須置於 :id 之前，否則 :id 會先匹配 */
@@ -78,35 +78,35 @@ export class StudentsController {
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('teacher', 'admin', 'viewer')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.studentsService.findById(id);
+  findOne(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
+    return this.studentsService.findById(id, req.user);
   }
 
   @Post('import')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('teacher', 'admin')
-  bulkImport(@Body() dto: BulkImportDto) {
-    return this.studentsService.bulkImport(dto.students, dto.classId);
+  bulkImport(@Body() dto: BulkImportDto, @Request() req: any) {
+    return this.studentsService.bulkImport(dto.students, dto.classId, req.user);
   }
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('teacher', 'admin')
-  create(@Body() dto: CreateStudentDto) {
-    return this.studentsService.create(dto);
+  create(@Body() dto: CreateStudentDto, @Request() req: any) {
+    return this.studentsService.create(dto, req.user);
   }
 
   @Put(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('teacher', 'admin')
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: Partial<CreateStudentDto>) {
-    return this.studentsService.update(id, dto);
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: Partial<CreateStudentDto>, @Request() req: any) {
+    return this.studentsService.update(id, dto, req.user);
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('teacher', 'admin')
-  delete(@Param('id', ParseIntPipe) id: number) {
-    return this.studentsService.delete(id);
+  delete(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
+    return this.studentsService.delete(id, req.user);
   }
 }

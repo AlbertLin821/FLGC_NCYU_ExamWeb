@@ -303,8 +303,10 @@ export function warmTeacherData(role: string | null) {
   const run = () => {
     prefetchGet('/dashboard/stats', undefined);
     prefetchGet('/exams', { params: {} });
-    prefetchGet('/cheat/alerts', undefined);
-    if (role !== 'viewer') {
+    if (role === 'admin' || role === 'viewer') {
+      prefetchGet('/cheat/alerts', undefined);
+    }
+    if (role === 'teacher' || role === 'admin') {
       prefetchGet('/classes', undefined);
     }
     if (role === 'admin') {

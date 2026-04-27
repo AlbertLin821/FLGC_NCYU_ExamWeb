@@ -19,6 +19,21 @@ const prisma_service_1 = require("../prisma/prisma.service");
 const scoring_service_1 = require("../scoring/scoring.service");
 const exam_time_util_1 = require("./exam-time.util");
 const sessionReviewFlags_1 = require("./sessionReviewFlags");
+const access_1 = require("../auth/access");
+function parseTeacherExamDate(input) {
+    const trimmed = String(input).trim();
+    if (!trimmed) {
+        throw new common_1.BadRequestException('考試時間不可為空');
+    }
+    const normalized = /(?:Z|[+-]\d{2}:\d{2})$/i.test(trimmed)
+        ? trimmed
+        : `${trimmed}+08:00`;
+    const parsed = new Date(normalized);
+    if (Number.isNaN(parsed.getTime())) {
+        throw new common_1.BadRequestException('考試時間格式無效');
+    }
+    return parsed;
+}
 let ExamsService = class ExamsService {
     prisma;
     scoringService;
@@ -26,10 +41,24 @@ let ExamsService = class ExamsService {
         this.prisma = prisma;
         this.scoringService = scoringService;
     }
-    async findAll(classId, page, limit) {
+    async findAll(actor, classId, page, limit) {
+        if (classId) {
+            await (0, access_1.ensureClassAccess)(this.prisma, actor, classId);
+        }
+        const andWhere = [
+            { deletedAt: null },
+        ];
+        if (classId) {
+            andWhere.push({ examClasses: { some: { classId } } });
+        }
+        if (!(0, access_1.isAdminRole)(actor.role)) {
+            andWhere.push({
+                examClasses: { some: { class: { teachers: { some: { teacherId: actor.id } } } } },
+            });
+        }
         const where = {
             deletedAt: null,
-            ...(classId ? { examClasses: { some: { classId } } } : {}),
+            AND: andWhere,
         };
         const include = {
             examClasses: { include: { class: { select: { id: true, name: true } } } },
@@ -54,7 +83,8 @@ let ExamsService = class ExamsService {
         ]);
         return { items, total, page: p, limit: l, totalPages: Math.ceil(total / l) };
     }
-    async findById(id) {
+    async findById(id, actor) {
+        await (0, access_1.ensureExamAccess)(this.prisma, actor, id);
         return this.prisma.exam.findFirst({
             where: { id, deletedAt: null },
             include: {
@@ -63,10 +93,13 @@ let ExamsService = class ExamsService {
             },
         });
     }
-    async create(data) {
+    async create(data, actor) {
         const uniqueClassIds = [...new Set(data.classIds)].filter((id) => Number.isInteger(id) && id > 0);
         if (uniqueClassIds.length === 0) {
             throw new common_1.BadRequestException('至少選擇一個適用班級');
+        }
+        for (const classId of uniqueClassIds) {
+            await (0, access_1.ensureClassAccess)(this.prisma, actor, classId);
         }
         return this.prisma.$transaction(async (tx) => {
             const exam = await tx.exam.create({
@@ -74,8 +107,8 @@ let ExamsService = class ExamsService {
                     title: data.title,
                     difficulty: data.difficulty,
                     timeLimit: data.timeLimit,
-                    startTime: new Date(data.startTime),
-                    endTime: new Date(data.endTime),
+                    startTime: parseTeacherExamDate(data.startTime),
+                    endTime: parseTeacherExamDate(data.endTime),
                     createdBy: data.createdBy,
                     examClasses: {
                         create: uniqueClassIds.map((classId) => ({ classId })),
@@ -88,20 +121,21 @@ let ExamsService = class ExamsService {
             return exam;
         });
     }
-    async update(id, data) {
-        const alive = await this.prisma.exam.findFirst({ where: { id, deletedAt: null } });
-        if (!alive)
-            throw new common_1.NotFoundException('考卷不存在或已移除');
+    async update(id, data, actor) {
+        await (0, access_1.ensureExamAccess)(this.prisma, actor, id);
         const { classIds, ...rest } = data;
         const updateData = { ...rest };
         if (data.startTime)
-            updateData.startTime = new Date(data.startTime);
+            updateData.startTime = parseTeacherExamDate(data.startTime);
         if (data.endTime)
-            updateData.endTime = new Date(data.endTime);
+            updateData.endTime = parseTeacherExamDate(data.endTime);
         if (classIds !== undefined) {
             const uniqueClassIds = [...new Set(classIds)].filter((cid) => Number.isInteger(cid) && cid > 0);
             if (uniqueClassIds.length === 0) {
                 throw new common_1.BadRequestException('至少選擇一個適用班級');
+            }
+            for (const classId of uniqueClassIds) {
+                await (0, access_1.ensureClassAccess)(this.prisma, actor, classId);
             }
             return this.prisma.$transaction(async (tx) => {
                 await tx.examClass.deleteMany({ where: { examId: id } });
@@ -128,25 +162,29 @@ let ExamsService = class ExamsService {
         }
         return this.prisma.exam.update({ where: { id }, data: updateData });
     }
-    async delete(id) {
-        const exam = await this.prisma.exam.findFirst({ where: { id, deletedAt: null } });
-        if (!exam)
-            throw new common_1.NotFoundException('考卷不存在或已移除');
+    async delete(id, actor) {
+        await (0, access_1.ensureExamAccess)(this.prisma, actor, id);
         return this.prisma.exam.update({
             where: { id },
             data: { deletedAt: new Date() },
         });
     }
-    async publish(id) {
+    async publish(id, actor) {
+        await (0, access_1.ensureExamAccess)(this.prisma, actor, id);
         const exam = await this.prisma.exam.findFirst({ where: { id, deletedAt: null } });
         if (!exam)
             throw new common_1.NotFoundException('考卷不存在或已移除');
+        const questionCount = await this.prisma.question.count({ where: { examId: id } });
+        if (questionCount === 0) {
+            throw new common_1.BadRequestException('考卷尚未建立題目，無法發放');
+        }
         return this.prisma.exam.update({
             where: { id },
             data: { status: 'published' },
         });
     }
-    async unpublish(id) {
+    async unpublish(id, actor) {
+        await (0, access_1.ensureExamAccess)(this.prisma, actor, id);
         const exam = await this.prisma.exam.findFirst({ where: { id, deletedAt: null } });
         if (!exam)
             throw new common_1.NotFoundException('考卷不存在或已移除');
@@ -163,20 +201,32 @@ let ExamsService = class ExamsService {
         });
     }
     async startSession(studentId, examId) {
+        const student = await this.prisma.student.findUnique({
+            where: { id: studentId },
+            select: { id: true, classId: true },
+        });
+        if (!student)
+            throw new common_1.NotFoundException('學生不存在');
         const exam = await this.prisma.exam.findFirst({
-            where: { id: examId, deletedAt: null },
+            where: {
+                id: examId,
+                deletedAt: null,
+                examClasses: { some: { classId: student.classId } },
+            },
             include: { questions: { orderBy: { orderNum: 'asc' } } },
         });
         if (!exam)
-            throw new common_1.NotFoundException('考卷不存在');
+            throw new common_1.NotFoundException('考卷不存在或未分配給此班級');
         if (exam.status !== 'published')
             throw new common_1.BadRequestException('考卷未開放');
+        if (exam.questions.length === 0)
+            throw new common_1.BadRequestException('考卷尚未建立題目');
         const now = new Date();
         if (now < exam.startTime || now > exam.endTime) {
             throw new common_1.BadRequestException('不在考試時間內');
         }
         const existingSession = await this.prisma.examSession.findUnique({
-            where: { studentId_examId: { studentId, examId } },
+            where: { studentId_examId: { studentId: student.id, examId } },
         });
         if (existingSession && existingSession.status === 'submitted') {
             throw new common_1.BadRequestException('已完成此考試');
@@ -196,10 +246,10 @@ let ExamsService = class ExamsService {
         }
         try {
             const session = await this.prisma.examSession.upsert({
-                where: { studentId_examId: { studentId, examId } },
+                where: { studentId_examId: { studentId: student.id, examId } },
                 update: { status: 'in_progress', startedAt: new Date() },
                 create: {
-                    studentId,
+                    studentId: student.id,
                     examId,
                     status: 'in_progress',
                     startedAt: new Date(),
@@ -217,7 +267,7 @@ let ExamsService = class ExamsService {
         catch (e) {
             if (e && typeof e === 'object' && 'code' in e && e.code === 'P2002') {
                 const session = await this.prisma.examSession.findUniqueOrThrow({
-                    where: { studentId_examId: { studentId, examId } },
+                    where: { studentId_examId: { studentId: student.id, examId } },
                     include: { exam: true },
                 });
                 if (session.status === 'submitted') {
@@ -247,6 +297,13 @@ let ExamsService = class ExamsService {
         const remaining = (0, exam_time_util_1.computeTimeRemainingSeconds)(session.startedAt, session.exam.timeLimit, new Date(), session.exam.endTime);
         if (remaining <= 0) {
             throw new common_1.BadRequestException('作答時間已結束');
+        }
+        const question = await this.prisma.question.findUnique({
+            where: { id: questionId },
+            select: { id: true, examId: true },
+        });
+        if (!question || question.examId !== session.examId) {
+            throw new common_1.BadRequestException('題目不屬於此考卷');
         }
         return this.prisma.$transaction(async (tx) => {
             const row = await tx.answer.upsert({
@@ -289,7 +346,11 @@ let ExamsService = class ExamsService {
         });
         return session;
     }
-    async getResults(classId, examId, page, limit) {
+    async getResults(actor, classId, examId, page, limit) {
+        await (0, access_1.ensureClassAccess)(this.prisma, actor, classId);
+        if (examId) {
+            await (0, access_1.ensureExamAccess)(this.prisma, actor, examId);
+        }
         const where = {
             exam: { examClasses: { some: { classId } } },
             ...(examId ? { examId } : {}),

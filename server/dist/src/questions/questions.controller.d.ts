@@ -35,7 +35,7 @@ export declare class ReorderDto {
 export declare class QuestionsController {
     private questionsService;
     constructor(questionsService: QuestionsService);
-    findByExam(examId: number): Promise<{
+    findByExam(examId: number, req: any): Promise<{
         id: number;
         type: string;
         content: string | null;
@@ -47,7 +47,7 @@ export declare class QuestionsController {
         maxPoints: number;
         examId: number;
     }[]>;
-    create(examId: number, dto: CreateQuestionBody): Promise<{
+    create(examId: number, dto: CreateQuestionBody, req: any): Promise<{
         id: number;
         type: string;
         content: string | null;
@@ -59,8 +59,8 @@ export declare class QuestionsController {
         maxPoints: number;
         examId: number;
     }>;
-    bulkCreate(examId: number, dto: BulkCreateDto): Promise<import("@prisma/client").Prisma.BatchPayload>;
-    reorder(dto: ReorderDto): Promise<{
+    bulkCreate(examId: number, dto: BulkCreateDto, req: any): Promise<import("@prisma/client").Prisma.BatchPayload>;
+    reorder(dto: ReorderDto, req: any): Promise<{
         id: number;
         type: string;
         content: string | null;
@@ -72,7 +72,7 @@ export declare class QuestionsController {
         maxPoints: number;
         examId: number;
     }[]>;
-    update(id: number, dto: UpdateQuestionBody): Promise<{
+    update(id: number, dto: UpdateQuestionBody, req: any): Promise<{
         id: number;
         type: string;
         content: string | null;
@@ -84,7 +84,7 @@ export declare class QuestionsController {
         maxPoints: number;
         examId: number;
     }>;
-    delete(id: number): Promise<{
+    delete(id: number, req: any): Promise<{
         id: number;
         type: string;
         content: string | null;

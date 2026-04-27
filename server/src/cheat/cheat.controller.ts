@@ -10,32 +10,34 @@ export class CheatController {
   constructor(private cheatService: CheatService) {}
 
   @Get('alerts')
-  @Roles('teacher', 'admin', 'viewer')
+  @Roles('admin', 'viewer')
   getPendingAlerts(
+    @Request() req: any,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
     return this.cheatService.getPendingAlerts(
+      req.user,
       page ? parseInt(page) : undefined,
       limit ? parseInt(limit) : undefined,
     );
   }
 
   @Get('session/:sessionId')
-  @Roles('teacher', 'admin', 'viewer')
-  getSessionLogs(@Param('sessionId', ParseIntPipe) sessionId: number) {
-    return this.cheatService.getLogsBySession(sessionId);
+  @Roles('admin', 'viewer')
+  getSessionLogs(@Param('sessionId', ParseIntPipe) sessionId: number, @Request() req: any) {
+    return this.cheatService.getLogsBySession(sessionId, req.user);
   }
 
   @Post(':logId/unlock')
-  @Roles('teacher', 'admin', 'viewer')
+  @Roles('admin')
   unlock(@Param('logId', ParseIntPipe) logId: number, @Request() req: any) {
-    return this.cheatService.unlockSession(logId, req.user.id);
+    return this.cheatService.unlockSession(logId, req.user.id, req.user);
   }
 
   @Post(':logId/terminate')
-  @Roles('teacher', 'admin', 'viewer')
+  @Roles('admin')
   terminate(@Param('logId', ParseIntPipe) logId: number, @Request() req: any) {
-    return this.cheatService.terminateSession(logId, req.user.id);
+    return this.cheatService.terminateSession(logId, req.user.id, req.user);
   }
 }

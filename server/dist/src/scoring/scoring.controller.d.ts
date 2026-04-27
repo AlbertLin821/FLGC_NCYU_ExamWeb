@@ -2,7 +2,7 @@ import { ScoringService } from './scoring.service';
 export declare class ScoringController {
     private scoringService;
     constructor(scoringService: ScoringService);
-    scoreSession(sessionId: number): Promise<({
+    scoreSession(sessionId: number, req: any): Promise<({
         answerId: number;
         score: number;
         feedback: string;
@@ -16,7 +16,7 @@ export declare class ScoringController {
     })[]>;
     batchEssayGrade(examId: number, body: {
         classId: number;
-    }): Promise<{
+    }, req: any): Promise<{
         examId: number;
         classId: number;
         processed: number;
@@ -39,7 +39,7 @@ export declare class ScoringController {
     manualGradeAnswer(answerId: number, body: {
         aiScore: number;
         aiFeedback?: string;
-    }): Promise<{
+    }, req: any): Promise<{
         question: {
             id: number;
             type: string;

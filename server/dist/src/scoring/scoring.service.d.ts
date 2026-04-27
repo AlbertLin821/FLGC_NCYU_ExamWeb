@@ -1,5 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
+import { type TeacherActor } from '../auth/access';
 interface ScoringResult {
     score: number;
     feedback: string;
@@ -41,7 +42,7 @@ export declare class ScoringService {
     })[]>;
     private static essayAnswerNeedsAiGrading;
     private finalizeSessionStatusAfterScoring;
-    scoreSession(sessionId: number): Promise<({
+    scoreSession(sessionId: number, actor: TeacherActor): Promise<({
         answerId: number;
         score: number;
         feedback: string;
@@ -53,7 +54,7 @@ export declare class ScoringService {
         pendingReview: true;
         kind: string;
     })[]>;
-    batchGradeEssaysForExamAndClass(examId: number, classId: number): Promise<{
+    batchGradeEssaysForExamAndClass(examId: number, classId: number, actor: TeacherActor): Promise<{
         examId: number;
         classId: number;
         processed: number;
@@ -74,7 +75,7 @@ export declare class ScoringService {
         }[];
     }>;
     private markSessionEssaysBatchParseFailed;
-    manualGradeAnswer(answerId: number, aiScore: number, aiFeedback?: string): Promise<{
+    manualGradeAnswer(answerId: number, aiScore: number, aiFeedback: string | undefined, actor: TeacherActor): Promise<{
         question: {
             id: number;
             type: string;

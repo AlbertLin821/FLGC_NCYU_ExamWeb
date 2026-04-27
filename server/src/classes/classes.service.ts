@@ -1,12 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { ensureClassAccess, isAdminRole, type TeacherActor } from '../auth/access';
 
 @Injectable()
 export class ClassesService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(teacherId: number, page?: number, limit?: number) {
-    const where = { teachers: { some: { teacherId } } };
+  async findAll(actor: TeacherActor, page?: number, limit?: number) {
+    const where = isAdminRole(actor.role) ? {} : { teachers: { some: { teacherId: actor.id } } };
     const include = {
       _count: { select: { students: true } },
       teachers: {
@@ -35,7 +36,8 @@ export class ClassesService {
     return { items, total, page: p, limit: l, totalPages: Math.ceil(total / l) };
   }
 
-  async findById(id: number) {
+  async findById(id: number, actor: TeacherActor) {
+    await ensureClassAccess(this.prisma, actor, id);
     return this.prisma.class.findUnique({
       where: { id },
       include: {
@@ -58,27 +60,32 @@ export class ClassesService {
     });
   }
 
-  async update(id: number, data: { name?: string; description?: string }) {
+  async update(id: number, data: { name?: string; description?: string }, actor: TeacherActor) {
+    await ensureClassAccess(this.prisma, actor, id);
     return this.prisma.class.update({ where: { id }, data });
   }
 
-  async delete(id: number) {
+  async delete(id: number, actor: TeacherActor) {
+    await ensureClassAccess(this.prisma, actor, id);
     return this.prisma.class.delete({ where: { id } });
   }
 
-  async addTeacher(classId: number, teacherId: number) {
+  async addTeacher(classId: number, teacherId: number, actor: TeacherActor) {
+    await ensureClassAccess(this.prisma, actor, classId);
     return this.prisma.teacherClass.create({
       data: { classId, teacherId, role: 'member' },
     });
   }
 
-  async removeTeacher(classId: number, teacherId: number) {
+  async removeTeacher(classId: number, teacherId: number, actor: TeacherActor) {
+    await ensureClassAccess(this.prisma, actor, classId);
     return this.prisma.teacherClass.delete({
       where: { teacherId_classId: { teacherId, classId } },
     });
   }
 
-  async getClassStats(classId: number) {
+  async getClassStats(classId: number, actor: TeacherActor) {
+    await ensureClassAccess(this.prisma, actor, classId);
     const aggregate = await this.prisma.answer.aggregate({
       where: {
         session: { exam: { examClasses: { some: { classId } } } },

@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { CheckCircle } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
+import { Navigate } from 'react-router-dom';
 import { cheatApi, getServerOrigin } from '../../api';
 import { cheatSocketStatusMessage, useCheatSocketStatus } from '../../hooks/useCheatSocketStatus';
+import { getTeacherRole } from '../../utils/teacherRole';
 
 const AntiCheatMonitor: React.FC = () => {
+  const role = getTeacherRole();
   const [alerts, setAlerts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const socketRef = useRef<Socket | null>(null);
@@ -53,6 +56,10 @@ const AntiCheatMonitor: React.FC = () => {
       setAlerts(prev => prev.filter(a => a.id !== logId));
     } catch { alert('操作失敗'); }
   };
+
+  if (role === 'teacher') {
+    return <Navigate to="/teacher/exams" replace />;
+  }
 
   return (
     <div>

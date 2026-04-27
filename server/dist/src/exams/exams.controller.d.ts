@@ -23,7 +23,7 @@ export declare class SubmitAnswerDto {
 export declare class ExamsController {
     private examsService;
     constructor(examsService: ExamsService);
-    findAll(classId?: string, page?: string, limit?: string): Promise<({
+    findAll(req: any, classId?: string, page?: string, limit?: string): Promise<({
         examClasses: ({
             class: {
                 name: string;
@@ -80,7 +80,7 @@ export declare class ExamsController {
         limit: number;
         totalPages: number;
     }>;
-    getResults(classId: number, examId?: string, page?: string, limit?: string): Promise<({
+    getResults(req: any, classId: number, examId?: string, page?: string, limit?: string): Promise<({
         answers: ({
             question: {
                 id: number;
@@ -165,7 +165,7 @@ export declare class ExamsController {
         limit: number;
         totalPages: number;
     }>;
-    findOne(id: number): Promise<({
+    findOne(id: number, req: any): Promise<({
         examClasses: ({
             class: {
                 name: string;
@@ -221,7 +221,7 @@ export declare class ExamsController {
         status: string;
         deletedAt: Date | null;
     }>;
-    update(id: number, dto: UpdateExamDto): Promise<{
+    update(id: number, dto: UpdateExamDto, req: any): Promise<{
         createdAt: Date;
         id: number;
         createdBy: number;
@@ -233,7 +233,7 @@ export declare class ExamsController {
         status: string;
         deletedAt: Date | null;
     }>;
-    delete(id: number): Promise<{
+    delete(id: number, req: any): Promise<{
         createdAt: Date;
         id: number;
         createdBy: number;
@@ -245,7 +245,7 @@ export declare class ExamsController {
         status: string;
         deletedAt: Date | null;
     }>;
-    publish(id: number): Promise<{
+    publish(id: number, req: any): Promise<{
         createdAt: Date;
         id: number;
         createdBy: number;
@@ -257,7 +257,7 @@ export declare class ExamsController {
         status: string;
         deletedAt: Date | null;
     }>;
-    unpublish(id: number): Promise<{
+    unpublish(id: number, req: any): Promise<{
         createdAt: Date;
         id: number;
         createdBy: number;

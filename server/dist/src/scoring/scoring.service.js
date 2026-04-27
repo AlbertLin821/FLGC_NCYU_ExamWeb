@@ -21,6 +21,7 @@ const config_1 = require("@nestjs/config");
 const prisma_service_1 = require("../prisma/prisma.service");
 const openai_1 = __importDefault(require("openai"));
 const genai_1 = require("@google/genai");
+const access_1 = require("../auth/access");
 const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
 function classifyAiScoringError(err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -374,10 +375,21 @@ Respond in this exact JSON format only:
             });
         }
     }
-    async scoreSession(sessionId) {
+    async scoreSession(sessionId, actor) {
+        const session = await this.prisma.examSession.findUnique({
+            where: { id: sessionId },
+            select: { id: true, examId: true, student: { select: { classId: true } } },
+        });
+        if (!session) {
+            throw new common_1.NotFoundException('考試工作階段不存在');
+        }
+        await (0, access_1.ensureExamAccess)(this.prisma, actor, session.examId);
+        await (0, access_1.ensureClassAccess)(this.prisma, actor, session.student.classId);
         return this.scoreObjectiveOnly(sessionId);
     }
-    async batchGradeEssaysForExamAndClass(examId, classId) {
+    async batchGradeEssaysForExamAndClass(examId, classId, actor) {
+        await (0, access_1.ensureExamAccess)(this.prisma, actor, examId);
+        await (0, access_1.ensureClassAccess)(this.prisma, actor, classId);
         const link = await this.prisma.examClass.findUnique({
             where: { examId_classId: { examId, classId } },
         });
@@ -522,16 +534,29 @@ Respond in this exact JSON format only:
             });
         }
     }
-    async manualGradeAnswer(answerId, aiScore, aiFeedback) {
+    async manualGradeAnswer(answerId, aiScore, aiFeedback, actor) {
         const raw = Number(aiScore);
         if (!Number.isFinite(raw)) {
             throw new common_1.BadRequestException('aiScore 需為 0–100 之數字');
         }
         const score = Math.min(100, Math.max(0, Math.round(raw * 100) / 100));
-        const existing = await this.prisma.answer.findUnique({ where: { id: answerId } });
+        const existing = await this.prisma.answer.findUnique({
+            where: { id: answerId },
+            select: {
+                id: true,
+                session: {
+                    select: {
+                        examId: true,
+                        student: { select: { classId: true } },
+                    },
+                },
+            },
+        });
         if (!existing) {
             throw new common_1.NotFoundException('找不到答案');
         }
+        await (0, access_1.ensureExamAccess)(this.prisma, actor, existing.session.examId);
+        await (0, access_1.ensureClassAccess)(this.prisma, actor, existing.session.student.classId);
         const data = {
             aiScore: score,
             aiModel: 'teacher_manual',

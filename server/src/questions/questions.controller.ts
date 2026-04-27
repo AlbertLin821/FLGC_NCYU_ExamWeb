@@ -1,6 +1,6 @@
 import {
   Controller, Get, Post, Put, Delete, Param, Body,
-  UseGuards, ParseIntPipe,
+  UseGuards, ParseIntPipe, Request,
 } from '@nestjs/common';
 import { QuestionsService } from './questions.service';
 import { JwtAuthGuard, RolesGuard, Roles } from '../auth/guards';
@@ -62,14 +62,14 @@ export class QuestionsController {
 
   @Get('exam/:examId')
   @Roles('teacher', 'admin', 'viewer')
-  findByExam(@Param('examId', ParseIntPipe) examId: number) {
-    return this.questionsService.findByExam(examId);
+  findByExam(@Param('examId', ParseIntPipe) examId: number, @Request() req: any) {
+    return this.questionsService.findByExam(examId, req.user);
   }
 
   @Post('exam/:examId')
   @Roles('teacher', 'admin')
-  create(@Param('examId', ParseIntPipe) examId: number, @Body() dto: CreateQuestionBody) {
-    return this.questionsService.create({ examId, ...dto });
+  create(@Param('examId', ParseIntPipe) examId: number, @Body() dto: CreateQuestionBody, @Request() req: any) {
+    return this.questionsService.create({ examId, ...dto }, req.user);
   }
 
   @Post('exam/:examId/bulk')
@@ -77,25 +77,26 @@ export class QuestionsController {
   bulkCreate(
     @Param('examId', ParseIntPipe) examId: number,
     @Body() dto: BulkCreateDto,
+    @Request() req: any,
   ) {
-    return this.questionsService.bulkCreate(examId, dto.questions);
+    return this.questionsService.bulkCreate(examId, dto.questions, req.user);
   }
 
   @Put('reorder')
   @Roles('teacher', 'admin')
-  reorder(@Body() dto: ReorderDto) {
-    return this.questionsService.reorder(dto.questions);
+  reorder(@Body() dto: ReorderDto, @Request() req: any) {
+    return this.questionsService.reorder(dto.questions, req.user);
   }
 
   @Put(':id')
   @Roles('teacher', 'admin')
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateQuestionBody) {
-    return this.questionsService.update(id, dto);
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateQuestionBody, @Request() req: any) {
+    return this.questionsService.update(id, dto, req.user);
   }
 
   @Delete(':id')
   @Roles('teacher', 'admin')
-  delete(@Param('id', ParseIntPipe) id: number) {
-    return this.questionsService.delete(id);
+  delete(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
+    return this.questionsService.delete(id, req.user);
   }
 }

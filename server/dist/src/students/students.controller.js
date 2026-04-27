@@ -97,25 +97,25 @@ let StudentsController = class StudentsController {
         if (Number.isNaN(classId)) {
             throw new common_1.BadRequestException('classId 無效');
         }
-        return this.studentsService.findByClass(classId, p, l);
+        return this.studentsService.findByClass(classId, req.user, p, l);
     }
     getStudentExams(id) {
         return this.studentsService.getStudentExams(id);
     }
-    findOne(id) {
-        return this.studentsService.findById(id);
+    findOne(id, req) {
+        return this.studentsService.findById(id, req.user);
     }
-    bulkImport(dto) {
-        return this.studentsService.bulkImport(dto.students, dto.classId);
+    bulkImport(dto, req) {
+        return this.studentsService.bulkImport(dto.students, dto.classId, req.user);
     }
-    create(dto) {
-        return this.studentsService.create(dto);
+    create(dto, req) {
+        return this.studentsService.create(dto, req.user);
     }
-    update(id, dto) {
-        return this.studentsService.update(id, dto);
+    update(id, dto, req) {
+        return this.studentsService.update(id, dto, req.user);
     }
-    delete(id) {
-        return this.studentsService.delete(id);
+    delete(id, req) {
+        return this.studentsService.delete(id, req.user);
     }
 };
 exports.StudentsController = StudentsController;
@@ -143,8 +143,9 @@ __decorate([
     (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
     (0, guards_1.Roles)('teacher', 'admin', 'viewer'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number]),
+    __metadata("design:paramtypes", [Number, Object]),
     __metadata("design:returntype", void 0)
 ], StudentsController.prototype, "findOne", null);
 __decorate([
@@ -152,8 +153,9 @@ __decorate([
     (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
     (0, guards_1.Roles)('teacher', 'admin'),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [BulkImportDto]),
+    __metadata("design:paramtypes", [BulkImportDto, Object]),
     __metadata("design:returntype", void 0)
 ], StudentsController.prototype, "bulkImport", null);
 __decorate([
@@ -161,8 +163,9 @@ __decorate([
     (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
     (0, guards_1.Roles)('teacher', 'admin'),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [CreateStudentDto]),
+    __metadata("design:paramtypes", [CreateStudentDto, Object]),
     __metadata("design:returntype", void 0)
 ], StudentsController.prototype, "create", null);
 __decorate([
@@ -171,8 +174,9 @@ __decorate([
     (0, guards_1.Roles)('teacher', 'admin'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, Object]),
+    __metadata("design:paramtypes", [Number, Object, Object]),
     __metadata("design:returntype", void 0)
 ], StudentsController.prototype, "update", null);
 __decorate([
@@ -180,8 +184,9 @@ __decorate([
     (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
     (0, guards_1.Roles)('teacher', 'admin'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number]),
+    __metadata("design:paramtypes", [Number, Object]),
     __metadata("design:returntype", void 0)
 ], StudentsController.prototype, "delete", null);
 exports.StudentsController = StudentsController = __decorate([

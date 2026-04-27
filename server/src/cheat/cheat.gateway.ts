@@ -76,14 +76,14 @@ export class CheatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleUnlock(
     @MessageBody() data: { logId: number; teacherId: number },
   ) {
-    const result = await this.cheatService.unlockSession(data.logId, data.teacherId);
-
-    // Notify the student
-    this.server.emit(`session:${result.sessionId}:resume`, {
-      message: '已解除封鎖，考試恢復',
-    });
-
-    return result;
+    const sessionId = await this.cheatService.getSessionIdByLogId(data.logId);
+    if (sessionId) {
+      this.server.emit(`session:${sessionId}:resume`, {
+        message: '已解除封鎖，考試恢復',
+      });
+    }
+    this.server.emit('cheat:alert');
+    return { status: 'unlock_broadcasted', logId: data.logId, teacherId: data.teacherId, sessionId };
   }
 
   // Teacher terminates a student's exam
@@ -91,13 +91,13 @@ export class CheatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleTerminate(
     @MessageBody() data: { logId: number; teacherId: number },
   ) {
-    const result = await this.cheatService.terminateSession(data.logId, data.teacherId);
-
-    // Notify the student
-    this.server.emit(`session:${result.sessionId}:terminated`, {
-      message: '考試已被結束',
-    });
-
-    return result;
+    const sessionId = await this.cheatService.getSessionIdByLogId(data.logId);
+    if (sessionId) {
+      this.server.emit(`session:${sessionId}:terminated`, {
+        message: '考試已被結束',
+      });
+    }
+    this.server.emit('cheat:alert');
+    return { status: 'terminate_broadcasted', logId: data.logId, teacherId: data.teacherId, sessionId };
   }
 }

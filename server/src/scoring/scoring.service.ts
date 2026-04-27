@@ -14,6 +14,11 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import OpenAI from 'openai';
 import { GoogleGenAI } from '@google/genai';
+import {
+  ensureClassAccess,
+  ensureExamAccess,
+  type TeacherActor,
+} from '../auth/access';
 
 /** 單題與集體批閱使用之 Gemini 模型；可於環境變數 GEMINI_MODEL 覆寫 */
 const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
@@ -433,14 +438,25 @@ Respond in this exact JSON format only:
   }
 
   /** 與 scoreObjectiveOnly 相同（保留 API 路徑給教師補計客觀題）。 */
-  async scoreSession(sessionId: number) {
+  async scoreSession(sessionId: number, actor: TeacherActor) {
+    const session = await this.prisma.examSession.findUnique({
+      where: { id: sessionId },
+      select: { id: true, examId: true, student: { select: { classId: true } } },
+    });
+    if (!session) {
+      throw new NotFoundException('考試工作階段不存在');
+    }
+    await ensureExamAccess(this.prisma, actor, session.examId);
+    await ensureClassAccess(this.prisma, actor, session.student.classId);
     return this.scoreObjectiveOnly(sessionId);
   }
 
   /**
    * 教師端：對指定考卷與班級，將已交卷且問答題尚未 AI 計分之 session 逐人送一次集體批閱。
    */
-  async batchGradeEssaysForExamAndClass(examId: number, classId: number) {
+  async batchGradeEssaysForExamAndClass(examId: number, classId: number, actor: TeacherActor) {
+    await ensureExamAccess(this.prisma, actor, examId);
+    await ensureClassAccess(this.prisma, actor, classId);
     const link = await this.prisma.examClass.findUnique({
       where: { examId_classId: { examId, classId } },
     });
@@ -605,17 +621,35 @@ Respond in this exact JSON format only:
   /**
    * 教師人工覆寫該題 AI 分數（含待複閱題），aiModel 改為 teacher_manual 以清除 pending_review。
    */
-  async manualGradeAnswer(answerId: number, aiScore: number, aiFeedback?: string) {
+  async manualGradeAnswer(
+    answerId: number,
+    aiScore: number,
+    aiFeedback: string | undefined,
+    actor: TeacherActor,
+  ) {
     const raw = Number(aiScore);
     if (!Number.isFinite(raw)) {
       throw new BadRequestException('aiScore 需為 0–100 之數字');
     }
     const score = Math.min(100, Math.max(0, Math.round(raw * 100) / 100));
 
-    const existing = await this.prisma.answer.findUnique({ where: { id: answerId } });
+    const existing = await this.prisma.answer.findUnique({
+      where: { id: answerId },
+      select: {
+        id: true,
+        session: {
+          select: {
+            examId: true,
+            student: { select: { classId: true } },
+          },
+        },
+      },
+    });
     if (!existing) {
       throw new NotFoundException('找不到答案');
     }
+    await ensureExamAccess(this.prisma, actor, existing.session.examId);
+    await ensureClassAccess(this.prisma, actor, existing.session.student.classId);
 
     const data: { aiScore: number; aiModel: string; aiFeedback?: string } = {
       aiScore: score,

@@ -1,5 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  ensureClassAccess,
+  ensureExamAccess,
+  isAdminRole,
+  type TeacherActor,
+} from '../auth/access';
 
 @Injectable()
 export class CheatService {
@@ -24,7 +30,23 @@ export class CheatService {
     return log;
   }
 
-  async unlockSession(logId: number, teacherId: number) {
+  async unlockSession(logId: number, teacherId: number, actor: TeacherActor) {
+    const logBeforeUpdate = await this.prisma.cheatLog.findUnique({
+      where: { id: logId },
+      select: {
+        id: true,
+        session: {
+          select: {
+            examId: true,
+            student: { select: { classId: true } },
+          },
+        },
+      },
+    });
+    if (logBeforeUpdate) {
+      await ensureExamAccess(this.prisma, actor, logBeforeUpdate.session.examId);
+      await ensureClassAccess(this.prisma, actor, logBeforeUpdate.session.student.classId);
+    }
     // Update the cheat log
     await this.prisma.cheatLog.update({
       where: { id: logId },
@@ -47,7 +69,23 @@ export class CheatService {
     return { status: 'unlocked', sessionId: log?.sessionId };
   }
 
-  async terminateSession(logId: number, teacherId: number) {
+  async terminateSession(logId: number, teacherId: number, actor: TeacherActor) {
+    const logBeforeUpdate = await this.prisma.cheatLog.findUnique({
+      where: { id: logId },
+      select: {
+        id: true,
+        session: {
+          select: {
+            examId: true,
+            student: { select: { classId: true } },
+          },
+        },
+      },
+    });
+    if (logBeforeUpdate) {
+      await ensureExamAccess(this.prisma, actor, logBeforeUpdate.session.examId);
+      await ensureClassAccess(this.prisma, actor, logBeforeUpdate.session.student.classId);
+    }
     // Update the cheat log
     await this.prisma.cheatLog.update({
       where: { id: logId },
@@ -70,8 +108,23 @@ export class CheatService {
     return { status: 'terminated', sessionId: log?.sessionId };
   }
 
-  async getPendingAlerts(page?: number, limit?: number) {
-    const where = { resolution: null };
+  async getPendingAlerts(actor: TeacherActor, page?: number, limit?: number) {
+    const where = {
+      resolution: null,
+      ...(!isAdminRole(actor.role)
+        ? {
+            session: {
+              student: {
+                class: {
+                  teachers: {
+                    some: { teacherId: actor.id },
+                  },
+                },
+              },
+            },
+          }
+        : {}),
+    };
     const include = {
       session: {
         include: {
@@ -104,10 +157,26 @@ export class CheatService {
     return { items, total, page: p, limit: l, totalPages: Math.ceil(total / l) };
   }
 
-  async getLogsBySession(sessionId: number) {
+  async getLogsBySession(sessionId: number, actor: TeacherActor) {
+    const session = await this.prisma.examSession.findUnique({
+      where: { id: sessionId },
+      select: { examId: true, student: { select: { classId: true } } },
+    });
+    if (session) {
+      await ensureExamAccess(this.prisma, actor, session.examId);
+      await ensureClassAccess(this.prisma, actor, session.student.classId);
+    }
     return this.prisma.cheatLog.findMany({
       where: { sessionId },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  async getSessionIdByLogId(logId: number): Promise<number | null> {
+    const log = await this.prisma.cheatLog.findUnique({
+      where: { id: logId },
+      select: { sessionId: true },
+    });
+    return log?.sessionId ?? null;
   }
 }

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { ensureClassAccess, ensureStudentAccess, type TeacherActor } from '../auth/access';
 
 @Injectable()
 export class StudentsService {
@@ -33,7 +34,8 @@ export class StudentsService {
     };
   }
 
-  async findByClass(classId: number, page?: number, limit?: number) {
+  async findByClass(classId: number, actor: TeacherActor, page?: number, limit?: number) {
+    await ensureClassAccess(this.prisma, actor, classId);
     const where = { classId };
     /** 班級學生列表僅需分數權重與場次狀態，精簡 query 以降低大量學生時延遲 */
     const include = {
@@ -76,7 +78,8 @@ export class StudentsService {
     return { items, total, page: p, limit: l, totalPages: Math.ceil(total / l) };
   }
 
-  async findById(id: number) {
+  async findById(id: number, actor: TeacherActor) {
+    await ensureStudentAccess(this.prisma, actor, id);
     return this.prisma.student.findUnique({
       where: { id },
       include: {
@@ -88,7 +91,9 @@ export class StudentsService {
   async bulkImport(
     students: { studentId: string; name: string; schoolName: string }[],
     classId: number,
+    actor: TeacherActor,
   ) {
+    await ensureClassAccess(this.prisma, actor, classId);
     const results = { created: 0, updated: 0, errors: [] as string[] };
     const chunkSize = 40;
 
@@ -124,7 +129,11 @@ export class StudentsService {
     return results;
   }
 
-  async create(data: { studentId: string; name: string; schoolName: string; classId: number }) {
+  async create(
+    data: { studentId: string; name: string; schoolName: string; classId: number },
+    actor: TeacherActor,
+  ) {
+    await ensureClassAccess(this.prisma, actor, data.classId);
     return this.prisma.student.create({
       data: {
         studentId: data.studentId.trim(),
@@ -135,7 +144,11 @@ export class StudentsService {
     });
   }
 
-  async update(id: number, data: { name?: string; schoolName?: string; classId?: number }) {
+  async update(id: number, data: { name?: string; schoolName?: string; classId?: number }, actor: TeacherActor) {
+    const currentClassId = await ensureStudentAccess(this.prisma, actor, id);
+    if (data.classId !== undefined && data.classId !== currentClassId) {
+      await ensureClassAccess(this.prisma, actor, data.classId);
+    }
     return this.prisma.student.update({
       where: { id },
       data: {
@@ -146,7 +159,8 @@ export class StudentsService {
     });
   }
 
-  async delete(id: number) {
+  async delete(id: number, actor: TeacherActor) {
+    await ensureStudentAccess(this.prisma, actor, id);
     return this.prisma.student.delete({ where: { id } });
   }
 
@@ -167,7 +181,7 @@ export class StudentsService {
       },
       include: {
         questions: { select: { id: true } },
-        sessions: { where: { studentId } },
+        sessions: { where: { studentId: student.id } },
       },
     });
 

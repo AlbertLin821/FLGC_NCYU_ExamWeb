@@ -16,19 +16,23 @@ export declare class CheatGateway implements OnGatewayConnection, OnGatewayDisco
         status: string;
         logId: number;
     }>;
-    handleTeacherJoin(client: Socket): void;
+    handleTeacherJoin(client: Socket): Promise<void>;
     handleUnlock(data: {
         logId: number;
         teacherId: number;
     }): Promise<{
         status: string;
-        sessionId: number | undefined;
+        logId: number;
+        teacherId: number;
+        sessionId: number | null;
     }>;
     handleTerminate(data: {
         logId: number;
         teacherId: number;
     }): Promise<{
         status: string;
-        sessionId: number | undefined;
+        logId: number;
+        teacherId: number;
+        sessionId: number | null;
     }>;
 }

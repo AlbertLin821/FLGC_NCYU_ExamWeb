@@ -4,6 +4,27 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ScoringService } from '../scoring/scoring.service';
 import { computeTimeRemainingSeconds } from './exam-time.util';
 import { mapSessionsWithReviewFlags } from './sessionReviewFlags';
+import {
+  ensureClassAccess,
+  ensureExamAccess,
+  isAdminRole,
+  type TeacherActor,
+} from '../auth/access';
+
+function parseTeacherExamDate(input: string): Date {
+  const trimmed = String(input).trim();
+  if (!trimmed) {
+    throw new BadRequestException('考試時間不可為空');
+  }
+  const normalized = /(?:Z|[+-]\d{2}:\d{2})$/i.test(trimmed)
+    ? trimmed
+    : `${trimmed}+08:00`;
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new BadRequestException('考試時間格式無效');
+  }
+  return parsed;
+}
 
 @Injectable()
 export class ExamsService {
@@ -13,10 +34,24 @@ export class ExamsService {
     private scoringService: ScoringService,
   ) {}
 
-  async findAll(classId?: number, page?: number, limit?: number) {
+  async findAll(actor: TeacherActor, classId?: number, page?: number, limit?: number) {
+    if (classId) {
+      await ensureClassAccess(this.prisma, actor, classId);
+    }
+    const andWhere: Prisma.ExamWhereInput[] = [
+      { deletedAt: null },
+    ];
+    if (classId) {
+      andWhere.push({ examClasses: { some: { classId } } });
+    }
+    if (!isAdminRole(actor.role)) {
+      andWhere.push({
+        examClasses: { some: { class: { teachers: { some: { teacherId: actor.id } } } } },
+      });
+    }
     const where: Prisma.ExamWhereInput = {
       deletedAt: null,
-      ...(classId ? { examClasses: { some: { classId } } } : {}),
+      AND: andWhere,
     };
     const include = {
       examClasses: { include: { class: { select: { id: true, name: true } } } },
@@ -45,7 +80,8 @@ export class ExamsService {
     return { items, total, page: p, limit: l, totalPages: Math.ceil(total / l) };
   }
 
-  async findById(id: number) {
+  async findById(id: number, actor: TeacherActor) {
+    await ensureExamAccess(this.prisma, actor, id);
     return this.prisma.exam.findFirst({
       where: { id, deletedAt: null },
       include: {
@@ -63,10 +99,13 @@ export class ExamsService {
     startTime: string;
     endTime: string;
     createdBy: number;
-  }) {
+  }, actor: TeacherActor) {
     const uniqueClassIds = [...new Set(data.classIds)].filter((id) => Number.isInteger(id) && id > 0);
     if (uniqueClassIds.length === 0) {
       throw new BadRequestException('至少選擇一個適用班級');
+    }
+    for (const classId of uniqueClassIds) {
+      await ensureClassAccess(this.prisma, actor, classId);
     }
     return this.prisma.$transaction(async (tx) => {
       const exam = await tx.exam.create({
@@ -74,8 +113,8 @@ export class ExamsService {
           title: data.title,
           difficulty: data.difficulty,
           timeLimit: data.timeLimit,
-          startTime: new Date(data.startTime),
-          endTime: new Date(data.endTime),
+          startTime: parseTeacherExamDate(data.startTime),
+          endTime: parseTeacherExamDate(data.endTime),
           createdBy: data.createdBy,
           examClasses: {
             create: uniqueClassIds.map((classId) => ({ classId })),
@@ -100,19 +139,22 @@ export class ExamsService {
       endTime: string;
       status: string;
     }>,
+    actor: TeacherActor,
   ) {
-    const alive = await this.prisma.exam.findFirst({ where: { id, deletedAt: null } });
-    if (!alive) throw new NotFoundException('考卷不存在或已移除');
+    await ensureExamAccess(this.prisma, actor, id);
 
     const { classIds, ...rest } = data;
     const updateData: any = { ...rest };
-    if (data.startTime) updateData.startTime = new Date(data.startTime);
-    if (data.endTime) updateData.endTime = new Date(data.endTime);
+    if (data.startTime) updateData.startTime = parseTeacherExamDate(data.startTime);
+    if (data.endTime) updateData.endTime = parseTeacherExamDate(data.endTime);
 
     if (classIds !== undefined) {
       const uniqueClassIds = [...new Set(classIds)].filter((cid) => Number.isInteger(cid) && cid > 0);
       if (uniqueClassIds.length === 0) {
         throw new BadRequestException('至少選擇一個適用班級');
+      }
+      for (const classId of uniqueClassIds) {
+        await ensureClassAccess(this.prisma, actor, classId);
       }
       return this.prisma.$transaction(async (tx) => {
         await tx.examClass.deleteMany({ where: { examId: id } });
@@ -141,18 +183,22 @@ export class ExamsService {
     return this.prisma.exam.update({ where: { id }, data: updateData });
   }
 
-  async delete(id: number) {
-    const exam = await this.prisma.exam.findFirst({ where: { id, deletedAt: null } });
-    if (!exam) throw new NotFoundException('考卷不存在或已移除');
+  async delete(id: number, actor: TeacherActor) {
+    await ensureExamAccess(this.prisma, actor, id);
     return this.prisma.exam.update({
       where: { id },
       data: { deletedAt: new Date() },
     });
   }
 
-  async publish(id: number) {
+  async publish(id: number, actor: TeacherActor) {
+    await ensureExamAccess(this.prisma, actor, id);
     const exam = await this.prisma.exam.findFirst({ where: { id, deletedAt: null } });
     if (!exam) throw new NotFoundException('考卷不存在或已移除');
+    const questionCount = await this.prisma.question.count({ where: { examId: id } });
+    if (questionCount === 0) {
+      throw new BadRequestException('考卷尚未建立題目，無法發放');
+    }
     return this.prisma.exam.update({
       where: { id },
       data: { status: 'published' },
@@ -160,7 +206,8 @@ export class ExamsService {
   }
 
   /** 將已發放考卷改回草稿；僅在尚無任何學生考試紀錄時允許，避免影響已進入或已交卷資料 */
-  async unpublish(id: number) {
+  async unpublish(id: number, actor: TeacherActor) {
+    await ensureExamAccess(this.prisma, actor, id);
     const exam = await this.prisma.exam.findFirst({ where: { id, deletedAt: null } });
     if (!exam) throw new NotFoundException('考卷不存在或已移除');
     if (exam.status !== 'published') {
@@ -177,13 +224,23 @@ export class ExamsService {
   }
 
   async startSession(studentId: number, examId: number) {
+    const student = await this.prisma.student.findUnique({
+      where: { id: studentId },
+      select: { id: true, classId: true },
+    });
+    if (!student) throw new NotFoundException('學生不存在');
     const exam = await this.prisma.exam.findFirst({
-      where: { id: examId, deletedAt: null },
+      where: {
+        id: examId,
+        deletedAt: null,
+        examClasses: { some: { classId: student.classId } },
+      },
       include: { questions: { orderBy: { orderNum: 'asc' } } },
     });
 
-    if (!exam) throw new NotFoundException('考卷不存在');
+    if (!exam) throw new NotFoundException('考卷不存在或未分配給此班級');
     if (exam.status !== 'published') throw new BadRequestException('考卷未開放');
+    if (exam.questions.length === 0) throw new BadRequestException('考卷尚未建立題目');
 
     const now = new Date();
     if (now < exam.startTime || now > exam.endTime) {
@@ -191,7 +248,7 @@ export class ExamsService {
     }
 
     const existingSession = await this.prisma.examSession.findUnique({
-      where: { studentId_examId: { studentId, examId } },
+      where: { studentId_examId: { studentId: student.id, examId } },
     });
 
     if (existingSession && existingSession.status === 'submitted') {
@@ -219,10 +276,10 @@ export class ExamsService {
 
     try {
       const session = await this.prisma.examSession.upsert({
-        where: { studentId_examId: { studentId, examId } },
+        where: { studentId_examId: { studentId: student.id, examId } },
         update: { status: 'in_progress', startedAt: new Date() },
         create: {
-          studentId,
+          studentId: student.id,
           examId,
           status: 'in_progress',
           startedAt: new Date(),
@@ -246,7 +303,7 @@ export class ExamsService {
       // 並行請求（例如 React Strict Mode 雙次掛載）可能同時 create，第二筆撞 unique
       if (e && typeof e === 'object' && 'code' in e && (e as { code: string }).code === 'P2002') {
         const session = await this.prisma.examSession.findUniqueOrThrow({
-          where: { studentId_examId: { studentId, examId } },
+          where: { studentId_examId: { studentId: student.id, examId } },
           include: { exam: true },
         });
         if (session.status === 'submitted') {
@@ -286,6 +343,13 @@ export class ExamsService {
     );
     if (remaining <= 0) {
       throw new BadRequestException('作答時間已結束');
+    }
+    const question = await this.prisma.question.findUnique({
+      where: { id: questionId },
+      select: { id: true, examId: true },
+    });
+    if (!question || question.examId !== session.examId) {
+      throw new BadRequestException('題目不屬於此考卷');
     }
     return this.prisma.$transaction(async (tx) => {
       const row = await tx.answer.upsert({
@@ -336,7 +400,11 @@ export class ExamsService {
     return session;
   }
 
-  async getResults(classId: number, examId?: number, page?: number, limit?: number) {
+  async getResults(actor: TeacherActor, classId: number, examId?: number, page?: number, limit?: number) {
+    await ensureClassAccess(this.prisma, actor, classId);
+    if (examId) {
+      await ensureExamAccess(this.prisma, actor, examId);
+    }
     const where = {
       exam: { examClasses: { some: { classId } } },
       ...(examId ? { examId } : {}),

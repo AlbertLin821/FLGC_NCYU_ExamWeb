@@ -2,7 +2,7 @@ import { CheatService } from './cheat.service';
 export declare class CheatController {
     private cheatService;
     constructor(cheatService: CheatService);
-    getPendingAlerts(page?: string, limit?: string): Promise<({
+    getPendingAlerts(req: any, page?: string, limit?: string): Promise<({
         session: {
             exam: {
                 title: string;
@@ -65,7 +65,7 @@ export declare class CheatController {
         limit: number;
         totalPages: number;
     }>;
-    getSessionLogs(sessionId: number): Promise<{
+    getSessionLogs(sessionId: number, req: any): Promise<{
         createdAt: Date;
         id: number;
         sessionId: number;

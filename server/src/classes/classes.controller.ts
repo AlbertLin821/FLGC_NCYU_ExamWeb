@@ -27,7 +27,7 @@ export class ClassesController {
     @Query('limit') limit?: string,
   ) {
     return this.classesService.findAll(
-      req.user.id,
+      req.user,
       page ? parseInt(page) : undefined,
       limit ? parseInt(limit) : undefined,
     );
@@ -35,14 +35,14 @@ export class ClassesController {
 
   @Get(':id')
   @Roles('teacher', 'admin', 'viewer')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.classesService.findById(id);
+  findOne(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
+    return this.classesService.findById(id, req.user);
   }
 
   @Get(':id/stats')
   @Roles('teacher', 'admin', 'viewer')
-  getStats(@Param('id', ParseIntPipe) id: number) {
-    return this.classesService.getClassStats(id);
+  getStats(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
+    return this.classesService.getClassStats(id, req.user);
   }
 
   @Post()
@@ -53,20 +53,20 @@ export class ClassesController {
 
   @Put(':id')
   @Roles('teacher', 'admin')
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: CreateClassDto) {
-    return this.classesService.update(id, dto);
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: CreateClassDto, @Request() req: any) {
+    return this.classesService.update(id, dto, req.user);
   }
 
   @Delete(':id')
   @Roles('teacher', 'admin')
-  delete(@Param('id', ParseIntPipe) id: number) {
-    return this.classesService.delete(id);
+  delete(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
+    return this.classesService.delete(id, req.user);
   }
 
   @Post(':id/teachers')
   @Roles('teacher', 'admin')
-  addTeacher(@Param('id', ParseIntPipe) id: number, @Body() dto: AddTeacherDto) {
-    return this.classesService.addTeacher(id, dto.teacherId);
+  addTeacher(@Param('id', ParseIntPipe) id: number, @Body() dto: AddTeacherDto, @Request() req: any) {
+    return this.classesService.addTeacher(id, dto.teacherId, req.user);
   }
 
   @Delete(':id/teachers/:teacherId')
@@ -74,7 +74,8 @@ export class ClassesController {
   removeTeacher(
     @Param('id', ParseIntPipe) id: number,
     @Param('teacherId', ParseIntPipe) teacherId: number,
+    @Request() req: any,
   ) {
-    return this.classesService.removeTeacher(id, teacherId);
+    return this.classesService.removeTeacher(id, teacherId, req.user);
   }
 }

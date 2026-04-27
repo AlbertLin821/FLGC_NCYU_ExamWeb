@@ -123,29 +123,29 @@ let ExamsController = class ExamsController {
     constructor(examsService) {
         this.examsService = examsService;
     }
-    findAll(classId, page, limit) {
-        return this.examsService.findAll(classId ? parseInt(classId) : undefined, page ? parseInt(page) : undefined, limit ? parseInt(limit) : undefined);
+    findAll(req, classId, page, limit) {
+        return this.examsService.findAll(req.user, classId ? parseInt(classId) : undefined, page ? parseInt(page) : undefined, limit ? parseInt(limit) : undefined);
     }
-    getResults(classId, examId, page, limit) {
-        return this.examsService.getResults(classId, examId ? parseInt(examId) : undefined, page ? parseInt(page) : undefined, limit ? parseInt(limit) : undefined);
+    getResults(req, classId, examId, page, limit) {
+        return this.examsService.getResults(req.user, classId, examId ? parseInt(examId) : undefined, page ? parseInt(page) : undefined, limit ? parseInt(limit) : undefined);
     }
-    findOne(id) {
-        return this.examsService.findById(id);
+    findOne(id, req) {
+        return this.examsService.findById(id, req.user);
     }
     create(dto, req) {
-        return this.examsService.create({ ...dto, createdBy: req.user.id });
+        return this.examsService.create({ ...dto, createdBy: req.user.id }, req.user);
     }
-    update(id, dto) {
-        return this.examsService.update(id, dto);
+    update(id, dto, req) {
+        return this.examsService.update(id, dto, req.user);
     }
-    delete(id) {
-        return this.examsService.delete(id);
+    delete(id, req) {
+        return this.examsService.delete(id, req.user);
     }
-    publish(id) {
-        return this.examsService.publish(id);
+    publish(id, req) {
+        return this.examsService.publish(id, req.user);
     }
-    unpublish(id) {
-        return this.examsService.unpublish(id);
+    unpublish(id, req) {
+        return this.examsService.unpublish(id, req.user);
     }
     startExam(examId, studentId) {
         return this.examsService.startSession(studentId, examId);
@@ -162,23 +162,25 @@ __decorate([
     (0, common_1.Get)(),
     (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
     (0, guards_1.Roles)('teacher', 'admin', 'viewer'),
-    __param(0, (0, common_1.Query)('classId')),
-    __param(1, (0, common_1.Query)('page')),
-    __param(2, (0, common_1.Query)('limit')),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Query)('classId')),
+    __param(2, (0, common_1.Query)('page')),
+    __param(3, (0, common_1.Query)('limit')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, String]),
+    __metadata("design:paramtypes", [Object, String, String, String]),
     __metadata("design:returntype", void 0)
 ], ExamsController.prototype, "findAll", null);
 __decorate([
     (0, common_1.Get)('results/:classId'),
     (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
     (0, guards_1.Roles)('teacher', 'admin', 'viewer'),
-    __param(0, (0, common_1.Param)('classId', common_1.ParseIntPipe)),
-    __param(1, (0, common_1.Query)('examId')),
-    __param(2, (0, common_1.Query)('page')),
-    __param(3, (0, common_1.Query)('limit')),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('classId', common_1.ParseIntPipe)),
+    __param(2, (0, common_1.Query)('examId')),
+    __param(3, (0, common_1.Query)('page')),
+    __param(4, (0, common_1.Query)('limit')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, String, String, String]),
+    __metadata("design:paramtypes", [Object, Number, String, String, String]),
     __metadata("design:returntype", void 0)
 ], ExamsController.prototype, "getResults", null);
 __decorate([
@@ -186,8 +188,9 @@ __decorate([
     (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
     (0, guards_1.Roles)('teacher', 'admin', 'viewer'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number]),
+    __metadata("design:paramtypes", [Number, Object]),
     __metadata("design:returntype", void 0)
 ], ExamsController.prototype, "findOne", null);
 __decorate([
@@ -206,8 +209,9 @@ __decorate([
     (0, guards_1.Roles)('teacher', 'admin'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, UpdateExamDto]),
+    __metadata("design:paramtypes", [Number, UpdateExamDto, Object]),
     __metadata("design:returntype", void 0)
 ], ExamsController.prototype, "update", null);
 __decorate([
@@ -215,8 +219,9 @@ __decorate([
     (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
     (0, guards_1.Roles)('teacher', 'admin'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number]),
+    __metadata("design:paramtypes", [Number, Object]),
     __metadata("design:returntype", void 0)
 ], ExamsController.prototype, "delete", null);
 __decorate([
@@ -224,8 +229,9 @@ __decorate([
     (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
     (0, guards_1.Roles)('teacher', 'admin'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number]),
+    __metadata("design:paramtypes", [Number, Object]),
     __metadata("design:returntype", void 0)
 ], ExamsController.prototype, "publish", null);
 __decorate([
@@ -233,8 +239,9 @@ __decorate([
     (0, common_1.UseGuards)(guards_1.JwtAuthGuard, guards_1.RolesGuard),
     (0, guards_1.Roles)('teacher', 'admin'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number]),
+    __metadata("design:paramtypes", [Number, Object]),
     __metadata("design:returntype", void 0)
 ], ExamsController.prototype, "unpublish", null);
 __decorate([

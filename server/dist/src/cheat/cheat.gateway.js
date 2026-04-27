@@ -46,23 +46,29 @@ let CheatGateway = CheatGateway_1 = class CheatGateway {
         });
         return { status: 'reported', logId: log.id };
     }
-    handleTeacherJoin(client) {
-        client.join('teachers');
+    async handleTeacherJoin(client) {
+        await client.join('teachers');
         this.logger.log(`Teacher joined monitoring: ${client.id}`);
     }
     async handleUnlock(data) {
-        const result = await this.cheatService.unlockSession(data.logId, data.teacherId);
-        this.server.emit(`session:${result.sessionId}:resume`, {
-            message: '已解除封鎖，考試恢復',
-        });
-        return result;
+        const sessionId = await this.cheatService.getSessionIdByLogId(data.logId);
+        if (sessionId) {
+            this.server.emit(`session:${sessionId}:resume`, {
+                message: '已解除封鎖，考試恢復',
+            });
+        }
+        this.server.emit('cheat:alert');
+        return { status: 'unlock_broadcasted', logId: data.logId, teacherId: data.teacherId, sessionId };
     }
     async handleTerminate(data) {
-        const result = await this.cheatService.terminateSession(data.logId, data.teacherId);
-        this.server.emit(`session:${result.sessionId}:terminated`, {
-            message: '考試已被結束',
-        });
-        return result;
+        const sessionId = await this.cheatService.getSessionIdByLogId(data.logId);
+        if (sessionId) {
+            this.server.emit(`session:${sessionId}:terminated`, {
+                message: '考試已被結束',
+            });
+        }
+        this.server.emit('cheat:alert');
+        return { status: 'terminate_broadcasted', logId: data.logId, teacherId: data.teacherId, sessionId };
     }
 };
 exports.CheatGateway = CheatGateway;
@@ -83,7 +89,7 @@ __decorate([
     __param(0, (0, websockets_1.ConnectedSocket)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [socket_io_1.Socket]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], CheatGateway.prototype, "handleTeacherJoin", null);
 __decorate([
     (0, websockets_1.SubscribeMessage)('cheat:unlock'),

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { Navigate, useParams, useNavigate } from 'react-router-dom';
 import { studentsApi, scoringApi } from '../../api';
 import { earnedPointsOnQuestion, sessionScorePercent } from '../../utils/sessionScore';
 import { describeAnswerScoring, questionTypeLabel } from '../../utils/answerModelLabel';
@@ -235,7 +235,8 @@ const AnswerCard: React.FC<{
 };
 
 const StudentResultDetail: React.FC = () => {
-  const isViewer = getTeacherRole() === 'viewer';
+  const role = getTeacherRole();
+  const isViewer = role === 'viewer';
   const { studentId } = useParams<{ studentId: string }>();
   const navigate = useNavigate();
   const [student, setStudent] = useState<any>(null);
@@ -274,6 +275,10 @@ const StudentResultDetail: React.FC = () => {
         new Date(b.exam?.endTime ?? 0).getTime() - new Date(a.exam?.endTime ?? 0).getTime(),
     );
   }, [student]);
+
+  if (role === 'teacher') {
+    return <Navigate to="/teacher/exams" replace />;
+  }
 
   if (loading || !student) return <div className="spinner"></div>;
 

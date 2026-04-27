@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { examsApi, classesApi, scoringApi } from '../../api';
 import { getTeacherRole } from '../../utils/teacherRole';
 import * as XLSX from 'xlsx';
 import { earnedPointsOnQuestion, sessionScorePercent } from '../../utils/sessionScore';
 
 const ResultsView: React.FC = () => {
-  const isViewer = getTeacherRole() === 'viewer';
+  const role = getTeacherRole();
+  const isViewer = role === 'viewer';
   const navigate = useNavigate();
   const [results, setResults] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
@@ -130,6 +131,10 @@ const ResultsView: React.FC = () => {
     XLSX.utils.book_append_sheet(wb, ws, '成績報表');
     XLSX.writeFile(wb, `成績報表_${new Date().toLocaleDateString()}.xlsx`);
   };
+
+  if (role === 'teacher') {
+    return <Navigate to="/teacher/exams" replace />;
+  }
 
   return (
     <div>

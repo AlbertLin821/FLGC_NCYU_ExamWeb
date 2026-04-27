@@ -19,6 +19,7 @@ export declare class StudentsController {
     constructor(studentsService: StudentsService);
     list(req: {
         user: {
+            id: number;
             role: string;
         };
     }, classIdStr: string | undefined, page?: string, limit?: string): Promise<{
@@ -124,7 +125,7 @@ export declare class StudentsController {
         endTime: Date;
         sessionStatus: string;
     }[]>;
-    findOne(id: number): Promise<({
+    findOne(id: number, req: any): Promise<({
         sessions: ({
             answers: ({
                 question: {
@@ -182,12 +183,12 @@ export declare class StudentsController {
         lockedUntil: Date | null;
         classId: number;
     }) | null>;
-    bulkImport(dto: BulkImportDto): Promise<{
+    bulkImport(dto: BulkImportDto, req: any): Promise<{
         created: number;
         updated: number;
         errors: string[];
     }>;
-    create(dto: CreateStudentDto): Promise<{
+    create(dto: CreateStudentDto, req: any): Promise<{
         name: string;
         createdAt: Date;
         id: number;
@@ -197,7 +198,7 @@ export declare class StudentsController {
         lockedUntil: Date | null;
         classId: number;
     }>;
-    update(id: number, dto: Partial<CreateStudentDto>): Promise<{
+    update(id: number, dto: Partial<CreateStudentDto>, req: any): Promise<{
         name: string;
         createdAt: Date;
         id: number;
@@ -207,7 +208,7 @@ export declare class StudentsController {
         lockedUntil: Date | null;
         classId: number;
     }>;
-    delete(id: number): Promise<{
+    delete(id: number, req: any): Promise<{
         name: string;
         createdAt: Date;
         id: number;

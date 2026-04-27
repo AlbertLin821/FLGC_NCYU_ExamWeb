@@ -156,23 +156,23 @@ let QuestionsController = class QuestionsController {
     constructor(questionsService) {
         this.questionsService = questionsService;
     }
-    findByExam(examId) {
-        return this.questionsService.findByExam(examId);
+    findByExam(examId, req) {
+        return this.questionsService.findByExam(examId, req.user);
     }
-    create(examId, dto) {
-        return this.questionsService.create({ examId, ...dto });
+    create(examId, dto, req) {
+        return this.questionsService.create({ examId, ...dto }, req.user);
     }
-    bulkCreate(examId, dto) {
-        return this.questionsService.bulkCreate(examId, dto.questions);
+    bulkCreate(examId, dto, req) {
+        return this.questionsService.bulkCreate(examId, dto.questions, req.user);
     }
-    reorder(dto) {
-        return this.questionsService.reorder(dto.questions);
+    reorder(dto, req) {
+        return this.questionsService.reorder(dto.questions, req.user);
     }
-    update(id, dto) {
-        return this.questionsService.update(id, dto);
+    update(id, dto, req) {
+        return this.questionsService.update(id, dto, req.user);
     }
-    delete(id) {
-        return this.questionsService.delete(id);
+    delete(id, req) {
+        return this.questionsService.delete(id, req.user);
     }
 };
 exports.QuestionsController = QuestionsController;
@@ -180,8 +180,9 @@ __decorate([
     (0, common_1.Get)('exam/:examId'),
     (0, guards_1.Roles)('teacher', 'admin', 'viewer'),
     __param(0, (0, common_1.Param)('examId', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number]),
+    __metadata("design:paramtypes", [Number, Object]),
     __metadata("design:returntype", void 0)
 ], QuestionsController.prototype, "findByExam", null);
 __decorate([
@@ -189,8 +190,9 @@ __decorate([
     (0, guards_1.Roles)('teacher', 'admin'),
     __param(0, (0, common_1.Param)('examId', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, CreateQuestionBody]),
+    __metadata("design:paramtypes", [Number, CreateQuestionBody, Object]),
     __metadata("design:returntype", void 0)
 ], QuestionsController.prototype, "create", null);
 __decorate([
@@ -198,16 +200,18 @@ __decorate([
     (0, guards_1.Roles)('teacher', 'admin'),
     __param(0, (0, common_1.Param)('examId', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, BulkCreateDto]),
+    __metadata("design:paramtypes", [Number, BulkCreateDto, Object]),
     __metadata("design:returntype", void 0)
 ], QuestionsController.prototype, "bulkCreate", null);
 __decorate([
     (0, common_1.Put)('reorder'),
     (0, guards_1.Roles)('teacher', 'admin'),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [ReorderDto]),
+    __metadata("design:paramtypes", [ReorderDto, Object]),
     __metadata("design:returntype", void 0)
 ], QuestionsController.prototype, "reorder", null);
 __decorate([
@@ -215,16 +219,18 @@ __decorate([
     (0, guards_1.Roles)('teacher', 'admin'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, UpdateQuestionBody]),
+    __metadata("design:paramtypes", [Number, UpdateQuestionBody, Object]),
     __metadata("design:returntype", void 0)
 ], QuestionsController.prototype, "update", null);
 __decorate([
     (0, common_1.Delete)(':id'),
     (0, guards_1.Roles)('teacher', 'admin'),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number]),
+    __metadata("design:paramtypes", [Number, Object]),
     __metadata("design:returntype", void 0)
 ], QuestionsController.prototype, "delete", null);
 exports.QuestionsController = QuestionsController = __decorate([

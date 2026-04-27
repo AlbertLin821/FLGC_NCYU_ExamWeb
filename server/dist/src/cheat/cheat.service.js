@@ -13,6 +13,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CheatService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
+const access_1 = require("../auth/access");
 let CheatService = CheatService_1 = class CheatService {
     prisma;
     logger = new common_1.Logger(CheatService_1.name);
@@ -30,7 +31,23 @@ let CheatService = CheatService_1 = class CheatService {
         });
         return log;
     }
-    async unlockSession(logId, teacherId) {
+    async unlockSession(logId, teacherId, actor) {
+        const logBeforeUpdate = await this.prisma.cheatLog.findUnique({
+            where: { id: logId },
+            select: {
+                id: true,
+                session: {
+                    select: {
+                        examId: true,
+                        student: { select: { classId: true } },
+                    },
+                },
+            },
+        });
+        if (logBeforeUpdate) {
+            await (0, access_1.ensureExamAccess)(this.prisma, actor, logBeforeUpdate.session.examId);
+            await (0, access_1.ensureClassAccess)(this.prisma, actor, logBeforeUpdate.session.student.classId);
+        }
         await this.prisma.cheatLog.update({
             where: { id: logId },
             data: { resolvedBy: teacherId, resolution: 'unlocked' },
@@ -47,7 +64,23 @@ let CheatService = CheatService_1 = class CheatService {
         }
         return { status: 'unlocked', sessionId: log?.sessionId };
     }
-    async terminateSession(logId, teacherId) {
+    async terminateSession(logId, teacherId, actor) {
+        const logBeforeUpdate = await this.prisma.cheatLog.findUnique({
+            where: { id: logId },
+            select: {
+                id: true,
+                session: {
+                    select: {
+                        examId: true,
+                        student: { select: { classId: true } },
+                    },
+                },
+            },
+        });
+        if (logBeforeUpdate) {
+            await (0, access_1.ensureExamAccess)(this.prisma, actor, logBeforeUpdate.session.examId);
+            await (0, access_1.ensureClassAccess)(this.prisma, actor, logBeforeUpdate.session.student.classId);
+        }
         await this.prisma.cheatLog.update({
             where: { id: logId },
             data: { resolvedBy: teacherId, resolution: 'terminated' },
@@ -64,8 +97,23 @@ let CheatService = CheatService_1 = class CheatService {
         }
         return { status: 'terminated', sessionId: log?.sessionId };
     }
-    async getPendingAlerts(page, limit) {
-        const where = { resolution: null };
+    async getPendingAlerts(actor, page, limit) {
+        const where = {
+            resolution: null,
+            ...(!(0, access_1.isAdminRole)(actor.role)
+                ? {
+                    session: {
+                        student: {
+                            class: {
+                                teachers: {
+                                    some: { teacherId: actor.id },
+                                },
+                            },
+                        },
+                    },
+                }
+                : {}),
+        };
         const include = {
             session: {
                 include: {
@@ -93,11 +141,26 @@ let CheatService = CheatService_1 = class CheatService {
         ]);
         return { items, total, page: p, limit: l, totalPages: Math.ceil(total / l) };
     }
-    async getLogsBySession(sessionId) {
+    async getLogsBySession(sessionId, actor) {
+        const session = await this.prisma.examSession.findUnique({
+            where: { id: sessionId },
+            select: { examId: true, student: { select: { classId: true } } },
+        });
+        if (session) {
+            await (0, access_1.ensureExamAccess)(this.prisma, actor, session.examId);
+            await (0, access_1.ensureClassAccess)(this.prisma, actor, session.student.classId);
+        }
         return this.prisma.cheatLog.findMany({
             where: { sessionId },
             orderBy: { createdAt: 'desc' },
         });
+    }
+    async getSessionIdByLogId(logId) {
+        const log = await this.prisma.cheatLog.findUnique({
+            where: { id: logId },
+            select: { sessionId: true },
+        });
+        return log?.sessionId ?? null;
     }
 };
 exports.CheatService = CheatService;

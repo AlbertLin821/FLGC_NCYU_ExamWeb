@@ -1,4 +1,5 @@
 import { PrismaService } from '../prisma/prisma.service';
+import { type TeacherActor } from '../auth/access';
 export declare class CheatService {
     private prisma;
     private readonly logger;
@@ -12,15 +13,15 @@ export declare class CheatService {
         eventType: string;
         details: import("@prisma/client/runtime/client").JsonValue | null;
     }>;
-    unlockSession(logId: number, teacherId: number): Promise<{
+    unlockSession(logId: number, teacherId: number, actor: TeacherActor): Promise<{
         status: string;
         sessionId: number | undefined;
     }>;
-    terminateSession(logId: number, teacherId: number): Promise<{
+    terminateSession(logId: number, teacherId: number, actor: TeacherActor): Promise<{
         status: string;
         sessionId: number | undefined;
     }>;
-    getPendingAlerts(page?: number, limit?: number): Promise<({
+    getPendingAlerts(actor: TeacherActor, page?: number, limit?: number): Promise<({
         session: {
             exam: {
                 title: string;
@@ -83,7 +84,7 @@ export declare class CheatService {
         limit: number;
         totalPages: number;
     }>;
-    getLogsBySession(sessionId: number): Promise<{
+    getLogsBySession(sessionId: number, actor: TeacherActor): Promise<{
         createdAt: Date;
         id: number;
         sessionId: number;
@@ -92,4 +93,5 @@ export declare class CheatService {
         eventType: string;
         details: import("@prisma/client/runtime/client").JsonValue | null;
     }[]>;
+    getSessionIdByLogId(logId: number): Promise<number | null>;
 }

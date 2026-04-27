@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.StudentsService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
+const access_1 = require("../auth/access");
 let StudentsService = class StudentsService {
     prisma;
     constructor(prisma) {
@@ -43,7 +44,8 @@ let StudentsService = class StudentsService {
             totalPages: Math.ceil(total / l),
         };
     }
-    async findByClass(classId, page, limit) {
+    async findByClass(classId, actor, page, limit) {
+        await (0, access_1.ensureClassAccess)(this.prisma, actor, classId);
         const where = { classId };
         const include = {
             sessions: {
@@ -80,7 +82,8 @@ let StudentsService = class StudentsService {
         ]);
         return { items, total, page: p, limit: l, totalPages: Math.ceil(total / l) };
     }
-    async findById(id) {
+    async findById(id, actor) {
+        await (0, access_1.ensureStudentAccess)(this.prisma, actor, id);
         return this.prisma.student.findUnique({
             where: { id },
             include: {
@@ -88,7 +91,8 @@ let StudentsService = class StudentsService {
             },
         });
     }
-    async bulkImport(students, classId) {
+    async bulkImport(students, classId, actor) {
+        await (0, access_1.ensureClassAccess)(this.prisma, actor, classId);
         const results = { created: 0, updated: 0, errors: [] };
         const chunkSize = 40;
         for (let i = 0; i < students.length; i += chunkSize) {
@@ -122,7 +126,8 @@ let StudentsService = class StudentsService {
         }
         return results;
     }
-    async create(data) {
+    async create(data, actor) {
+        await (0, access_1.ensureClassAccess)(this.prisma, actor, data.classId);
         return this.prisma.student.create({
             data: {
                 studentId: data.studentId.trim(),
@@ -132,7 +137,11 @@ let StudentsService = class StudentsService {
             },
         });
     }
-    async update(id, data) {
+    async update(id, data, actor) {
+        const currentClassId = await (0, access_1.ensureStudentAccess)(this.prisma, actor, id);
+        if (data.classId !== undefined && data.classId !== currentClassId) {
+            await (0, access_1.ensureClassAccess)(this.prisma, actor, data.classId);
+        }
         return this.prisma.student.update({
             where: { id },
             data: {
@@ -142,7 +151,8 @@ let StudentsService = class StudentsService {
             },
         });
     }
-    async delete(id) {
+    async delete(id, actor) {
+        await (0, access_1.ensureStudentAccess)(this.prisma, actor, id);
         return this.prisma.student.delete({ where: { id } });
     }
     async getStudentExams(studentId) {
@@ -162,7 +172,7 @@ let StudentsService = class StudentsService {
             },
             include: {
                 questions: { select: { id: true } },
-                sessions: { where: { studentId } },
+                sessions: { where: { studentId: student.id } },
             },
         });
         return exams.map((exam) => ({

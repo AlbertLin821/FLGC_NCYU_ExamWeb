@@ -1,8 +1,9 @@
 import { PrismaService } from '../prisma/prisma.service';
+import { type TeacherActor } from '../auth/access';
 export declare class ClassesService {
     private prisma;
     constructor(prisma: PrismaService);
-    findAll(teacherId: number, page?: number, limit?: number): Promise<({
+    findAll(actor: TeacherActor, page?: number, limit?: number): Promise<({
         teachers: ({
             teacher: {
                 email: string;
@@ -51,7 +52,7 @@ export declare class ClassesService {
         limit: number;
         totalPages: number;
     }>;
-    findById(id: number): Promise<({
+    findById(id: number, actor: TeacherActor): Promise<({
         students: {
             name: string;
             createdAt: Date;
@@ -85,31 +86,31 @@ export declare class ClassesService {
     update(id: number, data: {
         name?: string;
         description?: string;
-    }): Promise<{
+    }, actor: TeacherActor): Promise<{
         name: string;
         createdAt: Date;
         id: number;
         description: string | null;
         createdBy: number;
     }>;
-    delete(id: number): Promise<{
+    delete(id: number, actor: TeacherActor): Promise<{
         name: string;
         createdAt: Date;
         id: number;
         description: string | null;
         createdBy: number;
     }>;
-    addTeacher(classId: number, teacherId: number): Promise<{
+    addTeacher(classId: number, teacherId: number, actor: TeacherActor): Promise<{
         role: string;
         teacherId: number;
         classId: number;
     }>;
-    removeTeacher(classId: number, teacherId: number): Promise<{
+    removeTeacher(classId: number, teacherId: number, actor: TeacherActor): Promise<{
         role: string;
         teacherId: number;
         classId: number;
     }>;
-    getClassStats(classId: number): Promise<{
+    getClassStats(classId: number, actor: TeacherActor): Promise<{
         average: number;
         max: number;
         totalAnswered: number;

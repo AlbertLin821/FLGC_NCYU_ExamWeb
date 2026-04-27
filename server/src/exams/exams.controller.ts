@@ -44,11 +44,13 @@ export class ExamsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('teacher', 'admin', 'viewer')
   findAll(
+    @Request() req: any,
     @Query('classId') classId?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
     return this.examsService.findAll(
+      req.user,
       classId ? parseInt(classId) : undefined,
       page ? parseInt(page) : undefined,
       limit ? parseInt(limit) : undefined,
@@ -60,12 +62,14 @@ export class ExamsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('teacher', 'admin', 'viewer')
   getResults(
+    @Request() req: any,
     @Param('classId', ParseIntPipe) classId: number,
     @Query('examId') examId?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
     return this.examsService.getResults(
+      req.user,
       classId,
       examId ? parseInt(examId) : undefined,
       page ? parseInt(page) : undefined,
@@ -76,43 +80,43 @@ export class ExamsController {
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('teacher', 'admin', 'viewer')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.examsService.findById(id);
+  findOne(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
+    return this.examsService.findById(id, req.user);
   }
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('teacher', 'admin')
   create(@Body() dto: CreateExamDto, @Request() req: any) {
-    return this.examsService.create({ ...dto, createdBy: req.user.id });
+    return this.examsService.create({ ...dto, createdBy: req.user.id }, req.user);
   }
 
   @Put(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('teacher', 'admin')
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateExamDto) {
-    return this.examsService.update(id, dto);
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateExamDto, @Request() req: any) {
+    return this.examsService.update(id, dto, req.user);
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('teacher', 'admin')
-  delete(@Param('id', ParseIntPipe) id: number) {
-    return this.examsService.delete(id);
+  delete(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
+    return this.examsService.delete(id, req.user);
   }
 
   @Post(':id/publish')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('teacher', 'admin')
-  publish(@Param('id', ParseIntPipe) id: number) {
-    return this.examsService.publish(id);
+  publish(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
+    return this.examsService.publish(id, req.user);
   }
 
   @Post(':id/unpublish')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('teacher', 'admin')
-  unpublish(@Param('id', ParseIntPipe) id: number) {
-    return this.examsService.unpublish(id);
+  unpublish(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
+    return this.examsService.unpublish(id, req.user);
   }
 
   // === Student endpoints（維持無 JWT，由班級／學號流程驗證）===

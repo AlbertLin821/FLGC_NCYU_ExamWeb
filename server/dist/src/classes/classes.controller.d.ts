@@ -58,7 +58,7 @@ export declare class ClassesController {
         limit: number;
         totalPages: number;
     }>;
-    findOne(id: number): Promise<({
+    findOne(id: number, req: any): Promise<({
         students: {
             name: string;
             createdAt: Date;
@@ -79,7 +79,7 @@ export declare class ClassesController {
         description: string | null;
         createdBy: number;
     }) | null>;
-    getStats(id: number): Promise<{
+    getStats(id: number, req: any): Promise<{
         average: number;
         max: number;
         totalAnswered: number;
@@ -91,26 +91,26 @@ export declare class ClassesController {
         description: string | null;
         createdBy: number;
     }>;
-    update(id: number, dto: CreateClassDto): Promise<{
+    update(id: number, dto: CreateClassDto, req: any): Promise<{
         name: string;
         createdAt: Date;
         id: number;
         description: string | null;
         createdBy: number;
     }>;
-    delete(id: number): Promise<{
+    delete(id: number, req: any): Promise<{
         name: string;
         createdAt: Date;
         id: number;
         description: string | null;
         createdBy: number;
     }>;
-    addTeacher(id: number, dto: AddTeacherDto): Promise<{
+    addTeacher(id: number, dto: AddTeacherDto, req: any): Promise<{
         role: string;
         teacherId: number;
         classId: number;
     }>;
-    removeTeacher(id: number, teacherId: number): Promise<{
+    removeTeacher(id: number, teacherId: number, req: any): Promise<{
         role: string;
         teacherId: number;
         classId: number;

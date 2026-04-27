@@ -1,4 +1,5 @@
 import { PrismaService } from '../prisma/prisma.service';
+import { type TeacherActor } from '../auth/access';
 export declare class StudentsService {
     private prisma;
     constructor(prisma: PrismaService);
@@ -23,7 +24,7 @@ export declare class StudentsService {
         limit: number;
         totalPages: number;
     }>;
-    findByClass(classId: number, page?: number, limit?: number): Promise<({
+    findByClass(classId: number, actor: TeacherActor, page?: number, limit?: number): Promise<({
         sessions: ({
             answers: {
                 question: {
@@ -96,7 +97,7 @@ export declare class StudentsService {
         limit: number;
         totalPages: number;
     }>;
-    findById(id: number): Promise<({
+    findById(id: number, actor: TeacherActor): Promise<({
         sessions: ({
             answers: ({
                 question: {
@@ -158,7 +159,7 @@ export declare class StudentsService {
         studentId: string;
         name: string;
         schoolName: string;
-    }[], classId: number): Promise<{
+    }[], classId: number, actor: TeacherActor): Promise<{
         created: number;
         updated: number;
         errors: string[];
@@ -168,7 +169,7 @@ export declare class StudentsService {
         name: string;
         schoolName: string;
         classId: number;
-    }): Promise<{
+    }, actor: TeacherActor): Promise<{
         name: string;
         createdAt: Date;
         id: number;
@@ -182,7 +183,7 @@ export declare class StudentsService {
         name?: string;
         schoolName?: string;
         classId?: number;
-    }): Promise<{
+    }, actor: TeacherActor): Promise<{
         name: string;
         createdAt: Date;
         id: number;
@@ -192,7 +193,7 @@ export declare class StudentsService {
         lockedUntil: Date | null;
         classId: number;
     }>;
-    delete(id: number): Promise<{
+    delete(id: number, actor: TeacherActor): Promise<{
         name: string;
         createdAt: Date;
         id: number;
