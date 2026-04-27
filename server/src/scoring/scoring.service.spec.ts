@@ -32,6 +32,12 @@ describe('ScoringService', () => {
       update: jest.fn().mockResolvedValue({}),
       findUnique: jest.fn(),
     },
+    exam: {
+      findFirst: jest.fn().mockResolvedValue({ id: 1, examClasses: [] }),
+    },
+    student: {
+      findUnique: jest.fn().mockResolvedValue({ id: 1, classes: [] }),
+    },
   };
 
   beforeEach(async () => {
@@ -157,14 +163,17 @@ describe('ScoringService', () => {
   });
 
   it('manualGradeAnswer sets teacher_manual and clamps score', async () => {
-    mockPrisma.answer.findUnique.mockResolvedValue({ id: 3, sessionId: 1 });
+    mockPrisma.answer.findUnique.mockResolvedValue({
+      id: 3,
+      session: { examId: 1, student: { id: 1 } },
+    });
     mockPrisma.answer.update.mockResolvedValue({ id: 3, aiModel: 'teacher_manual' });
     mockPrisma.examSession.findUnique.mockResolvedValue({
       id: 1,
       exam: { questions: [] },
     });
 
-    const out = await service.manualGradeAnswer(3, 85.4, '佳');
+    const out = await service.manualGradeAnswer(3, 85.4, '佳', { id: 1, role: 'admin' });
 
     expect(mockPrisma.answer.update).toHaveBeenCalledWith(
       expect.objectContaining({

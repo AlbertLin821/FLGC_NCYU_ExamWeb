@@ -11,11 +11,11 @@ export const studentMessages = {
     home: {
       chooseRole: '選擇身分類別進入平台。',
       studentTitle: '學生',
-      studentTitleEn: 'student',
+      studentTitleEn: 'STUDENT',
       studentDesc: '進行 AI 英文寫作評測、查看可考考卷',
       studentCta: '進入考試',
       teacherTitle: '老師',
-      teacherTitleEn: 'Teacher',
+      teacherTitleEn: 'TEACHER',
       teacherAdmin: '/ 管理端',
       teacherDesc: '出題管理、批改流程、班級與評測統計',
       teacherCtaEnter: '進入管理端',
@@ -72,8 +72,11 @@ export const studentMessages = {
       question: '第 {{n}} 題',
       essayPlaceholder:
         '在這邊輸入您的答案（問答題可留白，按下一題即視為不作答）',
+      paragraphPlaceholder:
+        '請在此輸入段落寫作內容（建議約 500 字）',
+      wordCount: '目前字數',
       hintEssay:
-        '* 選擇／多選於按「下一題」時儲存；問答題另約每 45 秒自動儲存一次（內容有變更時才寫入）',
+        '* 選擇／多選於按「下一題」時儲存；非選擇題另約每 45 秒自動儲存一次（內容有變更時才寫入）',
       hintChoice: '* 按「下一題」時儲存該題答案',
       next: '下一題',
       submit: '確認交卷',
@@ -154,8 +157,11 @@ export const studentMessages = {
       question: 'Question {{n}}',
       essayPlaceholder:
         'Type your answer (essay may be left blank; Next counts as no answer for that item)',
+      paragraphPlaceholder:
+        'Type your paragraph response here (about 500 words is recommended).',
+      wordCount: 'Word count',
       hintEssay:
-        '* Multiple choice is saved on “Next”. Essays auto-save about every 45s when the text changes.',
+        '* Multiple choice is saved on “Next”. Writing responses auto-save about every 45s when the text changes.',
       hintChoice: '* Your answer is saved when you press “Next”.',
       next: 'Next',
       submit: 'Submit',

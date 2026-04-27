@@ -4,7 +4,7 @@ import {
 } from '@nestjs/common';
 import { ExamsService } from './exams.service';
 import { JwtAuthGuard, RolesGuard, Roles } from '../auth/guards';
-import { IsNotEmpty, IsString, IsOptional, IsInt, IsDateString, IsArray, ArrayMinSize } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, IsInt, IsDateString, IsArray, ArrayMinSize, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateExamDto {
@@ -32,7 +32,9 @@ export class UpdateExamDto {
 
 export class SubmitAnswerDto {
   @IsInt() questionId: number;
-  @IsNotEmpty() @IsString() content: string;
+  @IsString() content: string;
+  @IsOptional() @IsInt() @Min(0) writingDurationSeconds?: number;
+  @IsOptional() @IsInt() @Min(0) wordCount?: number;
 }
 
 @Controller('api/exams')
@@ -130,7 +132,10 @@ export class ExamsController {
     @Param('sessionId', ParseIntPipe) sessionId: number,
     @Body() dto: SubmitAnswerDto,
   ) {
-    return this.examsService.submitAnswer(sessionId, dto.questionId, dto.content);
+    return this.examsService.submitAnswer(sessionId, dto.questionId, dto.content, {
+      writingDurationSeconds: dto.writingDurationSeconds,
+      wordCount: dto.wordCount,
+    });
   }
 
   @Post('sessions/:sessionId/submit')

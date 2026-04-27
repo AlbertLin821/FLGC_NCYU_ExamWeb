@@ -245,8 +245,13 @@ export const examsApi = {
       invalidateGetCache(['/students', '/exams/results', '/dashboard']);
       return res;
     }),
-  submitAnswer: (sessionId: number, questionId: number, content: string) =>
-    api.post(`/exams/sessions/${sessionId}/answer`, { questionId, content }),
+  submitAnswer: (
+    sessionId: number,
+    questionId: number,
+    content: string,
+    metrics?: { writingDurationSeconds?: number; wordCount?: number },
+  ) =>
+    api.post(`/exams/sessions/${sessionId}/answer`, { questionId, content, ...metrics }),
   submit: (sessionId: number) =>
     api.post(`/exams/sessions/${sessionId}/submit`).then((res) => {
       invalidateGetCache(['/students', '/exams/results', '/dashboard']);

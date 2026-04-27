@@ -16,6 +16,15 @@ interface Question {
   orderNum: number;
 }
 
+function isWritingQuestion(type: string | undefined): boolean {
+  return type === 'essay' || type === 'paragraph_writing';
+}
+
+function countEnglishWords(input: string): number {
+  const matches = String(input || '').trim().match(/[A-Za-z]+(?:[-'][A-Za-z]+)*/g);
+  return matches ? matches.length : 0;
+}
+
 const ExamRoom: React.FC = () => {
   const { examId } = useParams<{ examId: string }>();
   const navigate = useNavigate();
@@ -46,6 +55,7 @@ const ExamRoom: React.FC = () => {
   const lastEssaySavedContentRef = useRef<string>('');
   const userAnswerRef = useRef(userAnswer);
   const cheatReportedRef = useRef(false);
+  const questionEnteredAtRef = useRef(Date.now());
   const student = JSON.parse(localStorage.getItem('student') || '{}');
 
   const applyExamState = useCallback((payload: any) => {
@@ -307,12 +317,20 @@ const ExamRoom: React.FC = () => {
 
   useEffect(() => {
     lastEssaySavedContentRef.current = '';
+    questionEnteredAtRef.current = Date.now();
   }, [currentIdx, questions[currentIdx]?.id]);
+
+  const currentWritingMetrics = useCallback((text: string) => {
+    return {
+      writingDurationSeconds: Math.max(0, Math.round((Date.now() - questionEnteredAtRef.current) / 1000)),
+      wordCount: countEnglishWords(text),
+    };
+  }, []);
 
   useEffect(() => {
     if (!session?.id || isPaused || loading) return;
     const q = questions[currentIdx];
-    if (q?.type !== 'essay') return;
+    if (!isWritingQuestion(q?.type)) return;
 
     const id = window.setInterval(() => {
       if (hasSubmittedRef.current) return;
@@ -321,7 +339,7 @@ const ExamRoom: React.FC = () => {
       if (!String(draft).trim()) return;
       void (async () => {
         try {
-          await examsApi.submitAnswer(session.id, q.id, draft);
+          await examsApi.submitAnswer(session.id, q.id, draft, currentWritingMetrics(draft));
           lastEssaySavedContentRef.current = draft;
         } catch {
           // 週期儲存失敗時不阻斷作答；下一題或下次 interval 可再試
@@ -330,7 +348,7 @@ const ExamRoom: React.FC = () => {
     }, 45_000);
 
     return () => clearInterval(id);
-  }, [session, session?.id, isPaused, loading, currentIdx, questions]);
+  }, [session, session?.id, isPaused, loading, currentIdx, questions, currentWritingMetrics]);
 
   const handleSubmitExam = useCallback(async () => {
     if (!session?.id || hasSubmittedRef.current) return;
@@ -344,7 +362,12 @@ const ExamRoom: React.FC = () => {
     try {
       const q = questions[currentIdx];
       if (q) {
-        await examsApi.submitAnswer(session.id, q.id, userAnswer);
+        await examsApi.submitAnswer(
+          session.id,
+          q.id,
+          userAnswer,
+          isWritingQuestion(q.type) ? currentWritingMetrics(userAnswer) : undefined,
+        );
       }
       await examsApi.submit(session.id);
       try {
@@ -362,7 +385,7 @@ const ExamRoom: React.FC = () => {
     } finally {
       setSubmitting(false);
     }
-  }, [session, isPaused, questions, currentIdx, userAnswer, navigate, locale]);
+  }, [session, isPaused, questions, currentIdx, userAnswer, navigate, locale, currentWritingMetrics]);
 
   // Timer：每秒遞減（與後端 timeRemainingSeconds 對齊後，仍以本地倒數顯示；重新進入頁面會再向後端取剩餘時間）
   useEffect(() => {
@@ -383,16 +406,21 @@ const ExamRoom: React.FC = () => {
       return;
     }
     const q = questions[currentIdx];
-    const isEssay = q?.type === 'essay';
-    if (!isEssay && !userAnswer.trim()) {
+    const isWriting = isWritingQuestion(q?.type);
+    if (!isWriting && !userAnswer.trim()) {
       alert(getStudentString(locale, 'exam.alertAnswerFirst'));
       return;
     }
 
     setSubmitting(true);
     try {
-      await examsApi.submitAnswer(session.id, q.id, userAnswer);
-      if (q.type === 'essay') {
+      await examsApi.submitAnswer(
+        session.id,
+        q.id,
+        userAnswer,
+        isWriting ? currentWritingMetrics(userAnswer) : undefined,
+      );
+      if (isWriting) {
         lastEssaySavedContentRef.current = userAnswer;
       }
       if (currentIdx < questions.length - 1) {
@@ -522,19 +550,30 @@ const ExamRoom: React.FC = () => {
                 })}
               </div>
             ) : (
-              <textarea
-                className="form-input answer-textarea"
-                placeholder={t('exam.essayPlaceholder')}
-                value={userAnswer}
-                onChange={(e) => setUserAnswer(e.target.value)}
-                disabled={submitting}
-              />
+              <>
+                <textarea
+                  className="form-input answer-textarea"
+                  placeholder={
+                    q?.type === 'paragraph_writing'
+                      ? t('exam.paragraphPlaceholder')
+                      : t('exam.essayPlaceholder')
+                  }
+                  value={userAnswer}
+                  onChange={(e) => setUserAnswer(e.target.value)}
+                  disabled={submitting}
+                />
+                {q?.type === 'paragraph_writing' && (
+                  <div className="text-xs text-secondary mt-xs">
+                    {t('exam.wordCount')}: {countEnglishWords(userAnswer)}
+                  </div>
+                )}
+              </>
             )}
           </div>
 
           <div className="flex flex-col-reverse gap-md sm:flex-row sm:flex-wrap justify-between items-stretch sm:items-center">
             <div className="text-xs text-secondary self-center sm:self-auto text-center sm:text-left">
-              {q?.type === 'essay' ? t('exam.hintEssay') : t('exam.hintChoice')}
+              {isWritingQuestion(q?.type) ? t('exam.hintEssay') : t('exam.hintChoice')}
             </div>
             <button
               className="btn btn-primary btn-lg w-full sm:w-auto shrink-0"

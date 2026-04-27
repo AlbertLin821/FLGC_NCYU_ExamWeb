@@ -6,7 +6,7 @@ import { ScoringService } from '../scoring/scoring.service';
 
 describe('ExamsService submit flows', () => {
   let service: ExamsService;
-  const mockScoreObjectiveOnly = jest.fn().mockResolvedValue([]);
+  const mockScoreSubmittedSession = jest.fn().mockResolvedValue({ objective: [], writing: { queued: 0 } });
   const mockPrisma = {
     $transaction: jest.fn((fn: (tx: typeof mockPrisma) => Promise<unknown>) => fn(mockPrisma)),
     $queryRaw: jest.fn().mockResolvedValue([{ c: 1 }]),
@@ -19,19 +19,22 @@ describe('ExamsService submit flows', () => {
     answer: {
       upsert: jest.fn(),
     },
+    question: {
+      findUnique: jest.fn(),
+    },
   };
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    mockScoreObjectiveOnly.mockReset();
-    mockScoreObjectiveOnly.mockResolvedValue([]);
+    mockScoreSubmittedSession.mockReset();
+    mockScoreSubmittedSession.mockResolvedValue({ objective: [], writing: { queued: 0 } });
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ExamsService,
         { provide: PrismaService, useValue: mockPrisma },
         {
           provide: ScoringService,
-          useValue: { scoreObjectiveOnly: mockScoreObjectiveOnly },
+          useValue: { scoreSubmittedSession: mockScoreSubmittedSession },
         },
       ],
     }).compile();
@@ -48,14 +51,14 @@ describe('ExamsService submit flows', () => {
 
     await expect(service.submitExam(1)).rejects.toBeInstanceOf(BadRequestException);
     await expect(service.submitExam(1)).rejects.toMatchObject({ message: '已交卷' });
-    expect(mockScoreObjectiveOnly).not.toHaveBeenCalled();
+    expect(mockScoreSubmittedSession).not.toHaveBeenCalled();
   });
 
   it('submitExam rejects when session missing', async () => {
     mockPrisma.examSession.findUnique.mockResolvedValue(null);
 
     await expect(service.submitExam(999)).rejects.toBeInstanceOf(NotFoundException);
-    expect(mockScoreObjectiveOnly).not.toHaveBeenCalled();
+    expect(mockScoreSubmittedSession).not.toHaveBeenCalled();
   });
 
   it('submitExam triggers background scoring without awaiting failure', async () => {
@@ -68,13 +71,13 @@ describe('ExamsService submit flows', () => {
       });
       mockPrisma.examSession.updateMany.mockResolvedValue({ count: 1 });
       mockPrisma.examSession.findUniqueOrThrow.mockResolvedValue({ id: 2, status: 'submitted' });
-      mockScoreObjectiveOnly.mockRejectedValue(new Error('scoring boom'));
+      mockScoreSubmittedSession.mockRejectedValue(new Error('scoring boom'));
 
       const result = await service.submitExam(2);
 
       expect(result.status).toBe('submitted');
       await new Promise((r) => setImmediate(r));
-      expect(mockScoreObjectiveOnly).toHaveBeenCalledWith(2);
+      expect(mockScoreSubmittedSession).toHaveBeenCalledWith(2);
     } finally {
       errLog.mockRestore();
     }
@@ -103,6 +106,7 @@ describe('ExamsService submit flows', () => {
       startedAt: started,
       exam: { timeLimit: 60 },
     });
+    mockPrisma.question.findUnique.mockResolvedValue({ id: 20, examId: undefined, type: 'essay' });
     mockPrisma.answer.upsert.mockResolvedValue({ id: 1 });
 
     await service.submitAnswer(4, 20, 'a');
@@ -112,7 +116,7 @@ describe('ExamsService submit flows', () => {
     expect(mockPrisma.answer.upsert).toHaveBeenLastCalledWith(
       expect.objectContaining({
         where: { sessionId_questionId: { sessionId: 4, questionId: 20 } },
-        update: { content: 'b' },
+        update: expect.objectContaining({ content: 'b' }),
       }),
     );
   });

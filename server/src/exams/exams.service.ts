@@ -26,6 +26,11 @@ function parseTeacherExamDate(input: string): Date {
   return parsed;
 }
 
+function countEnglishWords(input: string): number {
+  const matches = String(input || '').trim().match(/[A-Za-z]+(?:[-'][A-Za-z]+)*/g);
+  return matches ? matches.length : 0;
+}
+
 @Injectable()
 export class ExamsService {
   constructor(
@@ -330,7 +335,12 @@ export class ExamsService {
     }
   }
 
-  async submitAnswer(sessionId: number, questionId: number, content: string) {
+  async submitAnswer(
+    sessionId: number,
+    questionId: number,
+    content: string,
+    metrics?: { writingDurationSeconds?: number; wordCount?: number },
+  ) {
     const session = await this.prisma.examSession.findUnique({
       where: { id: sessionId },
       include: { exam: true },
@@ -350,16 +360,39 @@ export class ExamsService {
     }
     const question = await this.prisma.question.findUnique({
       where: { id: questionId },
-      select: { id: true, examId: true },
+      select: { id: true, examId: true, type: true },
     });
     if (!question || question.examId !== session.examId) {
       throw new BadRequestException('題目不屬於此考卷');
     }
+    const isWritingQuestion = ['essay', 'paragraph_writing'].includes(question.type);
+    const normalizedContent = String(content ?? '');
+    const writingDurationSeconds =
+      metrics?.writingDurationSeconds !== undefined
+        ? Math.max(0, Math.round(Number(metrics.writingDurationSeconds)) || 0)
+        : undefined;
+    const wordCount =
+      metrics?.wordCount !== undefined
+        ? Math.max(0, Math.round(Number(metrics.wordCount)) || 0)
+        : isWritingQuestion
+          ? countEnglishWords(normalizedContent)
+          : undefined;
+
     return this.prisma.$transaction(async (tx) => {
       const row = await tx.answer.upsert({
         where: { sessionId_questionId: { sessionId, questionId } },
-        update: { content },
-        create: { sessionId, questionId, content },
+        update: {
+          content: normalizedContent,
+          ...(writingDurationSeconds !== undefined ? { writingDurationSeconds } : {}),
+          ...(wordCount !== undefined ? { wordCount } : {}),
+        },
+        create: {
+          sessionId,
+          questionId,
+          content: normalizedContent,
+          ...(writingDurationSeconds !== undefined ? { writingDurationSeconds } : {}),
+          ...(wordCount !== undefined ? { wordCount } : {}),
+        },
       });
       const agg = await tx.$queryRaw<[{ c: number }]>(
         Prisma.sql`SELECT COUNT(*)::int AS c FROM "answers" WHERE "session_id" = ${sessionId} AND "content" IS NOT NULL AND TRIM("content") <> ''`,
@@ -397,8 +430,8 @@ export class ExamsService {
     const session = await this.prisma.examSession.findUniqueOrThrow({ where: { id: sessionId } });
 
     // 僅客觀題計分；問答題留待教師集體批閱
-    this.scoringService.scoreObjectiveOnly(sessionId).catch((err) => {
-      console.error(`Objective scoring failed for session ${sessionId}:`, err);
+    this.scoringService.scoreSubmittedSession(sessionId).catch((err) => {
+      console.error(`Background scoring failed for session ${sessionId}:`, err);
     });
 
     return session;

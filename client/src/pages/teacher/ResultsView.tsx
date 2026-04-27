@@ -47,6 +47,9 @@ const ResultsView: React.FC = () => {
   const calculateTotal = (answers: any[]) => sessionScorePercent(answers);
 
   const statusLabel = (row: any) => {
+    if (row.hasAiGrading) {
+      return { text: 'AI 批改中', className: 'badge-warning' };
+    }
     if (row.hasPendingReview) {
       return { text: '已評分（待複閱）', className: 'badge-warning' };
     }
@@ -59,7 +62,7 @@ const ResultsView: React.FC = () => {
   const handleTriggerScoring = async (sessionId: number) => {
     try {
       await scoringApi.scoreSession(sessionId);
-      alert('已重新計算該場次之客觀題（選擇題／多選）');
+      alert('已將該場次送入 AI 批改佇列');
       if (selectedClassId) {
         const res = await examsApi.getResults(selectedClassId, selectedExamId ?? undefined);
         setResults(res.data);
@@ -74,7 +77,7 @@ const ResultsView: React.FC = () => {
       alert('請先選擇班級與單一考卷');
       return;
     }
-    if (!window.confirm('將對此班、此考卷所有「已交卷」學生逐人執行問答題集體 AI 批閱，可能耗時較久。確定繼續？')) {
+    if (!window.confirm('將對此班、此考卷所有「已交卷」學生重新排入 AI 批改佇列，可能耗時較久。確定繼續？')) {
       return;
     }
     setBatchGrading(true);
@@ -153,7 +156,7 @@ const ResultsView: React.FC = () => {
               }
               onClick={handleBatchEssayGrade}
             >
-              {batchGrading ? '集體批閱中…' : '集體 AI 批閱答題'}
+              {batchGrading ? '排隊中…' : '重新排隊 AI 批改非選擇題'}
             </button>
           )}
           <button className="btn btn-secondary" onClick={handleExport} disabled={results.length === 0}>
@@ -243,10 +246,10 @@ const ResultsView: React.FC = () => {
                           <button
                             type="button"
                             className="btn btn-xs btn-secondary"
-                            title="僅重算選擇題與多選，不含問答題 AI"
+                            title="重新計算客觀題，並將非選擇題送入 AI 批改佇列"
                             onClick={() => handleTriggerScoring(r.id)}
                           >
-                            重算客觀題
+                            啟動 AI 批改
                           </button>
                         )}
                       </div>

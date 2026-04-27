@@ -41,7 +41,7 @@ const HomePage: React.FC = () => {
               <h3 className="mb-sm">
                 {t('home.studentTitle')}{' '}
                 <span className="text-secondary text-base font-normal" lang="en">
-                  student
+                  STUDENT
                 </span>
               </h3>
             )}
@@ -58,7 +58,7 @@ const HomePage: React.FC = () => {
             <h3 className="mb-sm">
               老師{' '}
               <span className="text-secondary text-base font-normal" lang="en">
-                Teacher
+                TEACHER
               </span>
               {' '}
               / 管理端

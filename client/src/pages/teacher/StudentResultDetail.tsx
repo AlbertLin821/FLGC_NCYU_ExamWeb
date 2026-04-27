@@ -26,6 +26,13 @@ function formatQuestionOptions(options: unknown): string | null {
   return lines.length ? lines.join('\n') : null;
 }
 
+function formatDuration(seconds: unknown): string {
+  const total = Math.max(0, Math.round(Number(seconds) || 0));
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m} 分 ${s} 秒`;
+}
+
 const AnswerCard: React.FC<{
   ans: any;
   idx: number;
@@ -34,6 +41,7 @@ const AnswerCard: React.FC<{
   onSave: (answerId: number, aiScore: number, aiFeedback: string) => Promise<void>;
 }> = ({ ans, idx, isViewer, savingAnswerId, onSave }) => {
   const pending = ans.aiModel === 'pending_review';
+  const aiGrading = ans.aiModel === 'ai_grading';
   const teacherManual = ans.aiModel === 'teacher_manual';
   const [scoreIn, setScoreIn] = useState('');
   const [fbIn, setFbIn] = useState('');
@@ -96,7 +104,8 @@ const AnswerCard: React.FC<{
             </span>
           )}
           {pending && <span className="badge badge-warning">待教師複閱</span>}
-          {!hasScore && !pending && <span className="badge badge-secondary">未評分</span>}
+          {aiGrading && <span className="badge badge-warning">AI 批改中</span>}
+          {!hasScore && !pending && !aiGrading && <span className="badge badge-secondary">未評分</span>}
         </div>
       </header>
 
@@ -167,6 +176,42 @@ const AnswerCard: React.FC<{
           )}
         </div>
 
+        {(ans.question?.type === 'essay' || ans.question?.type === 'paragraph_writing') && (
+          <div
+            className="text-xs flex flex-wrap gap-x-lg gap-y-xs py-sm px-md rounded-md"
+            style={{ background: '#f8fafc', color: 'var(--color-text-secondary)' }}
+          >
+            <span>
+              <span className="font-semibold" style={{ color: 'var(--color-text)' }}>
+                寫作時間：
+              </span>
+              {formatDuration(ans.writingDurationSeconds)}
+            </span>
+            <span>
+              <span className="font-semibold" style={{ color: 'var(--color-text)' }}>
+                寫作字數：
+              </span>
+              {Number(ans.wordCount) || 0}
+            </span>
+            {ans.question?.type === 'paragraph_writing' && ans.writingScore !== null && ans.writingScore !== undefined && (
+              <span>
+                <span className="font-semibold" style={{ color: 'var(--color-text)' }}>
+                  TOEFL 分數：
+                </span>
+                {Number(ans.writingScore)} / 5
+              </span>
+            )}
+            {ans.cefrLevel && (
+              <span>
+                <span className="font-semibold" style={{ color: 'var(--color-text)' }}>
+                  CEFR：
+                </span>
+                {ans.cefrLevel}
+              </span>
+            )}
+          </div>
+        )}
+
         {ans.aiFeedback && (
           <div
             className="text-sm p-md rounded-md"
@@ -175,14 +220,14 @@ const AnswerCard: React.FC<{
               background: 'var(--color-bg)',
             }}
           >
-            <span className="font-bold">{pending ? '系統訊息' : '評語與回饋'}</span>
+            <span className="font-bold">{pending || aiGrading ? '系統訊息' : '評語與回饋'}</span>
             <p className="mt-xs mb-0" style={{ whiteSpace: 'pre-wrap', lineHeight: 1.65 }}>
               {ans.aiFeedback}
             </p>
           </div>
         )}
 
-        {pending && !isViewer && (
+        {false && pending && !isViewer && (
           <div
             className="p-md rounded-md border border-dashed"
             style={{ borderColor: '#94a3b8', background: 'var(--color-bg)' }}

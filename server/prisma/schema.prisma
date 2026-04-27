@@ -181,6 +181,10 @@ model Answer {
   aiScore    Decimal? @map("ai_score") @db.Decimal(5, 2)
   aiFeedback String?  @map("ai_feedback")
   aiModel    String?  @map("ai_model")
+  writingDurationSeconds Int? @map("writing_duration_seconds")
+  wordCount Int? @map("word_count")
+  writingScore Decimal? @map("writing_score") @db.Decimal(4, 2)
+  cefrLevel String? @map("cefr_level")
   createdAt  DateTime @default(now()) @map("created_at")
 
   session    ExamSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)

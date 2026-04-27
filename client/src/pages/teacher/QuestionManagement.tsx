@@ -13,6 +13,21 @@ interface Question {
   maxPoints?: number;
 }
 
+function questionTypeLabel(type: string): string {
+  switch (type) {
+    case 'multiple_choice':
+      return '單選';
+    case 'multiple_selection':
+      return '複選';
+    case 'paragraph_writing':
+      return '段落寫作';
+    case 'essay':
+      return '問答';
+    default:
+      return type;
+  }
+}
+
 interface Exam {
   id: number;
   title: string;
@@ -192,6 +207,7 @@ const QuestionManagement: React.FC = () => {
                 <option value="multiple_choice">選擇題 (單選)</option>
                 <option value="multiple_selection">選擇題 (複選)</option>
                 <option value="essay">問答題 / 自由造句</option>
+                <option value="paragraph_writing">段落寫作（約 500 字）</option>
               </select>
             </div>
 
@@ -209,10 +225,16 @@ const QuestionManagement: React.FC = () => {
               <p className="text-xs text-secondary mt-xs">AI 與自動評分仍以 0–100% 計算，此處為該題佔整卷比重（加權）。</p>
             </div>
 
-            {(type === 'multiple_choice' || type === 'multiple_selection' || type === 'essay') && (
+            {(type === 'multiple_choice' || type === 'multiple_selection' || type === 'essay' || type === 'paragraph_writing') && (
               <div className="form-group mb-md">
                 <label className="form-label">題目內容</label>
-                <textarea className="form-input" placeholder="請輸入題目敘述" value={content} onChange={(e) => setContent(e.target.value)} required />
+                <textarea
+                  className="form-input"
+                  placeholder={type === 'paragraph_writing' ? '請輸入討論題目或段落寫作提示' : '請輸入題目敘述'}
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  required
+                />
               </div>
             )}
 
@@ -279,7 +301,7 @@ const QuestionManagement: React.FC = () => {
                       <td>{q.orderNum}</td>
                       <td>
                         <span className="text-xs text-secondary">
-                          {q.type === 'multiple_choice' ? '單選' : q.type === 'multiple_selection' ? '複選' : '問答'}
+                          {questionTypeLabel(q.type)}
                         </span>
                       </td>
                       {editingId === q.id ? (
@@ -289,6 +311,7 @@ const QuestionManagement: React.FC = () => {
                               <option value="multiple_choice">單選</option>
                               <option value="multiple_selection">複選</option>
                               <option value="essay">問答</option>
+                              <option value="paragraph_writing">段落寫作</option>
                             </select>
                             <label className="form-label text-sm">配分（滿分）</label>
                             <input

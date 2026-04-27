@@ -9,6 +9,8 @@ export function questionTypeLabel(type: string | undefined): string {
       return '多選題';
     case 'essay':
       return '問答題';
+    case 'paragraph_writing':
+      return '段落寫作';
     default:
       return type ? String(type) : '題型未知';
   }
@@ -30,6 +32,9 @@ export function describeAnswerScoring(aiModel: string | null | undefined): {
   }
   if (m === 'pending_review') {
     return { source: '待複閱' };
+  }
+  if (m === 'ai_grading') {
+    return { source: 'AI 批改中' };
   }
   if (m === 'system') {
     return { source: '系統比對（客觀題）' };
