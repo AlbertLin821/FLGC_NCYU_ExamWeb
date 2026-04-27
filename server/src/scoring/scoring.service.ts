@@ -17,6 +17,8 @@ import {
 
 /** 單題與集體批閱使用之 Gemini 模型；可於環境變數 GEMINI_MODEL 覆寫 */
 const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+const MAX_GEMINI_REQUESTS_PER_MINUTE = 15;
+const MAX_WRITING_QUEUE_RETRIES = 3;
 
 interface ScoringResult {
   score: number;
@@ -54,6 +56,12 @@ type ParsedWritingAiItem = {
   cefrLevel?: string | null;
 };
 
+type WritingQueueJob = {
+  sessionId: number;
+  answerIds: number[];
+  attempts: number;
+};
+
 /** 供測試與日誌分類：是否為配額／速率限制類錯誤 */
 export function classifyAiScoringError(err: unknown): 'rate_limit' | 'provider' | 'other' {
   const msg = err instanceof Error ? err.message : String(err);
@@ -71,7 +79,13 @@ export class ScoringService {
   private readonly logger = new Logger(ScoringService.name);
   private openai: OpenAI | null = null;
   private gemini: GoogleGenAI | null = null;
-  private writingQueue: Promise<void> = Promise.resolve();
+  private readonly writingJobs: WritingQueueJob[] = [];
+  private readonly writingJobsBySession = new Map<number, WritingQueueJob>();
+  private readonly writingJobsInFlight = new Set<number>();
+  private writingQueueTimer: ReturnType<typeof setTimeout> | null = null;
+  private writingPumpActive = false;
+  private writingMinuteBucket = 0;
+  private writingRequestsStartedThisMinute = 0;
 
   constructor(
     private prisma: PrismaService,
@@ -90,6 +104,154 @@ export class ScoringService {
 
   private resolveGeminiModel(): string {
     return this.config.get<string>('GEMINI_MODEL', DEFAULT_GEMINI_MODEL);
+  }
+
+  private resolveOpenAiModel(): string {
+    const configured = this.config.get<string>('AI_MODEL');
+    if (configured && /^(gpt-|o\d)/i.test(configured)) {
+      return configured;
+    }
+    return 'gpt-4o-mini';
+  }
+
+  private resolvePrimaryAiProvider(): 'openai' | 'gemini' {
+    const configured = this.config.get<string>('AI_MODEL');
+    if (configured) {
+      return /^(gpt-|o\d)/i.test(configured) ? 'openai' : 'gemini';
+    }
+    if (this.gemini) {
+      return 'gemini';
+    }
+    return 'openai';
+  }
+
+  private getCurrentMinuteBucket(): number {
+    return Math.floor(Date.now() / 60_000);
+  }
+
+  private resetWritingMinuteBucketIfNeeded(): void {
+    const bucket = this.getCurrentMinuteBucket();
+    if (this.writingMinuteBucket !== bucket) {
+      this.writingMinuteBucket = bucket;
+      this.writingRequestsStartedThisMinute = 0;
+    }
+  }
+
+  private msUntilNextMinute(): number {
+    const now = Date.now();
+    return Math.max(1_000, 60_000 - (now % 60_000) + 250);
+  }
+
+  private scheduleWritingPump(delayMs: number): void {
+    if (this.writingQueueTimer) {
+      return;
+    }
+    this.writingQueueTimer = setTimeout(() => {
+      this.writingQueueTimer = null;
+      void this.pumpWritingQueue();
+    }, delayMs);
+  }
+
+  private async markWritingAnswersQueued(answerIds: number[], attempts: number): Promise<void> {
+    const feedback =
+      attempts > 0
+        ? 'AI 服務暫時忙碌，已重新排入佇列，系統將於下一分鐘繼續批改。'
+        : `已進入 AI 批改佇列，系統會依每分鐘 ${MAX_GEMINI_REQUESTS_PER_MINUTE} 筆上限分批送出。`;
+    await this.prisma.answer.updateMany({
+      where: { id: { in: answerIds } },
+      data: {
+        aiScore: null,
+        aiFeedback: feedback,
+        aiModel: 'ai_queued',
+      },
+    });
+  }
+
+  private async markWritingAnswersGrading(answerIds: number[]): Promise<void> {
+    await this.prisma.answer.updateMany({
+      where: { id: { in: answerIds } },
+      data: {
+        aiScore: null,
+        aiFeedback: 'AI 批改中，請稍後重新整理。',
+        aiModel: 'ai_grading',
+      },
+    });
+  }
+
+  private upsertWritingQueueJob(sessionId: number, answerIds: number[], attempts = 0): void {
+    const existing = this.writingJobsBySession.get(sessionId);
+    if (existing) {
+      existing.answerIds = Array.from(new Set([...existing.answerIds, ...answerIds]));
+      existing.attempts = Math.max(existing.attempts, attempts);
+      return;
+    }
+    if (this.writingJobsInFlight.has(sessionId)) {
+      return;
+    }
+    const job: WritingQueueJob = { sessionId, answerIds: Array.from(new Set(answerIds)), attempts };
+    this.writingJobs.push(job);
+    this.writingJobsBySession.set(sessionId, job);
+  }
+
+  private async requeueWritingJob(job: WritingQueueJob): Promise<void> {
+    await this.markWritingAnswersQueued(job.answerIds, job.attempts);
+    this.upsertWritingQueueJob(job.sessionId, job.answerIds, job.attempts);
+    this.scheduleWritingPump(this.msUntilNextMinute());
+  }
+
+  private async runWritingQueueJob(job: WritingQueueJob): Promise<void> {
+    try {
+      await this.markWritingAnswersGrading(job.answerIds);
+      await this.gradeWritingAnswersForSession(job.sessionId, job.answerIds);
+    } catch (err) {
+      if (this.isRetryableAiError(err) && job.attempts < MAX_WRITING_QUEUE_RETRIES) {
+        this.logger.warn(
+          `writing grading retry queued session=${job.sessionId} attempt=${job.attempts + 1}: ${this.stringifyAiErr(err).slice(0, 300)}`,
+        );
+        await this.requeueWritingJob({
+          sessionId: job.sessionId,
+          answerIds: job.answerIds,
+          attempts: job.attempts + 1,
+        });
+        return;
+      }
+      await this.handleWritingAiFailure(job.answerIds, err);
+    } finally {
+      this.writingJobsInFlight.delete(job.sessionId);
+      void this.pumpWritingQueue();
+    }
+  }
+
+  private async pumpWritingQueue(): Promise<void> {
+    if (this.writingPumpActive) {
+      return;
+    }
+    this.writingPumpActive = true;
+    try {
+      this.resetWritingMinuteBucketIfNeeded();
+      while (
+        this.writingJobs.length > 0 &&
+        this.writingRequestsStartedThisMinute < MAX_GEMINI_REQUESTS_PER_MINUTE
+      ) {
+        const job = this.writingJobs.shift();
+        if (!job) {
+          break;
+        }
+        const latest = this.writingJobsBySession.get(job.sessionId);
+        if (latest !== job) {
+          continue;
+        }
+        this.writingJobsBySession.delete(job.sessionId);
+        this.writingJobsInFlight.add(job.sessionId);
+        this.writingRequestsStartedThisMinute += 1;
+        void this.runWritingQueueJob(job);
+      }
+      if (this.writingJobs.length > 0) {
+        this.scheduleWritingPump(this.msUntilNextMinute());
+      }
+    } finally {
+      this.writingPumpActive = false;
+    }
   }
 
   private buildWritingBatchPrompt(items: WritingAnswerForAi[]): string {
@@ -199,7 +361,7 @@ ${questionBlocks}`;
   async scoreWithOpenAI(prompt: string): Promise<ScoringResult> {
     if (!this.openai) throw new Error('OpenAI API key not configured');
 
-    const model = this.config.get<string>('AI_MODEL', 'gpt-4o-mini');
+    const model = this.resolveOpenAiModel();
     const response = await this.openai.chat.completions.create({
       model,
       messages: [{ role: 'user', content: prompt }],
@@ -419,10 +581,10 @@ ${questionBlocks}`;
   private async callBatchGradingModel(
     prompt: string,
   ): Promise<{ raw: string; modelUsed: string }> {
-    const aiModel = this.config.get<string>('AI_MODEL', 'gpt-4o-mini');
-    if (aiModel.startsWith('gpt') || aiModel.startsWith('o')) {
-      const raw = await this.callBatchGradingOpenAI(aiModel, prompt);
-      return { raw, modelUsed: aiModel };
+    if (this.resolvePrimaryAiProvider() === 'openai') {
+      const model = this.resolveOpenAiModel();
+      const raw = await this.callBatchGradingOpenAI(model, prompt);
+      return { raw, modelUsed: model };
     }
     try {
       const raw = await this.callBatchGradingGemini(prompt);
@@ -440,20 +602,19 @@ ${questionBlocks}`;
   }
 
   async scoreAI(prompt: string): Promise<ScoringResult> {
-    const aiModel = this.config.get<string>('AI_MODEL', 'gpt-4o-mini');
+    const provider = this.resolvePrimaryAiProvider();
 
     try {
-      if (aiModel.startsWith('gpt') || aiModel.startsWith('o')) {
+      if (provider === 'openai') {
         return await this.retryTransientAi('OpenAI scoring', () => this.scoreWithOpenAI(prompt));
-      } else {
-        return await this.retryTransientAi('Gemini scoring', () => this.scoreWithGemini(prompt));
       }
+      return await this.retryTransientAi('Gemini scoring', () => this.scoreWithGemini(prompt));
     } catch (error) {
       this.logger.warn(`Primary AI scoring failed, trying fallback: ${error}`);
       try {
-        if (aiModel.startsWith('gpt') && this.gemini) {
+        if (provider === 'openai' && this.gemini) {
           return await this.retryTransientAi('Gemini fallback scoring', () => this.scoreWithGemini(prompt), 3);
-        } else if (!aiModel.startsWith('gpt') && this.openai) {
+        } else if (provider === 'gemini' && this.openai) {
           return await this.retryTransientAi('OpenAI fallback scoring', () => this.scoreWithOpenAI(prompt), 3);
         }
       } catch (fallbackError) {
@@ -573,6 +734,7 @@ ${questionBlocks}`;
     answer: { aiScore: unknown; aiModel: string | null } | undefined,
   ): boolean {
     if (!answer) return true;
+    if (answer.aiModel === 'ai_queued') return true;
     if (answer.aiModel === 'ai_grading') return true;
     if (answer.aiModel === 'pending_review') return true;
     if (answer.aiScore === null || answer.aiScore === undefined) return true;
@@ -647,11 +809,8 @@ ${questionBlocks}`;
       await this.finalizeSessionStatusAfterScoring(sessionId);
       return { queued: 0 };
     }
-
-    const run = async () => {
-      await this.gradeWritingAnswersForSession(sessionId, pendingAnswerIds);
-    };
-    this.writingQueue = this.writingQueue.then(run, run);
+    this.upsertWritingQueueJob(sessionId, pendingAnswerIds);
+    void this.pumpWritingQueue();
     return { queued: pendingAnswerIds.length };
   }
 
@@ -673,6 +832,10 @@ ${questionBlocks}`;
     if (!session) return [];
 
     const pendingAnswerIds: number[] = [];
+    const inFlight = this.writingJobsInFlight.has(sessionId);
+    const queuedFeedback = `已進入 AI 批改佇列，系統會依每分鐘 ${MAX_GEMINI_REQUESTS_PER_MINUTE} 筆上限分批送出。`;
+    const targetAiModel = inFlight ? 'ai_grading' : 'ai_queued';
+    const targetFeedback = inFlight ? 'AI 批改中，請稍後重新整理。' : queuedFeedback;
     for (const question of session.exam.questions) {
       const existing = session.answers.find((a) => a.questionId === question.id);
       const needs = force || ScoringService.essayAnswerNeedsAiGrading(existing);
@@ -681,8 +844,8 @@ ${questionBlocks}`;
         where: { sessionId_questionId: { sessionId, questionId: question.id } },
         update: {
           aiScore: null,
-          aiFeedback: 'AI 批改中，請稍後重新整理。',
-          aiModel: 'ai_grading',
+          aiFeedback: targetFeedback,
+          aiModel: targetAiModel,
           writingScore: null,
           cefrLevel: null,
         },
@@ -691,8 +854,8 @@ ${questionBlocks}`;
           questionId: question.id,
           content: '',
           aiScore: null,
-          aiFeedback: 'AI 批改中，請稍後重新整理。',
-          aiModel: 'ai_grading',
+          aiFeedback: targetFeedback,
+          aiModel: targetAiModel,
           writingDurationSeconds: 0,
           wordCount: 0,
         },
@@ -751,47 +914,32 @@ ${questionBlocks}`;
     items: WritingAnswerForAi[],
   ): Promise<void> {
     const prompt = this.buildWritingBatchPrompt(items);
-    try {
-      const { raw, modelUsed } = await this.callBatchGradingModel(prompt);
-      const parsed = this.parseWritingBatchResponse(raw, items);
-      await this.prisma.$transaction([
-        ...parsed.items.map((item) =>
-          this.prisma.answer.update({
-            where: { id: item.answerId },
-            data: {
-              aiScore: item.aiScore,
-              aiFeedback: item.aiFeedback,
-              aiModel: modelUsed,
-              writingScore: item.writingScore ?? null,
-              cefrLevel: item.cefrLevel ?? null,
-            },
-          }),
-        ),
-        this.prisma.examSession.update({
-          where: { id: sessionId },
+    const { raw, modelUsed } = await this.callBatchGradingModel(prompt);
+    const parsed = this.parseWritingBatchResponse(raw, items);
+    await this.prisma.$transaction([
+      ...parsed.items.map((item) =>
+        this.prisma.answer.update({
+          where: { id: item.answerId },
           data: {
-            overallFeedbackEn: parsed.overallFeedbackEn || null,
-            overallFeedbackZh: parsed.overallFeedbackZh || null,
+            aiScore: item.aiScore,
+            aiFeedback: item.aiFeedback,
+            aiModel: modelUsed,
+            writingScore: item.writingScore ?? null,
+            cefrLevel: item.cefrLevel ?? null,
           },
         }),
-      ]);
-    } catch (err) {
-      await this.handleWritingAiFailure(items.map((item) => item.answerId), err);
-    }
+      ),
+      this.prisma.examSession.update({
+        where: { id: sessionId },
+        data: {
+          overallFeedbackEn: parsed.overallFeedbackEn || null,
+          overallFeedbackZh: parsed.overallFeedbackZh || null,
+        },
+      }),
+    ]);
   }
 
   private async handleWritingAiFailure(answerIds: number[], err: unknown): Promise<void> {
-    if (this.isRetryableAiError(err)) {
-      await this.prisma.answer.updateMany({
-        where: { id: { in: answerIds } },
-        data: {
-          aiScore: null,
-          aiFeedback: 'AI 服務忙碌，已保留於批改中。請稍後按「批次AI批改」或單筆「啟動 AI 批改」重試。',
-          aiModel: 'ai_grading',
-        },
-      });
-      return;
-    }
     for (const answerId of answerIds) {
       await this.markEssayPendingReview(answerId, err);
     }
@@ -847,7 +995,7 @@ ${questionBlocks}`;
             answers: {
               some: {
                 questionId: { in: writingIds },
-                OR: [{ aiScore: null }, { aiModel: { in: ['ai_grading', 'pending_review'] } }],
+                OR: [{ aiScore: null }, { aiModel: { in: ['ai_queued', 'ai_grading', 'pending_review'] } }],
               },
             },
           },

@@ -41,6 +41,7 @@ const AnswerCard: React.FC<{
   onSave: (answerId: number, aiScore: number, aiFeedback: string) => Promise<void>;
 }> = ({ ans, idx, isViewer, savingAnswerId, onSave }) => {
   const pending = ans.aiModel === 'pending_review';
+  const aiQueued = ans.aiModel === 'ai_queued';
   const aiGrading = ans.aiModel === 'ai_grading';
   const teacherManual = ans.aiModel === 'teacher_manual';
   const [scoreIn, setScoreIn] = useState('');
@@ -104,8 +105,9 @@ const AnswerCard: React.FC<{
             </span>
           )}
           {pending && <span className="badge badge-warning">待教師複閱</span>}
+          {aiQueued && <span className="badge badge-secondary">排隊中</span>}
           {aiGrading && <span className="badge badge-warning">AI 批改中</span>}
-          {!hasScore && !pending && !aiGrading && <span className="badge badge-secondary">未評分</span>}
+          {!hasScore && !pending && !aiQueued && !aiGrading && <span className="badge badge-secondary">未評分</span>}
         </div>
       </header>
 
@@ -220,7 +222,7 @@ const AnswerCard: React.FC<{
               background: 'var(--color-bg)',
             }}
           >
-            <span className="font-bold">{pending || aiGrading ? '系統訊息' : '評語與回饋'}</span>
+            <span className="font-bold">{pending || aiQueued || aiGrading ? '系統訊息' : '評語與回饋'}</span>
             <p className="mt-xs mb-0" style={{ whiteSpace: 'pre-wrap', lineHeight: 1.65 }}>
               {ans.aiFeedback}
             </p>

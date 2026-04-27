@@ -47,6 +47,9 @@ const ResultsView: React.FC = () => {
   const calculateTotal = (answers: any[]) => sessionScorePercent(answers);
 
   const statusLabel = (row: any) => {
+    if (row.hasAiQueued) {
+      return { text: '排隊中', className: 'badge-secondary' };
+    }
     if (row.hasAiGrading) {
       return { text: 'AI 批改中', className: 'badge-warning' };
     }

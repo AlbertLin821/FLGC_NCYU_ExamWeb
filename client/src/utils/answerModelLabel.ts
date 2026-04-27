@@ -33,6 +33,9 @@ export function describeAnswerScoring(aiModel: string | null | undefined): {
   if (m === 'pending_review') {
     return { source: '待複閱' };
   }
+  if (m === 'ai_queued') {
+    return { source: 'AI 排隊中' };
+  }
   if (m === 'ai_grading') {
     return { source: 'AI 批改中' };
   }
