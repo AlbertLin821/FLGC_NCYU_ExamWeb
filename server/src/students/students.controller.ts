@@ -15,7 +15,7 @@ import {
 } from '@nestjs/common';
 import { StudentsService } from './students.service';
 import { JwtAuthGuard, RolesGuard, Roles } from '../auth/guards';
-import { IsNotEmpty, IsString, IsInt, IsArray, ValidateNested } from 'class-validator';
+import { IsNotEmpty, IsString, IsInt, IsArray, ValidateNested, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
 
 class StudentImportItem {
@@ -32,6 +32,14 @@ export class BulkImportDto {
 
   @IsInt()
   classId: number;
+
+  @IsOptional() @IsString()
+  importSessionId?: string;
+}
+
+export class CancelImportDto {
+  @IsNotEmpty() @IsString()
+  importSessionId: string;
 }
 
 export class CreateStudentDto {
@@ -94,7 +102,14 @@ export class StudentsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   bulkImport(@Body() dto: BulkImportDto, @Request() req: any) {
-    return this.studentsService.bulkImport(dto.students, dto.classId, req.user);
+    return this.studentsService.bulkImport(dto.students, dto.classId, req.user, dto.importSessionId);
+  }
+
+  @Post('import/cancel')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  cancelBulkImport(@Body() dto: CancelImportDto) {
+    return this.studentsService.cancelBulkImport(dto.importSessionId);
   }
 
   @Post()

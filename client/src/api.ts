@@ -212,12 +212,14 @@ export const studentsApi = {
   bulkImport: (
     students: { studentId: string; name: string; schoolName: string }[],
     classId: number,
+    importSessionId?: string,
     config?: AxiosRequestConfig,
   ) =>
-    api.post('/students/import', { students, classId }, config).then((res) => {
+    api.post('/students/import', { students, classId, importSessionId }, config).then((res) => {
       invalidateGetCache(['/students', '/classes', '/dashboard']);
       return res;
     }),
+  cancelBulkImport: (importSessionId: string) => api.post('/students/import/cancel', { importSessionId }),
   create: (data: any) => api.post('/students', data).then((res) => {
     invalidateGetCache(['/students', '/classes', '/dashboard']);
     return res;

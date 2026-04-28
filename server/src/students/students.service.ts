@@ -4,7 +4,21 @@ import { ensureClassAccess, ensureStudentAccess, type TeacherActor } from '../au
 
 @Injectable()
 export class StudentsService {
+  private cancelledImportSessions = new Set<string>();
+
   constructor(private prisma: PrismaService) {}
+
+  cancelBulkImport(importSessionId: string) {
+    const normalized = String(importSessionId || '').trim();
+    if (!normalized) {
+      return { ok: false };
+    }
+    this.cancelledImportSessions.add(normalized);
+    setTimeout(() => {
+      this.cancelledImportSessions.delete(normalized);
+    }, 10 * 60 * 1000);
+    return { ok: true };
+  }
 
   private async getActorVisibleClassIds(actor: TeacherActor): Promise<number[] | null> {
     if (actor.role === 'admin') {
@@ -142,9 +156,22 @@ export class StudentsService {
     students: { studentId: string; name: string; schoolName: string }[],
     classId: number,
     actor: TeacherActor,
+    importSessionId?: string,
   ) {
     await ensureClassAccess(this.prisma, actor, classId);
     const results = { created: 0, updated: 0, errors: [] as string[] };
+    const normalizedImportSessionId = String(importSessionId || '').trim();
+    const isCancelled = () =>
+      normalizedImportSessionId.length > 0 && this.cancelledImportSessions.has(normalizedImportSessionId);
+    const throwIfCancelled = () => {
+      if (isCancelled()) {
+        throw new Error('IMPORT_CANCELLED');
+      }
+    };
+
+    if (isCancelled()) {
+      return { ...results, cancelled: true };
+    }
     const dedupedRows = new Map<string, { studentId: string; name: string; schoolName: string }>();
 
     for (const row of students) {
@@ -166,7 +193,9 @@ export class StudentsService {
     }
 
     try {
+      throwIfCancelled();
       await this.prisma.$transaction(async (tx) => {
+        throwIfCancelled();
         const studentIds = validRows.map((row) => row.studentId);
         const existingStudents = await tx.student.findMany({
           where: { studentId: { in: studentIds } },
@@ -178,6 +207,8 @@ export class StudentsService {
 
         const rowsToCreate = validRows.filter((row) => !existingByStudentId.has(row.studentId));
         const rowsToUpdate = validRows.filter((row) => existingByStudentId.has(row.studentId));
+
+        throwIfCancelled();
 
         if (rowsToCreate.length > 0) {
           await tx.student.createMany({
@@ -205,6 +236,8 @@ export class StudentsService {
           select: { id: true },
         });
 
+        throwIfCancelled();
+
         if (allStudents.length > 0) {
           await tx.studentClass.createMany({
             data: allStudents.map((student) => ({
@@ -219,11 +252,14 @@ export class StudentsService {
         results.updated += rowsToUpdate.length;
       });
     } catch (err: unknown) {
+      if (err instanceof Error && err.message === 'IMPORT_CANCELLED') {
+        return { ...results, cancelled: true };
+      }
       const message = err instanceof Error ? err.message : String(err);
       results.errors.push(`批次匯入失敗: ${message}`);
     }
 
-    return results;
+    return isCancelled() ? { ...results, cancelled: true } : results;
   }
 
   async create(

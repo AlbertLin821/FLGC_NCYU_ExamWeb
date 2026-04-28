@@ -203,6 +203,7 @@ const ClassManagement: React.FC = () => {
   const [importCancelling, setImportCancelling] = useState(false);
   const [activeImportController, setActiveImportController] = useState<AbortController | null>(null);
   const importCancelledRef = useRef(false);
+  const importSessionIdRef = useRef('');
 
   const fetchClasses = async () => {
     try {
@@ -308,6 +309,7 @@ const ClassManagement: React.FC = () => {
     setImportCancelling(false);
     setActiveImportController(null);
     importCancelledRef.current = false;
+    importSessionIdRef.current = '';
   };
 
   const openImportModal = () => {
@@ -393,6 +395,10 @@ const ClassManagement: React.FC = () => {
     setImportSubmitting(true);
     setImportCancelling(false);
     importCancelledRef.current = false;
+    importSessionIdRef.current =
+      (typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `import-${Date.now()}-${Math.random().toString(36).slice(2)}`);
     setImportProgress({
       processed: 0,
       total: importPreview.length,
@@ -419,9 +425,12 @@ const ClassManagement: React.FC = () => {
         });
         const controller = new AbortController();
         setActiveImportController(controller);
-        const res = await studentsApi.bulkImport(batch, selectedClass.id, {
+        const res = await studentsApi.bulkImport(batch, selectedClass.id, importSessionIdRef.current, {
           signal: controller.signal,
         });
+        if (importCancelledRef.current || res.data?.cancelled) {
+          throw new Error('IMPORT_CANCELLED');
+        }
         const data = res.data as { created?: number; updated?: number; errors?: string[] };
         created += data.created ?? 0;
         updated += data.updated ?? 0;
@@ -470,6 +479,11 @@ const ClassManagement: React.FC = () => {
     if (!importSubmitting) return;
     setImportCancelling(true);
     importCancelledRef.current = true;
+    if (importSessionIdRef.current) {
+      void studentsApi.cancelBulkImport(importSessionIdRef.current).catch(() => {
+        /* best effort */
+      });
+    }
     activeImportController?.abort();
   };
 
