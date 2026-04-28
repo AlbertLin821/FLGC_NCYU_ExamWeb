@@ -50,7 +50,7 @@ type ImportProgress = {
   batchCount: number;
 };
 
-const IMPORT_BATCH_SIZE = 100;
+const IMPORT_BATCH_SIZE = 10;
 
 const STUDENT_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]*\d[A-Za-z0-9_-]*$/;
 const SCHOOL_NAME_HINT_PATTERN = /(校|學校|大學|學院|高中|高職|國中|國小|university|college|school|ncyu)/i;

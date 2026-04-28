@@ -145,54 +145,82 @@ export class StudentsService {
   ) {
     await ensureClassAccess(this.prisma, actor, classId);
     const results = { created: 0, updated: 0, errors: [] as string[] };
-    for (const s of students) {
+    const dedupedRows = new Map<string, { studentId: string; name: string; schoolName: string }>();
+
+    for (const row of students) {
       const data = {
-        studentId: String(s.studentId || '').trim(),
-        name: String(s.name || '').trim(),
-        schoolName: String(s.schoolName || '').trim(),
+        studentId: String(row.studentId || '').trim(),
+        name: String(row.name || '').trim(),
+        schoolName: String(row.schoolName || '').trim(),
       };
       if (!data.studentId || !data.name || !data.schoolName) {
-        results.errors.push(`${s.studentId || '（空白學號）'}: 校名、學號、姓名不可空白`);
+        results.errors.push(`${row.studentId || '（空白學號）'}: 校名、學號、姓名不可空白`);
         continue;
       }
+      dedupedRows.set(data.studentId, data);
+    }
 
-      try {
-        await this.prisma.$transaction(async (tx) => {
-          const existing = await tx.student.findUnique({
-            where: { studentId: data.studentId },
-            select: { id: true },
+    const validRows = [...dedupedRows.values()];
+    if (validRows.length === 0) {
+      return results;
+    }
+
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        const studentIds = validRows.map((row) => row.studentId);
+        const existingStudents = await tx.student.findMany({
+          where: { studentId: { in: studentIds } },
+          select: { id: true, studentId: true, name: true, schoolName: true },
+        });
+        const existingByStudentId = new Map(
+          existingStudents.map((student) => [student.studentId, student] as const),
+        );
+
+        const rowsToCreate = validRows.filter((row) => !existingByStudentId.has(row.studentId));
+        const rowsToUpdate = validRows.filter((row) => existingByStudentId.has(row.studentId));
+
+        if (rowsToCreate.length > 0) {
+          await tx.student.createMany({
+            data: rowsToCreate,
           });
-          const student = existing
-            ? await tx.student.update({
-                where: { id: existing.id },
-                data: { name: data.name, schoolName: data.schoolName },
-              })
-            : await tx.student.create({ data });
+        }
 
-          await tx.studentClass.upsert({
-            where: {
-              studentId_classId: {
-                studentId: student.id,
-                classId,
-              },
-            },
-            update: {},
-            create: {
+        const changedRows = rowsToUpdate.filter((row) => {
+          const existing = existingByStudentId.get(row.studentId);
+          return existing && (existing.name !== row.name || existing.schoolName !== row.schoolName);
+        });
+
+        if (changedRows.length > 0) {
+          await Promise.all(
+            changedRows.map((row) =>
+              tx.student.update({
+                where: { studentId: row.studentId },
+                data: { name: row.name, schoolName: row.schoolName },
+              })),
+          );
+        }
+
+        const allStudents = await tx.student.findMany({
+          where: { studentId: { in: studentIds } },
+          select: { id: true },
+        });
+
+        if (allStudents.length > 0) {
+          await tx.studentClass.createMany({
+            data: allStudents.map((student) => ({
               studentId: student.id,
               classId,
-            },
+            })),
+            skipDuplicates: true,
           });
+        }
 
-          if (existing) {
-            results.updated++;
-          } else {
-            results.created++;
-          }
-        });
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : String(err);
-        results.errors.push(`${data.studentId}: ${message}`);
-      }
+        results.created += rowsToCreate.length;
+        results.updated += rowsToUpdate.length;
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      results.errors.push(`批次匯入失敗: ${message}`);
     }
 
     return results;
