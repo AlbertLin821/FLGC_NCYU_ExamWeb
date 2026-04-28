@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, FileText } from 'lucide-react';
 import { questionsApi, examsApi } from '../../api';
+import ResizableTableContainer from '../../components/ResizableTableContainer';
 
 interface Question {
   id: number;
@@ -284,7 +285,7 @@ const QuestionManagement: React.FC = () => {
               <p>此考卷尚無題目，請點擊上方按鈕新增</p>
             </div>
           ) : (
-            <div className="table-container">
+            <ResizableTableContainer storageKey="question-management-list">
               <table className="table">
                 <thead>
                   <tr>
@@ -347,7 +348,7 @@ const QuestionManagement: React.FC = () => {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ResizableTableContainer>
           )}
         </div>
       )}

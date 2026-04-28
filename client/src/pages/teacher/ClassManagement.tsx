@@ -4,6 +4,7 @@ import { classesApi, studentsApi } from '../../api';
 import * as XLSX from 'xlsx';
 import { FileSpreadsheet, Type, ClipboardList } from 'lucide-react';
 import { sessionScorePercent } from '../../utils/sessionScore';
+import ResizableTableContainer from '../../components/ResizableTableContainer';
 
 /** 單一考試場次之狀態說明（不含總分，總分另欄呈現） */
 function sessionStatusLine(session: any): string {
@@ -383,7 +384,7 @@ const ClassManagement: React.FC = () => {
 
         <div className="card table-card">
           {studentsLoading ? <div className="spinner"></div> : (
-            <div className="table-container scroll-region-y">
+            <ResizableTableContainer className="scroll-region-y" storageKey="class-management-students">
               <table className="table">
                 <thead>
                   <tr>
@@ -399,8 +400,8 @@ const ClassManagement: React.FC = () => {
                   {students.map(s => (
                     <tr key={s.id}>
                       <td className="cell-student-id"><b>{s.studentId}</b></td>
-                      <td>{s.name}</td>
-                      <td>{s.schoolName}</td>
+                      <td className="cell-nowrap">{s.name}</td>
+                      <td className="cell-nowrap">{s.schoolName}</td>
                       <td className="cell-wrap">
                         {s.sessions?.length ? (
                           <ul style={{ margin: 0, paddingLeft: '1.15rem', fontSize: '0.875rem', lineHeight: 1.5 }}>
@@ -434,7 +435,7 @@ const ClassManagement: React.FC = () => {
                   {students.length === 0 && <tr><td colSpan={6} className="text-center text-secondary">尚無學生資料</td></tr>}
                 </tbody>
               </table>
-            </div>
+            </ResizableTableContainer>
           )}
         </div>
 
@@ -488,7 +489,7 @@ const ClassManagement: React.FC = () => {
                   <p className="text-sm text-secondary mb-md">
                     即將匯入 {importPreview.length} 位學生至「{selectedClass.name}」。
                   </p>
-                  <div className="table-container modal-scroll mb-lg">
+                  <ResizableTableContainer className="modal-scroll mb-lg" storageKey="class-management-import-preview">
                     <table className="table">
                       <thead>
                         <tr>
@@ -500,14 +501,14 @@ const ClassManagement: React.FC = () => {
                       <tbody>
                         {importPreview.map((s, index) => (
                           <tr key={`${s.studentId}-${index}`}>
-                            <td>{s.schoolName}</td>
+                            <td className="cell-nowrap">{s.schoolName}</td>
                             <td className="cell-student-id"><b>{s.studentId}</b></td>
-                            <td>{s.name}</td>
+                            <td className="cell-nowrap">{s.name}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
-                  </div>
+                  </ResizableTableContainer>
                   <div className="modal-actions">
                     <button type="button" className="btn btn-secondary" disabled={importSubmitting || importParsing} onClick={() => setImportPreview([])}>返回修改</button>
                     <button type="button" className="btn btn-secondary" disabled={importSubmitting} onClick={closeImportModal}>取消</button>

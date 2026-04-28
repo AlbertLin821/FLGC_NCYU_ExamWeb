@@ -4,6 +4,7 @@ import { examsApi, classesApi, scoringApi } from '../../api';
 import { getTeacherRole } from '../../utils/teacherRole';
 import * as XLSX from 'xlsx';
 import { earnedPointsOnQuestion, sessionScorePercent } from '../../utils/sessionScore';
+import ResizableTableContainer from '../../components/ResizableTableContainer';
 
 const ResultsView: React.FC = () => {
   const role = getTeacherRole();
@@ -209,7 +210,7 @@ const ResultsView: React.FC = () => {
         {loading ? (
           <div className="spinner"></div>
         ) : (
-          <div className="table-container">
+          <ResizableTableContainer storageKey="results-view-list">
             <table className="table">
               <thead>
                 <tr>
@@ -225,7 +226,7 @@ const ResultsView: React.FC = () => {
                 {results.map((r) => (
                   <tr key={r.id}>
                     <td>{r.student.studentId}</td>
-                    <td><b>{r.student.name}</b></td>
+                    <td className="cell-nowrap"><b>{r.student.name}</b></td>
                     <td className="cell-wrap-sm">{r.exam.title}</td>
                     <td>
                       <span className={`badge ${statusLabel(r).className}`}>
@@ -260,7 +261,7 @@ const ResultsView: React.FC = () => {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ResizableTableContainer>
         )}
       </div>
     </div>

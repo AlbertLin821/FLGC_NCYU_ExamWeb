@@ -4,6 +4,7 @@ import { studentsApi, scoringApi } from '../../api';
 import { earnedPointsOnQuestion, sessionScorePercent } from '../../utils/sessionScore';
 import { describeAnswerScoring, questionTypeLabel } from '../../utils/answerModelLabel';
 import { getTeacherRole } from '../../utils/teacherRole';
+import ResizableTableContainer from '../../components/ResizableTableContainer';
 
 function sortSessionAnswers(answers: any[] | undefined) {
   return [...(answers || [])].sort(
@@ -384,7 +385,7 @@ const StudentResultDetail: React.FC = () => {
                 </div>
 
                 {showWeightedBlock && (
-                  <div className="table-container mb-lg">
+                  <ResizableTableContainer className="mb-lg" storageKey="student-result-summary">
                     <table className="table table--compact" style={{ fontSize: 'var(--font-size-sm)' }}>
                       <thead>
                         <tr>
@@ -418,7 +419,7 @@ const StudentResultDetail: React.FC = () => {
                         })}
                       </tbody>
                     </table>
-                  </div>
+                  </ResizableTableContainer>
                 )}
 
                 {(session.overallFeedbackZh || session.overallFeedbackEn) && (

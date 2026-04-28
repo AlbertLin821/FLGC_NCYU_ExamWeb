@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { studentsApi, teachersApi } from '../../api';
 import { getTeacherRole } from '../../utils/teacherRole';
+import ResizableTableContainer from '../../components/ResizableTableContainer';
 
 const FORCE_DELETE_EMAIL = 'albertlin94821@gmail.com';
 const FORCE_DELETE_NAME = 'Albert Lin';
@@ -158,7 +159,7 @@ const SystemManagement: React.FC = () => {
           <div className="spinner" />
         ) : (
           <>
-            <div className="table-container scroll-region-y">
+            <ResizableTableContainer className="scroll-region-y" storageKey="system-management-students">
               <table className="table">
                 <thead>
                   <tr>
@@ -172,14 +173,14 @@ const SystemManagement: React.FC = () => {
                   {students.map((s) => (
                     <tr key={s.id}>
                       <td className="cell-student-id">{s.studentId}</td>
-                      <td>{s.name}</td>
-                      <td>{s.schoolName}</td>
+                      <td className="cell-nowrap">{s.name}</td>
+                      <td className="cell-nowrap">{s.schoolName}</td>
                       <td>{classNames(s)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ResizableTableContainer>
             <div className="action-group mt-md">
               <button
                 type="button"

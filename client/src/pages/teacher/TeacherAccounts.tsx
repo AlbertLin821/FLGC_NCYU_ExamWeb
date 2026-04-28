@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { teachersApi } from '../../api';
 import { getTeacherRole } from '../../utils/teacherRole';
+import ResizableTableContainer from '../../components/ResizableTableContainer';
 
 function roleLabel(role: string): string {
   switch (role) {
@@ -132,7 +133,7 @@ const TeacherAccounts: React.FC = () => {
         {loading ? (
           <div className="spinner" />
         ) : (
-          <div className="table-container scroll-region-y">
+          <ResizableTableContainer className="scroll-region-y" storageKey="teacher-accounts-list">
             <table className="table table--sticky-header">
               <thead>
                 <tr>
@@ -199,7 +200,7 @@ const TeacherAccounts: React.FC = () => {
                 )}
               </tbody>
             </table>
-          </div>
+          </ResizableTableContainer>
         )}
       </div>
 

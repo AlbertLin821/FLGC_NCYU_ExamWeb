@@ -490,7 +490,50 @@ textarea.form-input {
 }
 
 .table td {
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.table--resizable {
+  width: max-content;
+  min-width: 100%;
+}
+
+.table-resizable__th {
+  position: relative;
+}
+
+.table-resizable__handle {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  width: 8px;
+  height: 100%;
+  cursor: col-resize;
+  user-select: none;
+  touch-action: none;
+  z-index: 3;
+}
+
+.table-resizable__handle::after {
+  content: '';
+  position: absolute;
+  top: 20%;
+  bottom: 20%;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
+  background: rgba(99, 110, 114, 0.35);
+}
+
+.table-resizable__th:hover .table-resizable__handle::after {
+  background: rgba(0, 119, 182, 0.55);
+}
+
+body.table-resizing {
+  cursor: col-resize;
+  user-select: none;
 }
 
 .table-actions {
@@ -705,17 +748,25 @@ textarea.form-input {
   min-width: 14rem;
   max-width: 24rem;
   white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .cell-wrap-sm {
   min-width: 12rem;
   max-width: 18rem;
   white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .cell-student-id {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+}
+
+.cell-nowrap {
+  white-space: nowrap;
 }
 
 .text-truncate {
@@ -727,6 +778,8 @@ textarea.form-input {
 
 .text-pre-wrap {
   white-space: pre-wrap;
+  overflow: visible;
+  text-overflow: clip;
   overflow-wrap: anywhere;
 }
 

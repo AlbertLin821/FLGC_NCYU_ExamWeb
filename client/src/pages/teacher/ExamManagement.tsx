@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { examsApi, classesApi } from '../../api';
+import ResizableTableContainer from '../../components/ResizableTableContainer';
 
 function toDatetimeLocalValue(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -172,7 +173,7 @@ const ExamManagement: React.FC = () => {
 
       <div className="card table-card">
         {loading ? <div className="spinner"></div> : (
-          <div className="table-container">
+          <ResizableTableContainer storageKey="exam-management-list">
             <table className="table">
               <thead>
                 <tr>
@@ -264,7 +265,7 @@ const ExamManagement: React.FC = () => {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ResizableTableContainer>
         )}
       </div>
 
