@@ -177,6 +177,21 @@ function sortImportRows(rows: StudentImportRow[]): StudentImportRow[] {
   return [...rows].sort((a, b) => a.studentId.localeCompare(b.studentId, 'en', { numeric: true, sensitivity: 'base' }));
 }
 
+function findDuplicateStudentIds(rows: StudentImportRow[]): string[] {
+  const seen = new Set<string>();
+  const duplicates = new Set<string>();
+  for (const row of rows) {
+    const studentId = String(row.studentId || '').trim();
+    if (!studentId) continue;
+    if (seen.has(studentId)) {
+      duplicates.add(studentId);
+      continue;
+    }
+    seen.add(studentId);
+  }
+  return [...duplicates].sort((a, b) => a.localeCompare(b, 'en', { numeric: true, sensitivity: 'base' }));
+}
+
 const ClassManagement: React.FC = () => {
   const navigate = useNavigate();
   const [classes, setClasses] = useState<any[]>([]);
@@ -335,6 +350,12 @@ const ClassManagement: React.FC = () => {
       setImportError('無法辨識資料，請確認至少包含校名、學號、姓名。');
       return;
     }
+    const duplicates = findDuplicateStudentIds(rows);
+    if (duplicates.length > 0) {
+      setImportPreview(sortImportRows(rows));
+      setImportError(`發現重複學號，請先修正後再匯入：${duplicates.slice(0, 20).join('、')}${duplicates.length > 20 ? '…' : ''}`);
+      return;
+    }
     setImportError('');
     setImportPreview(sortImportRows(rows));
   };
@@ -390,6 +411,9 @@ const ClassManagement: React.FC = () => {
     if (importSubmitting || importParsing) return;
     if (importPreview.length === 0) {
       setImportError('請先檢視並確認要匯入的資料。');
+      return;
+    }
+    if (importError) {
       return;
     }
     setImportSubmitting(true);

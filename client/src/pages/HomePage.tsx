@@ -32,16 +32,16 @@ const HomePage: React.FC = () => {
             </div>
             {locale === 'en' ? (
               <h3 className="mb-sm">
-                {t('home.studentTitleEn')}
+                {t('home.studentTitle')}
                 <span className="text-secondary text-base font-normal" lang="zh-Hant" style={{ display: 'block', marginTop: 'var(--space-xs)' }}>
-                  {t('home.studentTitle')}
+                  學生
                 </span>
               </h3>
             ) : (
               <h3 className="mb-sm">
-                {t('home.studentTitle')}
+                學生
                 <span className="text-secondary text-base font-normal" lang="en" style={{ display: 'block', marginTop: 'var(--space-xs)' }}>
-                  STUDENT
+                  {t('home.studentTitleEn')}
                 </span>
               </h3>
             )}
@@ -55,14 +55,23 @@ const HomePage: React.FC = () => {
             <div className="mb-lg flex justify-center text-secondary">
               <Users size={56} className="home-role-icon" />
             </div>
-            <h3 className="mb-sm">
-              老師
-              <span className="text-secondary text-base font-normal" lang="en" style={{ display: 'block', marginTop: 'var(--space-xs)' }}>
-                TEACHER / 管理端
-              </span>
-            </h3>
-            <p className="text-sm text-secondary mb-lg">出題管理、批改流程、班級與評測統計</p>
-            <span className="btn btn-secondary w-full">{teacher ? '進入管理端' : '管理登入'}</span>
+            {locale === 'en' ? (
+              <h3 className="mb-sm">
+                {t('home.teacherTitle')}
+                <span className="text-secondary text-base font-normal" lang="zh-Hant" style={{ display: 'block', marginTop: 'var(--space-xs)' }}>
+                  老師 / 管理端
+                </span>
+              </h3>
+            ) : (
+              <h3 className="mb-sm">
+                老師
+                <span className="text-secondary text-base font-normal" lang="en" style={{ display: 'block', marginTop: 'var(--space-xs)' }}>
+                  TEACHER / ADMIN
+                </span>
+              </h3>
+            )}
+            <p className="text-sm text-secondary mb-lg">{t('home.teacherDesc')}</p>
+            <span className="btn btn-secondary w-full">{teacher ? t('home.teacherCtaEnter') : t('home.teacherCtaLogin')}</span>
           </Link>
         </div>
       </div>

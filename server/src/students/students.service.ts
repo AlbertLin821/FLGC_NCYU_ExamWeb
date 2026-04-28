@@ -173,6 +173,7 @@ export class StudentsService {
       return { ...results, cancelled: true };
     }
     const dedupedRows = new Map<string, { studentId: string; name: string; schoolName: string }>();
+    const duplicateStudentIds = new Set<string>();
 
     for (const row of students) {
       const data = {
@@ -184,7 +185,18 @@ export class StudentsService {
         results.errors.push(`${row.studentId || '（空白學號）'}: 校名、學號、姓名不可空白`);
         continue;
       }
+      if (dedupedRows.has(data.studentId)) {
+        duplicateStudentIds.add(data.studentId);
+        continue;
+      }
       dedupedRows.set(data.studentId, data);
+    }
+
+    if (duplicateStudentIds.size > 0) {
+      results.errors.push(
+        `重複學號: ${[...duplicateStudentIds].sort((a, b) => a.localeCompare(b, 'en', { numeric: true, sensitivity: 'base' })).join('、')}`,
+      );
+      return results;
     }
 
     const validRows = [...dedupedRows.values()];
