@@ -209,6 +209,8 @@ export const studentsApi = {
   getById: (id: number) => cachedGet(`/students/${id}`),
   getExams: (id: number) => cachedGet(`/students/${id}/exams`, undefined, 20_000),
   getExamPreview: (id: number, examId: number) => cachedGet(`/students/${id}/exams/${examId}`, undefined, 20_000),
+  getExamResult: (id: number, examId: number) =>
+    api.get(`/students/${id}/exams/${examId}/result`),
   bulkImport: (
     students: { studentId: string; name: string; schoolName: string }[],
     classId: number,

@@ -1,12 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ensureClassAccess, ensureStudentAccess, type TeacherActor } from '../auth/access';
+import { ScoringService } from '../scoring/scoring.service';
 
 @Injectable()
 export class StudentsService {
   private cancelledImportSessions = new Set<string>();
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private scoringService: ScoringService,
+  ) {}
 
   cancelBulkImport(importSessionId: string) {
     const normalized = String(importSessionId || '').trim();
@@ -445,6 +449,96 @@ export class StudentsService {
       startTime: exam.startTime,
       endTime: exam.endTime,
       sessionStatus,
+    };
+  }
+
+  async getStudentExamResult(studentId: number, examId: number) {
+    const student = await this.prisma.student.findUnique({
+      where: { id: studentId },
+      include: {
+        classes: { select: { classId: true } },
+      },
+    });
+    if (!student) return null;
+
+    const classIds = student.classes.map((row) => row.classId);
+    if (classIds.length === 0) return null;
+
+    const exam = await this.prisma.exam.findFirst({
+      where: {
+        id: examId,
+        deletedAt: null,
+        examClasses: { some: { classId: { in: classIds } } },
+      },
+      include: {
+        questions: {
+          select: {
+            id: true,
+            orderNum: true,
+            type: true,
+            content: true,
+            maxPoints: true,
+          },
+          orderBy: { orderNum: 'asc' },
+        },
+        sessions: {
+          where: { studentId: student.id },
+          orderBy: { id: 'desc' },
+          take: 1,
+          include: {
+            answers: {
+              include: {
+                question: {
+                  select: {
+                    id: true,
+                    orderNum: true,
+                    type: true,
+                    content: true,
+                    maxPoints: true,
+                  },
+                },
+              },
+              orderBy: { question: { orderNum: 'asc' } },
+            },
+          },
+        },
+      },
+    });
+    if (!exam) return null;
+
+    const session = exam.sessions[0] ?? null;
+    const queueState = session
+      ? this.scoringService.getWritingQueueSessionState(session.id)
+      : { state: 'idle' as const, position: null, total: 0 };
+    const hasAiQueued = session?.answers.some((answer) => answer.aiModel === 'ai_queued') ?? false;
+    const hasAiGrading = session?.answers.some((answer) => answer.aiModel === 'ai_grading') ?? false;
+    const hasPendingReview = session?.answers.some((answer) => answer.aiModel === 'pending_review') ?? false;
+
+    return {
+      exam: {
+        id: exam.id,
+        title: exam.title,
+        instructions: exam.instructions,
+        timeLimit: exam.timeLimit,
+        startTime: exam.startTime,
+        endTime: exam.endTime,
+        questionCount: exam.questions.length,
+      },
+      session: session
+        ? {
+            id: session.id,
+            status: session.status,
+            startedAt: session.startedAt,
+            submittedAt: session.submittedAt,
+            overallFeedbackEn: session.overallFeedbackEn,
+            overallFeedbackZh: session.overallFeedbackZh,
+            hasAiQueued,
+            hasAiGrading,
+            hasPendingReview,
+            queueState,
+            answers: session.answers,
+          }
+        : null,
     };
   }
 }

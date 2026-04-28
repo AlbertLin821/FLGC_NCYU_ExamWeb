@@ -82,6 +82,8 @@ type WritingQueueJob = {
   estimatedChars: number;
 };
 
+type WritingQueueSessionState = 'queued' | 'grading' | 'idle';
+
 /** 供測試與日誌分類：是否為配額／速率限制類錯誤 */
 export function classifyAiScoringError(err: unknown): 'rate_limit' | 'provider' | 'other' {
   const msg = err instanceof Error ? err.message : String(err);
@@ -240,6 +242,27 @@ export class ScoringService {
     };
     this.writingJobs.push(job);
     this.writingJobsBySession.set(sessionId, job);
+  }
+
+  getWritingQueueSessionState(sessionId: number): {
+    state: WritingQueueSessionState;
+    position: number | null;
+    total: number;
+  } {
+    const inFlight = Array.from(this.writingJobsInFlight);
+    const queued = this.writingJobs
+      .map((job) => job.sessionId)
+      .filter((id, index, arr) => arr.indexOf(id) === index && !this.writingJobsInFlight.has(id));
+    const ordered = [...inFlight, ...queued.filter((id) => !inFlight.includes(id))];
+    const position = ordered.findIndex((id) => id === sessionId);
+    if (position >= 0) {
+      return {
+        state: inFlight.includes(sessionId) ? 'grading' : 'queued',
+        position: position + 1,
+        total: ordered.length,
+      };
+    }
+    return { state: 'idle', position: null, total: ordered.length };
   }
 
   private async requeueWritingJob(job: WritingQueueJob): Promise<void> {

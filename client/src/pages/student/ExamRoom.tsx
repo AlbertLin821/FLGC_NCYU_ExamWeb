@@ -421,7 +421,7 @@ const ExamRoom: React.FC = () => {
       } catch {
         /* ignore storage errors */
       }
-      navigate('/student/result');
+      navigate(`/student/result/${examId}`);
     } catch {
       hasSubmittedRef.current = false;
       alert(getStudentString(locale, 'exam.alertSubmitFail'));

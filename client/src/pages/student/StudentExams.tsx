@@ -50,6 +50,10 @@ const StudentExams: React.FC = () => {
     navigate(sessionStatus === 'in_progress' ? `/student/exam/${examId}` : `/student/exam/${examId}/intro`);
   };
 
+  const handleViewResult = (examId: number) => {
+    navigate(`/student/result/${examId}`);
+  };
+
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleString(locale === 'en' ? 'en-US' : 'zh-TW', {
       month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
@@ -108,7 +112,7 @@ const StudentExams: React.FC = () => {
 
               <div className="mt-xl">
                 {exam.sessionStatus === 'submitted' || exam.sessionStatus === 'graded' ? (
-                  <button className="btn btn-secondary w-full" disabled>{t('exams.done')}</button>
+                  <button className="btn btn-secondary w-full" onClick={() => handleViewResult(exam.id)}>{t('exams.done')}</button>
                 ) : (
                   <button
                     className="btn btn-primary w-full"

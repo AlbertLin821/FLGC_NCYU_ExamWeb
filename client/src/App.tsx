@@ -59,7 +59,7 @@ function App() {
             <Route path="/student/exams" element={<StudentExams />} />
             <Route path="/student/exam/:examId/intro" element={<StudentExamIntro />} />
             <Route path="/student/exam/:examId" element={<ExamRoom />} />
-            <Route path="/student/result" element={<ExamResult />} />
+            <Route path="/student/result/:examId" element={<ExamResult />} />
 
             {/* Teacher */}
             <Route path="/teacher/login" element={<TeacherLogin />} />
