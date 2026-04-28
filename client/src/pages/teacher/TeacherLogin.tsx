@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import { authApi } from '../../api';
+import TeacherLanguageSwitch from '../../components/TeacherLanguageSwitch';
+import { useTeacherLocale } from '../../i18n/TeacherLocaleContext';
 
 const TeacherLogin: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -10,12 +12,13 @@ const TeacherLogin: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { t } = useTeacherLocale();
   const reason = searchParams.get('reason');
   let reasonNotice = '';
   if (reason === 'session') {
-    reasonNotice = '登入已過期或無效，請重新登入。';
+    reasonNotice = t('login.sessionExpired');
   } else if (reason === 'forbidden') {
-    reasonNotice = '目前帳號權限不足，請使用具教師或管理員身分之帳號登入。';
+    reasonNotice = t('login.forbidden');
   }
 
   React.useEffect(() => {
@@ -33,7 +36,7 @@ const TeacherLogin: React.FC = () => {
       localStorage.setItem('teacher', JSON.stringify(response.data.teacher));
       navigate('/teacher/overview');
     } catch (err: any) {
-      setError(err.response?.data?.message || '帳號或密碼錯誤');
+      setError(err.response?.data?.message || t('login.error'));
     } finally {
       setLoading(false);
     }
@@ -43,9 +46,12 @@ const TeacherLogin: React.FC = () => {
     <Layout>
       <div className="flex justify-center">
         <div className="card modal-card modal-card--sm">
+          <div className="flex justify-end mb-md">
+            <TeacherLanguageSwitch compact />
+          </div>
           <div className="text-center mb-xl">
-            <h2 className="mb-xs">老師/管理端登入</h2>
-            <p className="text-sm text-secondary">請輸入您的教育帳號與密碼</p>
+            <h2 className="mb-xs">{t('login.title')}</h2>
+            <p className="text-sm text-secondary">{t('login.subtitle')}</p>
           </div>
 
           {reasonNotice ? (
@@ -56,22 +62,22 @@ const TeacherLogin: React.FC = () => {
 
           <form onSubmit={handleLogin}>
             <div className="form-group">
-              <label className="form-label">電子郵件 (Email)</label>
+              <label className="form-label">{t('login.email')}</label>
               <input
                 type="email"
                 className="form-input"
-                placeholder="example@ncyu.edu.tw"
+                placeholder={t('login.emailPlaceholder')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>
             <div className="form-group">
-              <label className="form-label">密碼 (Password)</label>
+              <label className="form-label">{t('login.password')}</label>
               <input
                 type="password"
                 className="form-input"
-                placeholder="請輸入密碼"
+                placeholder={t('login.passwordPlaceholder')}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -85,12 +91,12 @@ const TeacherLogin: React.FC = () => {
               className="btn btn-primary btn-lg w-full"
               disabled={loading}
             >
-              {loading ? <div className="spinner"></div> : '登入後台管理'}
+              {loading ? <div className="spinner"></div> : t('login.submit')}
             </button>
           </form>
 
           <div className="mt-xl text-center">
-            <Link to="/teacher/forgot-password" title="忘記密碼" className="text-xs text-secondary">忘記密碼？</Link>
+            <Link to="/teacher/forgot-password" title={t('login.forgot')} className="text-xs text-secondary">{t('login.forgot')}</Link>
           </div>
         </div>
       </div>

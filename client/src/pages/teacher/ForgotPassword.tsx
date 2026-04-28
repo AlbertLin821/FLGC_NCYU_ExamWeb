@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import { authApi } from '../../api';
+import TeacherLanguageSwitch from '../../components/TeacherLanguageSwitch';
+import { useTeacherLocale } from '../../i18n/TeacherLocaleContext';
 
 const ForgotPassword: React.FC = () => {
+  const { t } = useTeacherLocale();
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -23,7 +26,7 @@ const ForgotPassword: React.FC = () => {
         setToken(response.data.token);
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || '發生錯誤，請稍後再試');
+      setError(err.response?.data?.message || t('forgot.error'));
     } finally {
       setLoading(false);
     }
@@ -33,19 +36,22 @@ const ForgotPassword: React.FC = () => {
     <Layout>
       <div className="flex justify-center">
         <div className="card modal-card modal-card--sm">
+          <div className="flex justify-end mb-md">
+            <TeacherLanguageSwitch compact />
+          </div>
           <div className="text-center mb-xl">
-            <h2 className="mb-xs">忘記密碼</h2>
-            <p className="text-sm text-secondary">請輸入您的註冊信箱以獲取重設驗證碼</p>
+            <h2 className="mb-xs">{t('forgot.title')}</h2>
+            <p className="text-sm text-secondary">{t('forgot.subtitle')}</p>
           </div>
 
           {!message ? (
             <form onSubmit={handleSubmit}>
               <div className="form-group">
-                <label className="form-label">電子郵件 (Email)</label>
+                <label className="form-label">{t('login.email')}</label>
                 <input
                   type="email"
                   className="form-input"
-                  placeholder="example@ncyu.edu.tw"
+                  placeholder={t('login.emailPlaceholder')}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -59,7 +65,7 @@ const ForgotPassword: React.FC = () => {
                 className="btn btn-primary btn-lg w-full"
                 disabled={loading}
               >
-                {loading ? <div className="spinner"></div> : '發送驗證碼'}
+                {loading ? <div className="spinner"></div> : t('forgot.submit')}
               </button>
             </form>
           ) : (
@@ -67,24 +73,24 @@ const ForgotPassword: React.FC = () => {
               <div className="alert alert-success mb-lg">{message}</div>
               {token && (
                 <div className="card bg-light mb-lg p-md text-left">
-                  <p className="text-xs text-secondary mb-xs">測試模式：您的驗證碼為</p>
+                  <p className="text-xs text-secondary mb-xs">{t('forgot.testMode')}</p>
                   <code className="text-lg font-bold text-primary">{token}</code>
                   <div className="mt-md">
                     <Link 
                       to={`/teacher/reset-password/${token}`}
                       className="btn btn-outline btn-sm w-full"
                     >
-                      直接前往重設頁面
+                      {t('forgot.directReset')}
                     </Link>
                   </div>
                 </div>
               )}
-              <Link to="/teacher/login" className="text-sm text-primary">返回登入</Link>
+              <Link to="/teacher/login" className="text-sm text-primary">{t('forgot.back')}</Link>
             </div>
           )}
 
           <div className="mt-xl text-center">
-            <Link to="/teacher/login" className="text-xs text-secondary">想起來了？返回登入</Link>
+            <Link to="/teacher/login" className="text-xs text-secondary">{t('forgot.remember')}</Link>
           </div>
         </div>
       </div>

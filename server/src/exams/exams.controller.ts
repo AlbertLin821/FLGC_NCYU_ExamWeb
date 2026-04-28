@@ -9,6 +9,7 @@ import { Type } from 'class-transformer';
 
 export class CreateExamDto {
   @IsNotEmpty() @IsString() title: string;
+  @IsOptional() @IsString() instructions?: string;
   @IsArray()
   @ArrayMinSize(1)
   @IsInt({ each: true })
@@ -22,6 +23,7 @@ export class CreateExamDto {
 
 export class UpdateExamDto {
   @IsOptional() @IsString() title?: string;
+  @IsOptional() @IsString() instructions?: string;
   @IsOptional() @IsArray() @ArrayMinSize(1) @IsInt({ each: true }) @Type(() => Number) classIds?: number[];
   @IsOptional() @IsString() difficulty?: string;
   @IsOptional() @IsInt() timeLimit?: number;

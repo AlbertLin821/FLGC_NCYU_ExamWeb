@@ -3,7 +3,7 @@ import {
 } from '@nestjs/common';
 import { ClassesService } from './classes.service';
 import { JwtAuthGuard, RolesGuard, Roles } from '../auth/guards';
-import { IsNotEmpty, IsString, IsOptional, IsInt } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, IsInt, IsBoolean } from 'class-validator';
 
 export class CreateClassDto {
   @IsNotEmpty() @IsString() name: string;
@@ -12,6 +12,12 @@ export class CreateClassDto {
 
 export class AddTeacherDto {
   @IsInt() teacherId: number;
+}
+
+export class ClearStudentsDto {
+  @IsOptional()
+  @IsBoolean()
+  deleteStudentRecords?: boolean;
 }
 
 @Controller('api/classes')
@@ -59,8 +65,22 @@ export class ClassesController {
 
   @Delete(':id')
   @Roles('admin')
-  delete(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
-    return this.classesService.delete(id, req.user);
+  delete(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req: any,
+    @Query('deleteStudents') deleteStudents?: string,
+  ) {
+    return this.classesService.delete(id, req.user, deleteStudents === 'true');
+  }
+
+  @Post(':id/clear-students')
+  @Roles('admin')
+  clearStudents(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: ClearStudentsDto,
+    @Request() req: any,
+  ) {
+    return this.classesService.clearStudents(id, req.user, dto.deleteStudentRecords !== false);
   }
 
   @Post(':id/teachers')

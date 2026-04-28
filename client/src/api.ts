@@ -184,10 +184,15 @@ export const classesApi = {
     invalidateGetCache(['/classes', '/students', '/exams', '/dashboard']);
     return res;
   }),
-  delete: (id: number) => api.delete(`/classes/${id}`).then((res) => {
+  delete: (id: number, deleteStudents = true) => api.delete(`/classes/${id}`, { params: { deleteStudents } }).then((res) => {
     invalidateGetCache(['/classes', '/students', '/exams', '/dashboard']);
     return res;
   }),
+  clearStudents: (id: number, deleteStudentRecords = true) =>
+    api.post(`/classes/${id}/clear-students`, { deleteStudentRecords }).then((res) => {
+      invalidateGetCache(['/classes', '/students', '/dashboard']);
+      return res;
+    }),
   addTeacher: (classId: number, teacherId: number) =>
     api.post(`/classes/${classId}/teachers`, { teacherId }).then((res) => {
       invalidateGetCache(['/classes', '/teachers']);
@@ -203,6 +208,7 @@ export const studentsApi = {
   getByClass: (classId: number) => cachedGet(`/students`, { params: { classId } }),
   getById: (id: number) => cachedGet(`/students/${id}`),
   getExams: (id: number) => cachedGet(`/students/${id}/exams`, undefined, 20_000),
+  getExamPreview: (id: number, examId: number) => cachedGet(`/students/${id}/exams/${examId}`, undefined, 20_000),
   bulkImport: (
     students: { studentId: string; name: string; schoolName: string }[],
     classId: number,

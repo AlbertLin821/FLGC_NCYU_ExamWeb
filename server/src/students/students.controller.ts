@@ -75,6 +75,14 @@ export class StudentsController {
     return this.studentsService.getStudentExams(id);
   }
 
+  @Get(':id/exams/:examId')
+  getStudentExamPreview(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('examId', ParseIntPipe) examId: number,
+  ) {
+    return this.studentsService.getStudentExamPreview(id, examId);
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'viewer')

@@ -308,6 +308,7 @@ export class StudentsService {
     return exams.map((exam) => ({
       id: exam.id,
       title: exam.title,
+      instructions: exam.instructions,
       difficulty: exam.difficulty,
       timeLimit: exam.timeLimit,
       questionCount: exam.questions.length,
@@ -315,5 +316,14 @@ export class StudentsService {
       endTime: exam.endTime,
       sessionStatus: exam.sessions[0]?.status || 'not_started',
     }));
+  }
+
+  async getStudentExamPreview(studentId: number, examId: number) {
+    const exams = await this.getStudentExams(studentId);
+    const exam = exams.find((item) => item.id === examId);
+    if (!exam) {
+      return null;
+    }
+    return exam;
   }
 }

@@ -246,11 +246,29 @@ const ClassManagement: React.FC = () => {
   };
 
   const deleteClass = async (id: number) => {
-    if (!confirm('確認刪除此班級？這會影響所屬學生與考卷。')) return;
+    if (!confirm('確認刪除此班級？系統會一併移除此班學生關聯，並自動刪除已不屬於任何班級的學生資料。')) return;
     try {
-      await classesApi.delete(id);
+      await classesApi.delete(id, true);
+      if (selectedClass?.id === id) {
+        setSelectedClass(null);
+      }
       fetchClasses();
     } catch { alert('刪除失敗'); }
+  };
+
+  const clearClassStudents = async () => {
+    if (!selectedClass) return;
+    if (!confirm(`確認清空「${selectedClass.name}」的所有學生？系統會移除此班學生關聯，並刪除已不屬於任何班級的學生資料。`)) return;
+    try {
+      const res = await classesApi.clearStudents(selectedClass.id, true);
+      const deletedStudentCount = Number(res.data?.deletedStudentCount || 0);
+      const removedMemberships = Number(res.data?.removedMemberships || 0);
+      await fetchStudents(selectedClass.id);
+      await fetchClasses();
+      alert(`已清除 ${removedMemberships} 筆班級學生關聯，刪除 ${deletedStudentCount} 筆無班級學生資料。`);
+    } catch {
+      alert('清空學生失敗');
+    }
   };
 
   // Student Actions
@@ -469,6 +487,9 @@ const ClassManagement: React.FC = () => {
             </button>
             <button className="btn btn-primary" onClick={() => { setEditingStudent({ studentId: '', name: '', schoolName: '國立嘉義大學' }); setShowStudentModal(true); }}>
               + 新增學生
+            </button>
+            <button className="btn btn-danger" onClick={clearClassStudents}>
+              清空全班學生
             </button>
           </div>
         </div>

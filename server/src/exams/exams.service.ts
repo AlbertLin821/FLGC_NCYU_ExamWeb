@@ -102,6 +102,7 @@ export class ExamsService {
 
   async create(data: {
     title: string;
+    instructions?: string;
     classIds: number[];
     difficulty?: string;
     timeLimit: number;
@@ -120,6 +121,7 @@ export class ExamsService {
       const exam = await tx.exam.create({
         data: {
           title: data.title,
+          instructions: data.instructions?.trim() || null,
           difficulty: data.difficulty,
           timeLimit: data.timeLimit,
           startTime: parseTeacherExamDate(data.startTime),
@@ -141,6 +143,7 @@ export class ExamsService {
     id: number,
     data: Partial<{
       title: string;
+      instructions: string;
       classIds: number[];
       difficulty: string;
       timeLimit: number;
@@ -153,7 +156,10 @@ export class ExamsService {
     await ensureExamAccess(this.prisma, actor, id);
 
     const { classIds, ...rest } = data;
-    const updateData: any = { ...rest };
+    const updateData: any = {
+      ...rest,
+      ...(data.instructions !== undefined ? { instructions: data.instructions.trim() || null } : {}),
+    };
     if (data.startTime) updateData.startTime = parseTeacherExamDate(data.startTime);
     if (data.endTime) updateData.endTime = parseTeacherExamDate(data.endTime);
 

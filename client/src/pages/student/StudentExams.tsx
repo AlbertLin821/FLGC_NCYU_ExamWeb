@@ -46,8 +46,8 @@ const StudentExams: React.FC = () => {
     fetchExams();
   }, [student, navigate, locale]);
 
-  const handleStartExam = (examId: number) => {
-    navigate(`/student/exam/${examId}`);
+  const handleStartExam = (examId: number, sessionStatus: string) => {
+    navigate(sessionStatus === 'in_progress' ? `/student/exam/${examId}` : `/student/exam/${examId}/intro`);
   };
 
   const formatDate = (dateStr: string) => {
@@ -112,9 +112,9 @@ const StudentExams: React.FC = () => {
                 ) : (
                   <button
                     className="btn btn-primary w-full"
-                    onClick={() => handleStartExam(exam.id)}
+                    onClick={() => handleStartExam(exam.id, exam.sessionStatus)}
                   >
-                    {exam.sessionStatus === 'in_progress' ? t('exams.continue') : t('exams.enter')}
+                    {exam.sessionStatus === 'in_progress' ? t('exams.continue') : t('exams.readFirst')}
                   </button>
                 )}
               </div>

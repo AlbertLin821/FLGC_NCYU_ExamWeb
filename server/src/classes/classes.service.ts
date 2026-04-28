@@ -1,10 +1,32 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ensureClassAccess, isAdminRole, type TeacherActor } from '../auth/access';
 
 @Injectable()
 export class ClassesService {
   constructor(private prisma: PrismaService) {}
+
+  private async deleteOrphanStudents(tx: PrismaService | Prisma.TransactionClient, candidateStudentIds: number[]) {
+    if (candidateStudentIds.length === 0) {
+      return 0;
+    }
+    const uniqueStudentIds = [...new Set(candidateStudentIds)];
+    const remainingClassCounts = await tx.studentClass.groupBy({
+      by: ['studentId'],
+      where: { studentId: { in: uniqueStudentIds } },
+      _count: { studentId: true },
+    });
+    const studentsStillAssigned = new Set(remainingClassCounts.map((row) => row.studentId));
+    const orphanStudentIds = uniqueStudentIds.filter((studentId) => !studentsStillAssigned.has(studentId));
+    if (orphanStudentIds.length === 0) {
+      return 0;
+    }
+    const deleted = await tx.student.deleteMany({
+      where: { id: { in: orphanStudentIds } },
+    });
+    return deleted.count;
+  }
 
   async findAll(actor: TeacherActor, page?: number, limit?: number) {
     const where = isAdminRole(actor.role) ? {} : { teachers: { some: { teacherId: actor.id } } };
@@ -69,9 +91,42 @@ export class ClassesService {
     return this.prisma.class.update({ where: { id }, data });
   }
 
-  async delete(id: number, actor: TeacherActor) {
+  async delete(id: number, actor: TeacherActor, deleteStudents = true) {
     await ensureClassAccess(this.prisma, actor, id);
-    return this.prisma.class.delete({ where: { id } });
+    return this.prisma.$transaction(async (tx) => {
+      const linkedStudents = await tx.studentClass.findMany({
+        where: { classId: id },
+        select: { studentId: true },
+      });
+      const deletedClass = await tx.class.delete({ where: { id } });
+      const deletedStudentCount = deleteStudents
+        ? await this.deleteOrphanStudents(tx, linkedStudents.map((row) => row.studentId))
+        : 0;
+      return {
+        deletedClass,
+        deletedStudentCount,
+      };
+    });
+  }
+
+  async clearStudents(id: number, actor: TeacherActor, deleteStudentRecords = true) {
+    await ensureClassAccess(this.prisma, actor, id);
+    return this.prisma.$transaction(async (tx) => {
+      const linkedStudents = await tx.studentClass.findMany({
+        where: { classId: id },
+        select: { studentId: true },
+      });
+      const removedMemberships = await tx.studentClass.deleteMany({
+        where: { classId: id },
+      });
+      const deletedStudentCount = deleteStudentRecords
+        ? await this.deleteOrphanStudents(tx, linkedStudents.map((row) => row.studentId))
+        : 0;
+      return {
+        removedMemberships: removedMemberships.count,
+        deletedStudentCount,
+      };
+    });
   }
 
   async addTeacher(classId: number, teacherId: number, actor: TeacherActor) {

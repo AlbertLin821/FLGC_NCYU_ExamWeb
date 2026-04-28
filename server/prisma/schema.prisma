@@ -106,6 +106,7 @@ model ExamClass {
 model Exam {
   id         Int       @id @default(autoincrement())
   title      String
+  instructions String? @db.Text
   difficulty String?   // 'easy' | 'medium' | 'hard'
   timeLimit  Int       @map("time_limit") // 分鐘
   startTime  DateTime  @map("start_time")

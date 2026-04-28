@@ -23,7 +23,7 @@ const ExamManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [newExam, setNewExam] = useState<any>({
-    title: '', classIds: [] as number[], difficulty: 'medium', timeLimit: 30,
+    title: '', instructions: '', classIds: [] as number[], difficulty: 'medium', timeLimit: 30,
     startTime: '', endTime: ''
   });
   const [editingExamId, setEditingExamId] = useState<number | null>(null);
@@ -74,7 +74,7 @@ const ExamManagement: React.FC = () => {
   const openCreateModal = () => {
     setEditingExamId(null);
     setNewExam({
-      title: '', classIds: classes[0]?.id ? [classes[0].id] : [], difficulty: 'medium', timeLimit: 30,
+      title: '', instructions: '', classIds: classes[0]?.id ? [classes[0].id] : [], difficulty: 'medium', timeLimit: 30,
       startTime: '', endTime: ''
     });
     setShowModal(true);
@@ -85,6 +85,7 @@ const ExamManagement: React.FC = () => {
     const ids = exam.examClasses?.map((ec: { classId: number }) => ec.classId) ?? [];
     setNewExam({
       title: exam.title,
+      instructions: exam.instructions ?? '',
       classIds: ids.length ? ids : (classes[0]?.id ? [classes[0].id] : []),
       difficulty: exam.difficulty || 'medium',
       timeLimit: exam.timeLimit,
@@ -127,6 +128,7 @@ const ExamManagement: React.FC = () => {
 
     const payload = {
       title: newExam.title,
+      instructions: newExam.instructions,
       classIds: newExam.classIds as number[],
       difficulty: newExam.difficulty,
       timeLimit: newExam.timeLimit,
@@ -268,6 +270,16 @@ const ExamManagement: React.FC = () => {
               <div className="form-group">
                 <label className="form-label">考卷標題</label>
                 <input className="form-input" value={newExam.title} onChange={e => setNewExam({ ...newExam, title: e.target.value })} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">考卷說明</label>
+                <textarea
+                  className="form-input"
+                  rows={5}
+                  placeholder="請輸入考卷目的、作答方式、注意事項。學生開始作答前會先看到這段說明。"
+                  value={newExam.instructions}
+                  onChange={e => setNewExam({ ...newExam, instructions: e.target.value })}
+                />
               </div>
               <div className="form-grid mb-md">
                 <div className="form-group w-full" ref={classMenuRef} style={{ position: 'relative' }}>
