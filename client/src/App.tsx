@@ -5,11 +5,29 @@ import { StudentLocaleProvider } from './i18n/StudentLocaleContext';
 import { TeacherLocaleProvider } from './i18n/TeacherLocaleContext';
 import { useStudentDocumentLang } from './i18n/useStudentDocumentLang';
 import { useTeacherDocumentLang } from './i18n/useTeacherDocumentLang';
+import { useEffect } from 'react';
 
 function DocumentLangBridge() {
   const { pathname } = useLocation();
   useStudentDocumentLang(pathname);
   useTeacherDocumentLang(pathname);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('translate', 'no');
+    document.documentElement.classList.add('notranslate');
+    document.body.classList.add('notranslate');
+    document.getElementById('root')?.classList.add('notranslate');
+
+    const handleContextMenu = (event: MouseEvent) => {
+      event.preventDefault();
+    };
+
+    document.addEventListener('contextmenu', handleContextMenu);
+    return () => {
+      document.removeEventListener('contextmenu', handleContextMenu);
+    };
+  }, [pathname]);
+
   return null;
 }
 
