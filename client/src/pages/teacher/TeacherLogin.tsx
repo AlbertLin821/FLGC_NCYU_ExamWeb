@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import { authApi } from '../../api';
-import TeacherLanguageSwitch from '../../components/TeacherLanguageSwitch';
 import { useTeacherLocale } from '../../i18n/TeacherLocaleContext';
 
 const TeacherLogin: React.FC = () => {
@@ -46,9 +45,6 @@ const TeacherLogin: React.FC = () => {
     <Layout>
       <div className="flex justify-center">
         <div className="card modal-card modal-card--sm">
-          <div className="flex justify-end mb-md">
-            <TeacherLanguageSwitch compact />
-          </div>
           <div className="text-center mb-xl">
             <h2 className="mb-xs">{t('login.title')}</h2>
             <p className="text-sm text-secondary">{t('login.subtitle')}</p>

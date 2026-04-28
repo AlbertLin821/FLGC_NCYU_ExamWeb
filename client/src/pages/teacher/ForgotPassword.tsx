@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import { authApi } from '../../api';
-import TeacherLanguageSwitch from '../../components/TeacherLanguageSwitch';
 import { useTeacherLocale } from '../../i18n/TeacherLocaleContext';
 
 const ForgotPassword: React.FC = () => {
@@ -36,9 +35,6 @@ const ForgotPassword: React.FC = () => {
     <Layout>
       <div className="flex justify-center">
         <div className="card modal-card modal-card--sm">
-          <div className="flex justify-end mb-md">
-            <TeacherLanguageSwitch compact />
-          </div>
           <div className="text-center mb-xl">
             <h2 className="mb-xs">{t('forgot.title')}</h2>
             <p className="text-sm text-secondary">{t('forgot.subtitle')}</p>

@@ -22,7 +22,6 @@ import {
 } from 'lucide-react';
 import { dashboardApi, teachersApi, warmTeacherData } from '../../api';
 import { getTeacherRole } from '../../utils/teacherRole';
-import TeacherLanguageSwitch from '../../components/TeacherLanguageSwitch';
 import { useTeacherLocale } from '../../i18n/TeacherLocaleContext';
 
 const DashboardOverview = () => {
@@ -81,11 +80,6 @@ const DashboardOverview = () => {
 
   return (
   <div className="flex flex-col gap-lg">
-    {role === 'teacher' && (
-      <div className="flex justify-end">
-        <TeacherLanguageSwitch compact />
-      </div>
-    )}
     <div className="dashboard-grid">
       <div className="card" style={{ background: 'var(--color-primary)', color: 'white' }}>
         <h4 style={{ opacity: 0.8 }}>{role === 'teacher' ? t('dashboard.activeSessions') : '目前作答人數'}</h4>

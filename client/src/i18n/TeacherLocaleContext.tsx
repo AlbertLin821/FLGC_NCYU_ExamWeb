@@ -1,10 +1,11 @@
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
   TEACHER_LOCALE_STORAGE_KEY,
   type TeacherLocale,
   getTeacherString,
 } from './teacherMessages';
+import { GLOBAL_LOCALE_EVENT, readGlobalLocale, syncGlobalLocale } from './localeSync';
 
 type TeacherLocaleContextValue = {
   locale: TeacherLocale;
@@ -15,6 +16,10 @@ type TeacherLocaleContextValue = {
 const TeacherLocaleContext = createContext<TeacherLocaleContextValue | null>(null);
 
 function readStoredLocale(): TeacherLocale {
+  const globalLocale = readGlobalLocale();
+  if (globalLocale) {
+    return globalLocale;
+  }
   try {
     const value = localStorage.getItem(TEACHER_LOCALE_STORAGE_KEY);
     if (value === 'zh-TW' || value === 'en') {
@@ -31,11 +36,38 @@ export function TeacherLocaleProvider({ children }: { children: React.ReactNode 
 
   const setLocale = useCallback((nextLocale: TeacherLocale) => {
     setLocaleState(nextLocale);
-    try {
-      localStorage.setItem(TEACHER_LOCALE_STORAGE_KEY, nextLocale);
-    } catch {
-      /* ignore */
-    }
+    syncGlobalLocale(nextLocale, [TEACHER_LOCALE_STORAGE_KEY, 'ncyu-student-locale']);
+  }, []);
+
+  useEffect(() => {
+    const syncLocale = (nextLocale: TeacherLocale) => {
+      setLocaleState((prev) => (prev === nextLocale ? prev : nextLocale));
+    };
+
+    const onStorage = (event: StorageEvent) => {
+      if (
+        event.key === TEACHER_LOCALE_STORAGE_KEY ||
+        event.key === 'ncyu-student-locale' ||
+        event.key === 'ncyu-global-locale'
+      ) {
+        const nextLocale = readStoredLocale();
+        syncLocale(nextLocale);
+      }
+    };
+
+    const onGlobalLocale = (event: Event) => {
+      const nextLocale = (event as CustomEvent<TeacherLocale>).detail;
+      if (nextLocale === 'zh-TW' || nextLocale === 'en') {
+        syncLocale(nextLocale);
+      }
+    };
+
+    window.addEventListener('storage', onStorage);
+    window.addEventListener(GLOBAL_LOCALE_EVENT, onGlobalLocale as EventListener);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener(GLOBAL_LOCALE_EVENT, onGlobalLocale as EventListener);
+    };
   }, []);
 
   const t = useCallback(

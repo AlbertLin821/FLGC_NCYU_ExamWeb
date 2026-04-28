@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import { authApi } from '../../api';
-import TeacherLanguageSwitch from '../../components/TeacherLanguageSwitch';
 import { useTeacherLocale } from '../../i18n/TeacherLocaleContext';
 
 const ResetPassword: React.FC = () => {
@@ -44,9 +43,6 @@ const ResetPassword: React.FC = () => {
     <Layout>
       <div className="flex justify-center">
         <div className="card modal-card modal-card--sm">
-          <div className="flex justify-end mb-md">
-            <TeacherLanguageSwitch compact />
-          </div>
           <div className="text-center mb-xl">
             <h2 className="mb-xs">{t('reset.title')}</h2>
             <p className="text-sm text-secondary">{t('reset.subtitle')}</p>

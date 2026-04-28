@@ -4,7 +4,6 @@ import { io, Socket } from 'socket.io-client';
 import { cheatApi, getServerOrigin } from '../../api';
 import { cheatSocketStatusMessage, useCheatSocketStatus } from '../../hooks/useCheatSocketStatus';
 import { getTeacherRole } from '../../utils/teacherRole';
-import TeacherLanguageSwitch from '../../components/TeacherLanguageSwitch';
 import { useTeacherLocale } from '../../i18n/TeacherLocaleContext';
 
 const AntiCheatMonitor: React.FC = () => {
@@ -61,11 +60,6 @@ const AntiCheatMonitor: React.FC = () => {
 
   return (
     <div>
-      {role === 'teacher' && (
-        <div className="flex justify-end mb-md">
-          <TeacherLanguageSwitch compact />
-        </div>
-      )}
       <div
         role="status"
         data-testid="monitor-ws-status"

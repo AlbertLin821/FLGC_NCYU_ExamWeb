@@ -6,7 +6,6 @@ import { cheatApi, examsApi, getServerOrigin } from '../../api';
 import { useCheatSocketStatus } from '../../hooks/useCheatSocketStatus';
 import { useStudentLocale } from '../../i18n/StudentLocaleContext';
 import { getStudentExamSocketLine, getStudentString } from '../../i18n/studentMessages';
-import StudentLanguageSwitch from '../../components/StudentLanguageSwitch';
 
 interface Question {
   id: number;
@@ -494,7 +493,6 @@ const ExamRoom: React.FC = () => {
       <div className="header" style={{ position: 'relative' }}>
         <div className="container header-inner exam-room-bar">
           <div className="flex items-center gap-lg min-w-0">
-            <StudentLanguageSwitch variant="compact" />
             <span className="badge badge-primary">{t('exam.inProgress')}</span>
             {session ? (
               <span className="min-w-0" style={{ fontWeight: 600, lineHeight: 1.35 }}>
