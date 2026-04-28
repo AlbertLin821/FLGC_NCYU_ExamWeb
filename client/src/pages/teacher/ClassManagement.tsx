@@ -42,6 +42,14 @@ function gradedWeightedSummary(sessions: any[] | undefined): string {
 
 type StudentImportRow = { studentId: string; name: string; schoolName: string };
 type ImportMode = 'text' | 'excel';
+type ImportProgress = {
+  processed: number;
+  total: number;
+  batchIndex: number;
+  batchCount: number;
+};
+
+const IMPORT_BATCH_SIZE = 100;
 
 const STUDENT_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]*\d[A-Za-z0-9_-]*$/;
 const SCHOOL_NAME_HINT_PATTERN = /(校|學校|大學|學院|高中|高職|國中|國小|university|college|school|ncyu)/i;
@@ -186,6 +194,7 @@ const ClassManagement: React.FC = () => {
   const [importFileName, setImportFileName] = useState('');
   const [importParsing, setImportParsing] = useState(false);
   const [importSubmitting, setImportSubmitting] = useState(false);
+  const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
 
   const fetchClasses = async () => {
     try {
@@ -269,6 +278,7 @@ const ClassManagement: React.FC = () => {
     setImportFileName('');
     setImportParsing(false);
     setImportSubmitting(false);
+    setImportProgress(null);
   };
 
   const openImportModal = () => {
@@ -352,9 +362,49 @@ const ClassManagement: React.FC = () => {
       return;
     }
     setImportSubmitting(true);
+    setImportProgress({
+      processed: 0,
+      total: importPreview.length,
+      batchIndex: 0,
+      batchCount: Math.max(1, Math.ceil(importPreview.length / IMPORT_BATCH_SIZE)),
+    });
     try {
-      await studentsApi.bulkImport(importPreview, selectedClass.id);
-      alert(`成功匯入 ${importPreview.length} 位學生`);
+      let created = 0;
+      let updated = 0;
+      const errors: string[] = [];
+      const total = importPreview.length;
+      const batchCount = Math.max(1, Math.ceil(total / IMPORT_BATCH_SIZE));
+
+      for (let i = 0; i < total; i += IMPORT_BATCH_SIZE) {
+        const batch = importPreview.slice(i, i + IMPORT_BATCH_SIZE);
+        setImportProgress({
+          processed: i,
+          total,
+          batchIndex: Math.floor(i / IMPORT_BATCH_SIZE) + 1,
+          batchCount,
+        });
+        const res = await studentsApi.bulkImport(batch, selectedClass.id);
+        const data = res.data as { created?: number; updated?: number; errors?: string[] };
+        created += data.created ?? 0;
+        updated += data.updated ?? 0;
+        if (Array.isArray(data.errors) && data.errors.length > 0) {
+          errors.push(...data.errors);
+        }
+        setImportProgress({
+          processed: Math.min(i + batch.length, total),
+          total,
+          batchIndex: Math.floor(i / IMPORT_BATCH_SIZE) + 1,
+          batchCount,
+        });
+      }
+
+      if (errors.length > 0) {
+        alert(
+          `匯入完成：新增 ${created} 位、更新 ${updated} 位。\n失敗 ${errors.length} 筆。\n前 10 筆錯誤：\n${errors.slice(0, 10).join('\n')}`,
+        );
+      } else {
+        alert(`匯入完成：新增 ${created} 位、更新 ${updated} 位。`);
+      }
       closeImportModal();
       fetchStudents(selectedClass.id);
     } catch (err: any) {
@@ -362,6 +412,7 @@ const ClassManagement: React.FC = () => {
       alert(Array.isArray(msg) ? msg.join('；') : msg || '匯入失敗');
     } finally {
       setImportSubmitting(false);
+      setImportProgress(null);
     }
   };
 
@@ -482,6 +533,33 @@ const ClassManagement: React.FC = () => {
                   <p className="text-sm text-secondary mt-sm">
                     {importSubmitting ? '匯入中，請勿關閉視窗或重複按鈕…' : '正在解析資料…'}
                   </p>
+                  {importSubmitting && importProgress && (
+                    <div className="w-full max-w-sm mt-md">
+                      <p className="text-sm text-secondary text-center mb-sm">
+                        已完成 {importProgress.processed} / {importProgress.total} 筆
+                        （第 {importProgress.batchIndex} / {importProgress.batchCount} 批）
+                      </p>
+                      <div
+                        style={{
+                          width: '100%',
+                          height: '10px',
+                          background: 'var(--color-bg-alt)',
+                          borderRadius: '999px',
+                          overflow: 'hidden',
+                          border: '1px solid var(--color-border)',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: `${Math.min(100, Math.round((importProgress.processed / Math.max(1, importProgress.total)) * 100))}%`,
+                            height: '100%',
+                            background: 'var(--color-primary)',
+                            transition: 'width 180ms ease',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
               {importPreview.length > 0 ? (
