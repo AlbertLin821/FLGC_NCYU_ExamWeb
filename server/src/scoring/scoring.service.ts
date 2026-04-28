@@ -425,7 +425,10 @@ General rules:
     - Keep it concise, within about 30 English words total.
 - For type "paragraph_writing", use the Academic Writing Specialist rubric below.
 - For type "paragraph_writing", return writingScore on a 0-5 scale, CEFR level, and aiScore converted to percentage by writingScore / 5 * 100.
-- For type "paragraph_writing", aiFeedback must be in Traditional Chinese, start with strengths, then weaknesses and actionable advice, and stay concise.
+- For type "paragraph_writing", aiFeedback must be bilingual in this exact inline format:
+  EN: <one concise English sentence>
+  ZH: <one concise Traditional Chinese sentence>
+- In both languages, mention strengths first, then weakness or actionable advice.
 - Blank answers receive 0.
 
 Academic Writing Specialist Evaluator
@@ -441,10 +444,10 @@ Scoring & CEFR Reference:
 2 (A2/B1): Mostly unsuccessful; limited range of expression, frequent errors that obscure meaning.
 1 (A1/A2): Unsuccessful; incoherent or extremely limited in scope.
 - For paragraph_writing output, keep the response compact:
-  - aiFeedback: Traditional Chinese only, 2-3 short sentences, with this order:
-    1. strengths
-    2. weaknesses
-    3. actionable suggestion
+  - aiFeedback:
+    - exactly one short English sentence and one short Traditional Chinese sentence
+    - use the exact format "EN: ... ZH: ..."
+    - strengths first, then weakness or actionable suggestion
   - overallFeedbackEn: 1 concise sentence
   - overallFeedbackZh: 1 concise professional sentence
 - Do not include markdown headings, diagnostic sections, or exemplary revision text in the JSON values.
@@ -471,7 +474,7 @@ Output JSON shape:
 Examples of valid aiFeedback:
 - "EN: She runs daily. ZH: 句子正確通順。"
 - "EN: Use \"He runs fast.\" ZH: 缺少目標字。"
-- "文意完整清楚。可再強化論述。"
+- "EN: Clear main idea; add more support. ZH: 主旨清楚，建議補強論述。"
 
 Submitted writing sessions:
 
@@ -578,7 +581,7 @@ ${sessionBlocks}`;
         const aiFeedback =
           expectedItem.type === 'essay'
             ? rawFeedback.slice(0, 160)
-            : rawFeedback.slice(0, 30);
+            : rawFeedback.slice(0, 220);
         let writingScore: number | null | undefined = null;
         if (row.writingScore !== null && row.writingScore !== undefined && row.writingScore !== '') {
           const rawScore = Number(row.writingScore);

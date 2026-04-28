@@ -5,6 +5,7 @@ import Layout from '../../components/Layout';
 import { studentsApi } from '../../api';
 import { useStudentLocale } from '../../i18n/StudentLocaleContext';
 import { earnedPointsOnQuestion, sessionScorePercent } from '../../utils/sessionScore';
+import { getLocalizedAiFeedback } from '../../utils/aiFeedbackLocale';
 
 type AnswerRow = {
   id: number;
@@ -263,7 +264,7 @@ const ExamResult: React.FC = () => {
 
                   <div className="text-sm" style={{ whiteSpace: 'pre-wrap' }}>
                     <span className="font-bold">{t('result.answerFeedback')}：</span>
-                    {answer.aiFeedback?.trim() || (locale === 'en' ? 'Pending AI grading.' : '等待 AI 批改中。')}
+                    {getLocalizedAiFeedback(answer.aiFeedback, locale) || (locale === 'en' ? 'Pending AI grading.' : '等待 AI 批改中。')}
                   </div>
                 </div>
               );

@@ -27,7 +27,10 @@ const AntiCheatMonitor: React.FC = () => {
     fetchAlerts();
 
     // WS Connection
-    const socket = io(`${getServerOrigin()}/cheat`, { transports: ['websocket'] });
+    const socket = io(`${getServerOrigin()}/cheat`, {
+      withCredentials: true,
+      reconnectionAttempts: 5,
+    });
     socketRef.current = socket;
     setMonitorSocket(socket);
 

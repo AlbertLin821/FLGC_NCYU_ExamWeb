@@ -8,24 +8,32 @@ export type CheatSocketStatus = 'connected' | 'reconnecting' | 'disconnected';
  */
 export function useCheatSocketStatus(socket: Socket | null): CheatSocketStatus {
   const [status, setStatus] = useState<CheatSocketStatus>('disconnected');
+  const [hadSuccessfulConnect, setHadSuccessfulConnect] = useState(false);
 
   useEffect(() => {
     if (!socket) {
       setStatus('disconnected');
+      setHadSuccessfulConnect(false);
       return;
     }
 
-    const onConnect = () => setStatus('connected');
+    const onConnect = () => {
+      setHadSuccessfulConnect(true);
+      setStatus('connected');
+    };
     const onDisconnect = (reason: string) => {
       if (reason === 'io client disconnect') {
         setStatus('disconnected');
       } else {
-        setStatus('reconnecting');
+        setStatus(hadSuccessfulConnect ? 'reconnecting' : 'disconnected');
       }
     };
     const onReconnectAttempt = () => setStatus('reconnecting');
-    const onConnectError = () => setStatus('reconnecting');
-    const onReconnect = () => setStatus('connected');
+    const onConnectError = () => setStatus(hadSuccessfulConnect ? 'reconnecting' : 'disconnected');
+    const onReconnect = () => {
+      setHadSuccessfulConnect(true);
+      setStatus('connected');
+    };
 
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
@@ -33,7 +41,7 @@ export function useCheatSocketStatus(socket: Socket | null): CheatSocketStatus {
     socket.io.on('reconnect_attempt', onReconnectAttempt);
     socket.io.on('reconnect', onReconnect);
 
-    setStatus(socket.connected ? 'connected' : 'reconnecting');
+    setStatus(socket.connected ? 'connected' : 'disconnected');
 
     return () => {
       socket.off('connect', onConnect);
@@ -42,7 +50,7 @@ export function useCheatSocketStatus(socket: Socket | null): CheatSocketStatus {
       socket.io.off('reconnect_attempt', onReconnectAttempt);
       socket.io.off('reconnect', onReconnect);
     };
-  }, [socket]);
+  }, [socket, hadSuccessfulConnect]);
 
   return status;
 }
