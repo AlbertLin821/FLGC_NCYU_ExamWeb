@@ -162,7 +162,7 @@ const TeacherDashboard: React.FC = () => {
   const token = localStorage.getItem('token');
   const [teacherMenuOpen, setTeacherMenuOpen] = React.useState(false);
   const role = getTeacherRole();
-  const { t } = useTeacherLocale();
+  const { locale, t } = useTeacherLocale();
 
   React.useEffect(() => {
     if (!token) navigate('/teacher/login');
@@ -180,7 +180,7 @@ const TeacherDashboard: React.FC = () => {
     return (
       <Layout>
         <div className="flex justify-center items-center" style={{ minHeight: '400px' }}>
-          <div className="spinner" role="status" aria-label="載入中" />
+          <div className="spinner" role="status" aria-label={role === 'teacher' && locale === 'en' ? 'Loading' : '載入中'} />
         </div>
       </Layout>
     );

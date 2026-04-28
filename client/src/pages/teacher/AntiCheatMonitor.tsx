@@ -9,7 +9,7 @@ import { useTeacherLocale } from '../../i18n/TeacherLocaleContext';
 
 const AntiCheatMonitor: React.FC = () => {
   const role = getTeacherRole();
-  const { t } = useTeacherLocale();
+  const { locale, t } = useTeacherLocale();
   const [alerts, setAlerts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const socketRef = useRef<Socket | null>(null);
@@ -71,7 +71,7 @@ const AntiCheatMonitor: React.FC = () => {
         data-testid="monitor-ws-status"
         className={`text-sm mb-md ${wsStatus === 'connected' ? 'text-secondary' : 'alert alert-warning'}`}
       >
-        {cheatSocketStatusMessage(wsStatus, 'monitor')}
+        {cheatSocketStatusMessage(wsStatus, 'monitor', locale)}
       </div>
       <div className="mb-lg">
         <h3>{role === 'teacher' ? t('cheat.title') : '防弊即時監控'}</h3>

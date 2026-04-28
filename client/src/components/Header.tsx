@@ -1,7 +1,9 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useStudentLocale } from '../i18n/StudentLocaleContext';
+import { useTeacherLocale } from '../i18n/TeacherLocaleContext';
 import StudentLanguageSwitch from './StudentLanguageSwitch';
+import TeacherLanguageSwitch from './TeacherLanguageSwitch';
 
 const BRAND_EN = 'NCYU Language Center AI English Write';
 const BRAND_ZH = '國立嘉義大學語言中心AI英文寫作評測系統';
@@ -9,12 +11,17 @@ const BRAND_ZH = '國立嘉義大學語言中心AI英文寫作評測系統';
 const Header: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { locale, t } = useStudentLocale();
+  const { locale: studentLocale, t: tStudent } = useStudentLocale();
+  const { locale: teacherLocale, t: tTeacher } = useTeacherLocale();
   const teacherData = localStorage.getItem('teacher');
   const teacher = teacherData ? JSON.parse(teacherData) : null;
 
   const studentSurface = location.pathname === '/' || location.pathname.startsWith('/student');
-  const navI18n = studentSurface && locale === 'en';
+  const teacherSurface = location.pathname.startsWith('/teacher');
+  const useTeacherI18n = teacherSurface && teacherLocale === 'en';
+  const useStudentI18n = studentSurface && studentLocale === 'en';
+  const tHeader = useTeacherI18n ? tTeacher : tStudent;
+  const navI18n = useTeacherI18n || useStudentI18n;
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -33,20 +40,20 @@ const Header: React.FC = () => {
           </span>
         </Link>
         <div className="header-actions">
-          {studentSurface && <StudentLanguageSwitch />}
+          {teacherSurface ? <TeacherLanguageSwitch /> : studentSurface ? <StudentLanguageSwitch /> : null}
           <nav>
             <ul className="header-nav">
               <li>
-                <Link to="/">{navI18n ? t('header.home') : '首頁'}</Link>
+                <Link to="/">{navI18n ? tHeader('header.home') : '首頁'}</Link>
               </li>
               {teacher ? (
                 <>
-                  <li><Link to="/teacher/dashboard">{navI18n ? t('header.teacherPortal') : '管理端'}</Link></li>
-                  <li><button onClick={handleLogout} className="btn btn-sm btn-secondary">{navI18n ? t('header.logout') : '登出'}</button></li>
+                  <li><Link to="/teacher/dashboard">{navI18n ? tHeader('header.teacherPortal') : '管理端'}</Link></li>
+                  <li><button onClick={handleLogout} className="btn btn-sm btn-secondary">{navI18n ? tHeader('header.logout') : '登出'}</button></li>
                 </>
               ) : (
                 <li>
-                  <Link to="/teacher/login">{navI18n ? t('header.teacherLogin') : '老師登入'}</Link>
+                  <Link to="/teacher/login">{navI18n ? tHeader('header.teacherLogin') : '老師登入'}</Link>
                 </li>
               )}
             </ul>

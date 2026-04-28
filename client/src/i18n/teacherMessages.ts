@@ -4,6 +4,12 @@ export const TEACHER_LOCALE_STORAGE_KEY = 'ncyu-teacher-locale';
 
 export const teacherMessages = {
   'zh-TW': {
+    header: {
+      home: '首頁',
+      teacherLogin: '老師登入',
+      teacherPortal: '管理端',
+      logout: '登出',
+    },
     nav: {
       overview: '儀表板',
       cheat: '防弊監控',
@@ -87,6 +93,12 @@ export const teacherMessages = {
     },
   },
   en: {
+    header: {
+      home: 'Home',
+      teacherLogin: 'Teacher Login',
+      teacherPortal: 'Dashboard',
+      logout: 'Sign Out',
+    },
     nav: {
       overview: 'Dashboard',
       cheat: 'Cheat Monitor',

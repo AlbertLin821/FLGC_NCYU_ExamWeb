@@ -50,13 +50,21 @@ export function useCheatSocketStatus(socket: Socket | null): CheatSocketStatus {
 export function cheatSocketStatusMessage(
   status: CheatSocketStatus,
   context: 'exam' | 'monitor',
+  locale: 'zh-TW' | 'en' = 'zh-TW',
 ): string {
-  const prefix = context === 'exam' ? '考場即時連線' : '防弊監控連線';
+  const isEnglish = locale === 'en';
+  const prefix = context === 'exam'
+    ? (isEnglish ? 'Live exam connection' : '考場即時連線')
+    : (isEnglish ? 'Cheat monitor connection' : '防弊監控連線');
   if (status === 'connected') {
-    return `${prefix}：已連線`;
+    return isEnglish ? `${prefix}: connected` : `${prefix}：已連線`;
   }
   if (status === 'reconnecting') {
-    return `${prefix}：重新連線中（事件通報可能延遲）`;
+    return isEnglish
+      ? `${prefix}: reconnecting (alerts may be delayed)`
+      : `${prefix}：重新連線中（事件通報可能延遲）`;
   }
-  return `${prefix}：無法連線（即時通報可能無法送出）`;
+  return isEnglish
+    ? `${prefix}: offline (live alerts may not be sent)`
+    : `${prefix}：無法連線（即時通報可能無法送出）`;
 }

@@ -7,4 +7,10 @@ describe('cheatSocketStatusMessage', () => {
     expect(cheatSocketStatusMessage('reconnecting', 'monitor')).toContain('重新連線中');
     expect(cheatSocketStatusMessage('disconnected', 'exam')).toContain('無法連線');
   });
+
+  it('supports clear English monitor copy', () => {
+    expect(cheatSocketStatusMessage('connected', 'monitor', 'en')).toContain('connected');
+    expect(cheatSocketStatusMessage('reconnecting', 'monitor', 'en')).toContain('reconnecting');
+    expect(cheatSocketStatusMessage('disconnected', 'monitor', 'en')).toContain('offline');
+  });
 });
