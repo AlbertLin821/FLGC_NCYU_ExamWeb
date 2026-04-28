@@ -395,11 +395,56 @@ export class StudentsService {
   }
 
   async getStudentExamPreview(studentId: number, examId: number) {
-    const exams = await this.getStudentExams(studentId);
-    const exam = exams.find((item) => item.id === examId);
+    const student = await this.prisma.student.findUnique({
+      where: { id: studentId },
+      include: {
+        classes: { select: { classId: true } },
+      },
+    });
+    if (!student) return null;
+
+    const classIds = student.classes.map((row) => row.classId);
+    if (classIds.length === 0) return null;
+
+    const exam = await this.prisma.exam.findFirst({
+      where: {
+        id: examId,
+        deletedAt: null,
+        status: 'published',
+        examClasses: { some: { classId: { in: classIds } } },
+      },
+      include: {
+        questions: { select: { id: true } },
+        sessions: {
+          where: { studentId: student.id },
+          orderBy: { id: 'desc' },
+          take: 1,
+        },
+      },
+    });
     if (!exam) {
       return null;
     }
-    return exam;
+
+    const now = new Date();
+    const sessionStatus = exam.sessions[0]?.status || 'not_started';
+    const isCurrentlyAvailable = exam.startTime <= now && exam.endTime >= now;
+    const hasOngoingSession = sessionStatus === 'in_progress' || sessionStatus === 'paused';
+
+    if (!isCurrentlyAvailable && !hasOngoingSession) {
+      return null;
+    }
+
+    return {
+      id: exam.id,
+      title: exam.title,
+      instructions: exam.instructions,
+      difficulty: exam.difficulty,
+      timeLimit: exam.timeLimit,
+      questionCount: exam.questions.length,
+      startTime: exam.startTime,
+      endTime: exam.endTime,
+      sessionStatus,
+    };
   }
 }
