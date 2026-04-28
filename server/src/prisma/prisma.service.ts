@@ -35,6 +35,14 @@ function warnIfSupabasePoolerConfigLooksWrong(connectionString: string | undefin
   }
 }
 
+function resolvePoolMax(): number {
+  const raw = Number(process.env.DB_POOL_MAX || process.env.PGPOOL_MAX || '');
+  if (Number.isFinite(raw) && raw >= 1) {
+    return Math.floor(raw);
+  }
+  return process.env.NODE_ENV === 'production' ? 40 : 10;
+}
+
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   private readonly pool: pg.Pool;
@@ -42,7 +50,10 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   constructor() {
     const conn = process.env.DB_URL || process.env.DATABASE_URL;
     warnIfSupabasePoolerConfigLooksWrong(conn);
-    const pool = new pg.Pool({ connectionString: conn });
+    const pool = new pg.Pool({
+      connectionString: conn,
+      max: resolvePoolMax(),
+    });
     const adapter = new PrismaPg(pool);
     super({
       adapter: adapter,

@@ -31,6 +31,10 @@ function countEnglishWords(input: string): number {
   return matches ? matches.length : 0;
 }
 
+function hasAnswerContent(input: string | null | undefined): boolean {
+  return String(input ?? '').trim().length > 0;
+}
+
 @Injectable()
 export class ExamsService {
   constructor(
@@ -377,33 +381,53 @@ export class ExamsService {
         : isWritingQuestion
           ? countEnglishWords(normalizedContent)
           : undefined;
-
-    return this.prisma.$transaction(async (tx) => {
-      const row = await tx.answer.upsert({
-        where: { sessionId_questionId: { sessionId, questionId } },
-        update: {
-          content: normalizedContent,
-          ...(writingDurationSeconds !== undefined ? { writingDurationSeconds } : {}),
-          ...(wordCount !== undefined ? { wordCount } : {}),
-        },
-        create: {
-          sessionId,
-          questionId,
-          content: normalizedContent,
-          ...(writingDurationSeconds !== undefined ? { writingDurationSeconds } : {}),
-          ...(wordCount !== undefined ? { wordCount } : {}),
-        },
-      });
-      const agg = await tx.$queryRaw<[{ c: number }]>(
-        Prisma.sql`SELECT COUNT(*)::int AS c FROM "answers" WHERE "session_id" = ${sessionId} AND "content" IS NOT NULL AND TRIM("content") <> ''`,
-      );
-      const answeredQuestionCount = Number(agg[0]?.c ?? 0);
-      await tx.examSession.update({
-        where: { id: sessionId },
-        data: { answeredQuestionCount },
-      });
-      return row;
+    const existingAnswer = await this.prisma.answer.findUnique({
+      where: { sessionId_questionId: { sessionId, questionId } },
+      select: { id: true, content: true },
     });
+    const hadAnswerBefore = hasAnswerContent(existingAnswer?.content);
+    const hasAnswerNow = hasAnswerContent(normalizedContent);
+
+    const row = await this.prisma.answer.upsert({
+      where: { sessionId_questionId: { sessionId, questionId } },
+      update: {
+        content: normalizedContent,
+        ...(writingDurationSeconds !== undefined ? { writingDurationSeconds } : {}),
+        ...(wordCount !== undefined ? { wordCount } : {}),
+      },
+      create: {
+        sessionId,
+        questionId,
+        content: normalizedContent,
+        ...(writingDurationSeconds !== undefined ? { writingDurationSeconds } : {}),
+        ...(wordCount !== undefined ? { wordCount } : {}),
+      },
+    });
+
+    if (!hadAnswerBefore && hasAnswerNow) {
+      await this.prisma.examSession.update({
+        where: { id: sessionId },
+        data: {
+          answeredQuestionCount: {
+            increment: 1,
+          },
+        },
+      });
+    } else if (hadAnswerBefore && !hasAnswerNow) {
+      await this.prisma.examSession.updateMany({
+        where: {
+          id: sessionId,
+          answeredQuestionCount: { gt: 0 },
+        },
+        data: {
+          answeredQuestionCount: {
+            decrement: 1,
+          },
+        },
+      });
+    }
+
+    return row;
   }
 
   async submitExam(sessionId: number) {
