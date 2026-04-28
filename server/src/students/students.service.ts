@@ -23,7 +23,7 @@ export class StudentsService {
     const l = limit || 20;
     const skip = (p - 1) * l;
     const where = {};
-    const orderBy: any = { id: 'asc' };
+    const orderBy: any = { studentId: 'asc' };
     const [items, total] = await Promise.all([
       this.prisma.student.findMany({
         where,

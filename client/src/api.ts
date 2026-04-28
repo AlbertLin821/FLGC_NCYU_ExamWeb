@@ -203,8 +203,12 @@ export const studentsApi = {
   getByClass: (classId: number) => cachedGet(`/students`, { params: { classId } }),
   getById: (id: number) => cachedGet(`/students/${id}`),
   getExams: (id: number) => cachedGet(`/students/${id}/exams`, undefined, 20_000),
-  bulkImport: (students: { studentId: string; name: string; schoolName: string }[], classId: number) =>
-    api.post('/students/import', { students, classId }).then((res) => {
+  bulkImport: (
+    students: { studentId: string; name: string; schoolName: string }[],
+    classId: number,
+    config?: AxiosRequestConfig,
+  ) =>
+    api.post('/students/import', { students, classId }, config).then((res) => {
       invalidateGetCache(['/students', '/classes', '/dashboard']);
       return res;
     }),

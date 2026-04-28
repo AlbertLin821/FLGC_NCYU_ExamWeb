@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { classesApi, studentsApi } from '../../api';
+import axios from 'axios';
 import * as XLSX from 'xlsx';
 import { FileSpreadsheet, Type, ClipboardList } from 'lucide-react';
 import { sessionScorePercent } from '../../utils/sessionScore';
@@ -172,6 +173,10 @@ function parseBulkStudentImportText(text: string): StudentImportRow[] {
   return parseStudentImportRows(rows);
 }
 
+function sortImportRows(rows: StudentImportRow[]): StudentImportRow[] {
+  return [...rows].sort((a, b) => a.studentId.localeCompare(b.studentId, 'en', { numeric: true, sensitivity: 'base' }));
+}
+
 const ClassManagement: React.FC = () => {
   const navigate = useNavigate();
   const [classes, setClasses] = useState<any[]>([]);
@@ -195,6 +200,9 @@ const ClassManagement: React.FC = () => {
   const [importParsing, setImportParsing] = useState(false);
   const [importSubmitting, setImportSubmitting] = useState(false);
   const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
+  const [importCancelling, setImportCancelling] = useState(false);
+  const [activeImportController, setActiveImportController] = useState<AbortController | null>(null);
+  const importCancelledRef = useRef(false);
 
   const fetchClasses = async () => {
     try {
@@ -279,6 +287,9 @@ const ClassManagement: React.FC = () => {
     setImportParsing(false);
     setImportSubmitting(false);
     setImportProgress(null);
+    setImportCancelling(false);
+    setActiveImportController(null);
+    importCancelledRef.current = false;
   };
 
   const openImportModal = () => {
@@ -305,7 +316,7 @@ const ClassManagement: React.FC = () => {
       return;
     }
     setImportError('');
-    setImportPreview(rows);
+    setImportPreview(sortImportRows(rows));
   };
 
   const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -362,6 +373,8 @@ const ClassManagement: React.FC = () => {
       return;
     }
     setImportSubmitting(true);
+    setImportCancelling(false);
+    importCancelledRef.current = false;
     setImportProgress({
       processed: 0,
       total: importPreview.length,
@@ -376,6 +389,9 @@ const ClassManagement: React.FC = () => {
       const batchCount = Math.max(1, Math.ceil(total / IMPORT_BATCH_SIZE));
 
       for (let i = 0; i < total; i += IMPORT_BATCH_SIZE) {
+        if (importCancelledRef.current) {
+          throw new Error('IMPORT_CANCELLED');
+        }
         const batch = importPreview.slice(i, i + IMPORT_BATCH_SIZE);
         setImportProgress({
           processed: i,
@@ -383,7 +399,11 @@ const ClassManagement: React.FC = () => {
           batchIndex: Math.floor(i / IMPORT_BATCH_SIZE) + 1,
           batchCount,
         });
-        const res = await studentsApi.bulkImport(batch, selectedClass.id);
+        const controller = new AbortController();
+        setActiveImportController(controller);
+        const res = await studentsApi.bulkImport(batch, selectedClass.id, {
+          signal: controller.signal,
+        });
         const data = res.data as { created?: number; updated?: number; errors?: string[] };
         created += data.created ?? 0;
         updated += data.updated ?? 0;
@@ -396,6 +416,7 @@ const ClassManagement: React.FC = () => {
           batchIndex: Math.floor(i / IMPORT_BATCH_SIZE) + 1,
           batchCount,
         });
+        setActiveImportController(null);
       }
 
       if (errors.length > 0) {
@@ -408,12 +429,30 @@ const ClassManagement: React.FC = () => {
       closeImportModal();
       fetchStudents(selectedClass.id);
     } catch (err: any) {
-      const msg = err.response?.data?.message;
-      alert(Array.isArray(msg) ? msg.join('；') : msg || '匯入失敗');
+      const cancelled =
+        err?.message === 'IMPORT_CANCELLED' ||
+        err?.code === 'ERR_CANCELED' ||
+        axios.isCancel(err);
+      if (cancelled) {
+        alert('已終止上傳程序');
+      } else {
+        const msg = err.response?.data?.message;
+        alert(Array.isArray(msg) ? msg.join('；') : msg || '匯入失敗');
+      }
     } finally {
       setImportSubmitting(false);
       setImportProgress(null);
+      setImportCancelling(false);
+      setActiveImportController(null);
+      importCancelledRef.current = false;
     }
+  };
+
+  const handleCancelImport = () => {
+    if (!importSubmitting) return;
+    setImportCancelling(true);
+    importCancelledRef.current = true;
+    activeImportController?.abort();
   };
 
   if (selectedClass) {
@@ -531,7 +570,7 @@ const ClassManagement: React.FC = () => {
                 <div className="modal-busy" role="status" aria-live="polite">
                   <div className="spinner" />
                   <p className="text-sm text-secondary mt-sm">
-                    {importSubmitting ? '匯入中，請勿關閉視窗或重複按鈕…' : '正在解析資料…'}
+                  {importSubmitting ? '匯入中，請勿關閉視窗或重複按鈕…' : '正在解析資料…'}
                   </p>
                   {importSubmitting && importProgress && (
                     <div className="w-full max-w-sm mt-md">
@@ -557,6 +596,16 @@ const ClassManagement: React.FC = () => {
                             transition: 'width 180ms ease',
                           }}
                         />
+                      </div>
+                      <div className="action-group mt-md justify-center">
+                        <button
+                          type="button"
+                          className="btn btn-danger btn-sm"
+                          onClick={handleCancelImport}
+                          disabled={importCancelling}
+                        >
+                          {importCancelling ? '終止中…' : '取消匯入'}
+                        </button>
                       </div>
                     </div>
                   )}
