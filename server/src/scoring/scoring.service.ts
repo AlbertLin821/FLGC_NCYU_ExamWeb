@@ -384,19 +384,24 @@ General rules:
 - Return valid JSON only. Do not use markdown.
 - Evaluate each student independently. Never compare one student with another.
 - Within each student, evaluate each item independently.
-- Keep every aiFeedback in Traditional Chinese, exactly 2 short sentences, and within 30 Chinese characters total.
 - Do not include analysis, revision samples, headings, or extra explanation.
 - For type "essay", treat it as a Two-Word Sentence Writing quiz item:
-  - The student must use the two target words to write exactly one coherent sentence.
-  - They may change word forms and use any order.
-  - Score 0 if the sentence is meaningless, misses one or both target words, or contains multiple sentences.
-  - First grade with a raw 20-point scale.
-  - Start from 20 and deduct 5 points per unique error type only once each: grammar, spelling, punctuation, capitalization.
-  - If the sentence is meaningful and error-free, give raw 20/20.
-  - Convert that final raw score to aiScore on a 0-100 scale.
-- Essay aiFeedback sentence 1: comment on sentence correctness.
-- Essay aiFeedback sentence 2: advise whether sentence pattern should be easier or harder.
+  - Role: You are a professional English teacher grading a Two-Word Sentence Writing quiz.
+  - Objective: the student must use the two target words to write one coherent sentence.
+  - Flexibility: word forms may change and the target words may appear in any order.
+  - Automatic zero if the answer is meaningless, misses one or both target words, or contains more than one sentence.
+  - Score each essay item with a raw 20-point scale.
+  - Full marks 20/20 if the sentence is meaningful and grammatically correct, even if it is simple.
+  - Deduct 5 points per unique error type only once each: grammar, spelling, punctuation, capitalization.
+  - Minimum raw score is 0.
+  - Convert the final raw score to aiScore on a 0-100 scale.
+  - Essay aiFeedback must be bilingual and specific:
+    - Include a brief error analysis or confirmation.
+    - Include one corrected sentence or one improved example sentence.
+    - Include both English and Chinese in one short line.
+    - Keep it concise, within about 30 English words total.
 - For type "paragraph_writing", use the TOEFL Academic Discussion Writing Evaluator rubric below. Return writingScore on a 0-5 scale, CEFR level, a short Traditional Chinese feedback, and aiScore converted to percentage by writingScore / 5 * 100.
+- For type "paragraph_writing", keep aiFeedback in Traditional Chinese, exactly 2 short sentences, and within 30 Chinese characters total.
 - Blank answers receive 0.
 
 TOEFL Academic Discussion Writing Evaluator (with CEFR)
@@ -422,7 +427,7 @@ Output JSON shape:
           "answerId": <number>,
           "questionId": <number>,
           "aiScore": <number 0..100>,
-          "aiFeedback": "<Traditional Chinese, <=30 chars>",
+          "aiFeedback": "<concise feedback based on type rules above>",
           "writingScore": <number 0..5 or null>,
           "cefrLevel": "<string or null>"
         }
@@ -432,9 +437,9 @@ Output JSON shape:
 }
 
 Examples of valid aiFeedback:
-- "句型正確通順。可提升句型難度。"
-- "文法有誤需修正。先用較簡單句型。"
-- "拼字標點需加強。可逐步增加變化。"
+- "EN: She runs daily. ZH: 句子正確通順。"
+- "EN: Use \"He runs fast.\" ZH: 缺少目標字。"
+- "文意完整清楚。可再強化論述。"
 
 Submitted writing sessions:
 
@@ -537,8 +542,11 @@ ${sessionBlocks}`;
         let aiScore = Number(row.aiScore);
         if (!Number.isFinite(aiScore)) aiScore = 0;
         aiScore = Math.min(100, Math.max(0, Math.round(aiScore * 100) / 100));
+        const rawFeedback = String(row.aiFeedback ?? '').trim() || 'AI 已完成批改。';
         const aiFeedback =
-          (String(row.aiFeedback ?? '').trim() || 'AI 已完成批改。').slice(0, 30);
+          expectedItem.type === 'essay'
+            ? rawFeedback.slice(0, 160)
+            : rawFeedback.slice(0, 30);
         let writingScore: number | null | undefined = null;
         if (row.writingScore !== null && row.writingScore !== undefined && row.writingScore !== '') {
           const rawScore = Number(row.writingScore);

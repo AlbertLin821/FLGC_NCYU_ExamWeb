@@ -95,6 +95,8 @@ const AntiCheatMonitor: React.FC = () => {
                             ? (role === 'teacher' ? t('cheat.exitFullscreen') : '退出全螢幕')
                             : alert.eventType === 'browser_back'
                               ? (role === 'teacher' ? t('cheat.browserBack') : '瀏覽器返回')
+                              : alert.eventType === 'grammar_extension'
+                                ? (role === 'teacher' ? t('cheat.grammarExtension') : '偵測到文法外掛')
                               : (role === 'teacher' ? t('cheat.unknown') : '異常操作')
                     }</span>
                     <span className="text-xs text-secondary">{new Date(alert.createdAt).toLocaleTimeString()}</span>

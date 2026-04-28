@@ -421,6 +421,9 @@ describe('ScoringService', () => {
     expect(prompt).toContain('sessionId: 8');
     expect(prompt).toContain('answerId: 11');
     expect(prompt).toContain('answerId: 21');
+    expect(prompt).toContain('Automatic zero if the answer is meaningless');
+    expect(prompt).toContain('Full marks 20/20 if the sentence is meaningful and grammatically correct');
+    expect(prompt).toContain('Include one corrected sentence or one improved example sentence');
     expect(mockPrisma.answer.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: 11 },

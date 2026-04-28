@@ -24,6 +24,22 @@ function countEnglishWords(input: string): number {
   return matches ? matches.length : 0;
 }
 
+function hasGrammarExtensionArtifacts(): boolean {
+  if (typeof document === 'undefined') return false;
+  const root = document.documentElement;
+  if (
+    root.hasAttribute('data-new-gr-c-s-check-loaded') ||
+    root.hasAttribute('data-gr-ext-installed')
+  ) {
+    return true;
+  }
+  return Boolean(
+    document.querySelector(
+      'grammarly-extension, grammarly-popups, [data-grammarly-shadow-root], [data-grammarly-part], [id^="grammarly"], [class*="grammarly"]',
+    ),
+  );
+}
+
 const ExamRoom: React.FC = () => {
   const { examId } = useParams<{ examId: string }>();
   const navigate = useNavigate();
@@ -103,7 +119,11 @@ const ExamRoom: React.FC = () => {
     });
     setSession((prev: any) => (prev ? { ...prev, status: 'paused' } : prev));
     setIsPaused(true);
-    setPauseMessage(getStudentString(locale, 'exam.pauseForced'));
+    setPauseMessage(
+      type === 'grammar_extension'
+        ? getStudentString(locale, 'exam.pauseGrammarExtension')
+        : getStudentString(locale, 'exam.pauseForced'),
+    );
   }, [session, locale]);
 
   useEffect(() => {
@@ -169,6 +189,30 @@ const ExamRoom: React.FC = () => {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!session || isPaused) return;
+    if (hasGrammarExtensionArtifacts()) {
+      reportCheat('grammar_extension', { source: 'detected_on_mount' });
+      return;
+    }
+
+    const observer = new MutationObserver(() => {
+      if (hasGrammarExtensionArtifacts()) {
+        observer.disconnect();
+        reportCheat('grammar_extension', { source: 'mutation_observer' });
+      }
+    });
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      childList: true,
+      subtree: true,
+      attributeFilter: ['data-new-gr-c-s-check-loaded', 'data-gr-ext-installed', 'class', 'id'],
+    });
+
+    return () => observer.disconnect();
+  }, [session, isPaused, reportCheat]);
 
   useEffect(() => {
     initExamStartedRef.current = false;
@@ -559,6 +603,12 @@ const ExamRoom: React.FC = () => {
                   value={userAnswer}
                   onChange={(e) => setUserAnswer(e.target.value)}
                   disabled={submitting}
+                  spellCheck={false}
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  data-gramm="false"
+                  data-gramm_editor="false"
+                  data-enable-grammarly="false"
                 />
                 {q?.type === 'paragraph_writing' && (
                   <div className="text-xs text-secondary mt-xs">
