@@ -47,7 +47,7 @@ export class StudentsController {
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('teacher', 'admin', 'viewer')
+  @Roles('admin', 'viewer')
   list(
     @Request() req: { user: { id: number; role: string } },
     @Query('classId') classIdStr: string | undefined,
@@ -77,35 +77,35 @@ export class StudentsController {
 
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('teacher', 'admin', 'viewer')
+  @Roles('admin', 'viewer')
   findOne(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
     return this.studentsService.findById(id, req.user);
   }
 
   @Post('import')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('teacher', 'admin')
+  @Roles('admin')
   bulkImport(@Body() dto: BulkImportDto, @Request() req: any) {
     return this.studentsService.bulkImport(dto.students, dto.classId, req.user);
   }
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('teacher', 'admin')
+  @Roles('admin')
   create(@Body() dto: CreateStudentDto, @Request() req: any) {
     return this.studentsService.create(dto, req.user);
   }
 
   @Put(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('teacher', 'admin')
+  @Roles('admin')
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: Partial<CreateStudentDto>, @Request() req: any) {
     return this.studentsService.update(id, dto, req.user);
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('teacher', 'admin')
+  @Roles('admin')
   delete(
     @Param('id', ParseIntPipe) id: number,
     @Request() req: any,

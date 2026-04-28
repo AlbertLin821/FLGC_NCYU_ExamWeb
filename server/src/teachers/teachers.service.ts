@@ -4,6 +4,7 @@ import {
   ConflictException,
   NotFoundException,
   ForbiddenException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
@@ -36,13 +37,36 @@ export class TeachersService {
   }
 
   async create(data: any) {
-    const passwordHash = await bcrypt.hash(data.password, 12);
+    const email = String(data.email || '').trim().toLowerCase();
+    const name = String(data.name || '').trim();
+    const password = String(data.password || '').trim();
+    const role = String(data.role || 'teacher').trim();
+
+    if (!email || !name || !password) {
+      throw new BadRequestException('電子郵件、姓名與密碼不可空白');
+    }
+    if (!['teacher', 'admin', 'viewer'].includes(role)) {
+      throw new BadRequestException('角色無效');
+    }
+    if (password.length < 8) {
+      throw new BadRequestException('密碼至少須 8 個字元');
+    }
+
+    const existing = await this.prisma.teacher.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (existing) {
+      throw new ConflictException('此電子郵件已被使用');
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
     return this.prisma.teacher.create({
       data: {
-        email: data.email,
-        name: data.name,
+        email,
+        name,
         passwordHash,
-        role: data.role || 'teacher',
+        role,
       },
       select: { id: true, email: true, name: true, role: true, createdAt: true },
     });
@@ -71,6 +95,34 @@ export class TeachersService {
       data: { passwordHash },
       select: { id: true, email: true, name: true, role: true, createdAt: true },
     });
+  }
+
+  async updateOwnPassword(id: number, currentPassword: string, newPassword: string) {
+    const current = typeof currentPassword === 'string' ? currentPassword : '';
+    const next = typeof newPassword === 'string' ? newPassword.trim() : '';
+    if (next.length < 8) {
+      throw new BadRequestException('密碼至少須 8 個字元');
+    }
+
+    const teacher = await this.prisma.teacher.findUnique({
+      where: { id },
+      select: { id: true, passwordHash: true },
+    });
+    if (!teacher) {
+      throw new NotFoundException('找不到此教師帳號');
+    }
+
+    const valid = await bcrypt.compare(current, teacher.passwordHash);
+    if (!valid) {
+      throw new UnauthorizedException('目前密碼錯誤');
+    }
+
+    const passwordHash = await bcrypt.hash(next, 12);
+    await this.prisma.teacher.update({
+      where: { id },
+      data: { passwordHash },
+    });
+    return { ok: true };
   }
 
   /**

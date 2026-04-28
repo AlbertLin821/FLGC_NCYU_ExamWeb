@@ -17,15 +17,6 @@ function toApiDatetime(value: string): string {
   return Number.isNaN(parsed.getTime()) ? value : parsed.toISOString();
 }
 
-/** 依開放時間 + 作答分鐘數得到截止時間（datetime-local 字串），無效則回傳 null */
-function computeEndFromStartAndLimit(startTime: string, timeLimitMinutes: number): string | null {
-  if (!startTime || !Number.isFinite(timeLimitMinutes) || timeLimitMinutes <= 0) return null;
-  const start = new Date(startTime);
-  if (Number.isNaN(start.getTime())) return null;
-  const end = new Date(start.getTime() + timeLimitMinutes * 60_000);
-  return toDatetimeLocalValue(end);
-}
-
 const ExamManagement: React.FC = () => {
   const [exams, setExams] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
@@ -356,17 +347,7 @@ const ExamManagement: React.FC = () => {
                   min={1}
                   className="form-input"
                   value={newExam.timeLimit}
-                  onChange={(e) => {
-                    const timeLimit = Number(e.target.value);
-                    setNewExam((prev: any) => {
-                      const next = { ...prev, timeLimit };
-                      if (!editingExamId && prev.startTime && Number.isFinite(timeLimit) && timeLimit > 0) {
-                        const end = computeEndFromStartAndLimit(prev.startTime, timeLimit);
-                        if (end) next.endTime = end;
-                      }
-                      return next;
-                    });
-                  }}
+                  onChange={(e) => setNewExam({ ...newExam, timeLimit: Number(e.target.value) })}
                 />
               </div>
               <div className="flex flex-col gap-md">
@@ -376,17 +357,7 @@ const ExamManagement: React.FC = () => {
                     type="datetime-local"
                     className="form-input"
                     value={newExam.startTime}
-                    onChange={(e) => {
-                      const startTime = e.target.value;
-                      setNewExam((prev: any) => {
-                        const next = { ...prev, startTime };
-                        if (!editingExamId && prev.timeLimit > 0) {
-                          const end = computeEndFromStartAndLimit(startTime, prev.timeLimit);
-                          if (end) next.endTime = end;
-                        }
-                        return next;
-                      });
-                    }}
+                    onChange={(e) => setNewExam({ ...newExam, startTime: e.target.value })}
                     required
                   />
                 </div>

@@ -158,6 +158,8 @@ export const teachersApi = {
     }),
   updatePassword: (id: number, password: string) =>
     api.patch(`/teachers/${id}/password`, { password }),
+  updateOwnPassword: (currentPassword: string, newPassword: string) =>
+    api.patch('/teachers/me/password', { currentPassword, newPassword }),
   delete: (id: number) => api.delete(`/teachers/${id}`).then((res) => {
     invalidateGetCache(['/teachers', '/dashboard']);
     return res;
@@ -330,11 +332,13 @@ export const dashboardApi = {
 export function warmTeacherData(role: string | null) {
   const run = () => {
     prefetchGet('/dashboard/stats', undefined);
-    prefetchGet('/exams', { params: {} });
     if (role === 'teacher' || role === 'admin' || role === 'viewer') {
       prefetchGet('/cheat/alerts', undefined);
     }
-    if (role === 'teacher' || role === 'admin') {
+    if (role === 'admin' || role === 'viewer') {
+      prefetchGet('/exams', { params: {} });
+    }
+    if (role === 'admin' || role === 'viewer') {
       prefetchGet('/classes', undefined);
     }
     if (role === 'admin') {

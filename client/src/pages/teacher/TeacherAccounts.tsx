@@ -72,8 +72,11 @@ const TeacherAccounts: React.FC = () => {
       closeCreateModal();
       loadTeachers();
       alert(`已新增角色「${createdRoleName}」`);
-    } catch {
-      alert('新增失敗，請確認電子郵件是否已被使用');
+    } catch (err: unknown) {
+      const ax = err as { response?: { data?: { message?: string | string[] } } };
+      const msg = ax.response?.data?.message;
+      const text = Array.isArray(msg) ? msg.join('；') : msg || '新增失敗';
+      alert(text);
     }
   };
 

@@ -61,19 +61,19 @@ export class QuestionsController {
   constructor(private questionsService: QuestionsService) {}
 
   @Get('exam/:examId')
-  @Roles('teacher', 'admin', 'viewer')
+  @Roles('admin', 'viewer')
   findByExam(@Param('examId', ParseIntPipe) examId: number, @Request() req: any) {
     return this.questionsService.findByExam(examId, req.user);
   }
 
   @Post('exam/:examId')
-  @Roles('teacher', 'admin')
+  @Roles('admin')
   create(@Param('examId', ParseIntPipe) examId: number, @Body() dto: CreateQuestionBody, @Request() req: any) {
     return this.questionsService.create({ examId, ...dto }, req.user);
   }
 
   @Post('exam/:examId/bulk')
-  @Roles('teacher', 'admin')
+  @Roles('admin')
   bulkCreate(
     @Param('examId', ParseIntPipe) examId: number,
     @Body() dto: BulkCreateDto,
@@ -83,19 +83,19 @@ export class QuestionsController {
   }
 
   @Put('reorder')
-  @Roles('teacher', 'admin')
+  @Roles('admin')
   reorder(@Body() dto: ReorderDto, @Request() req: any) {
     return this.questionsService.reorder(dto.questions, req.user);
   }
 
   @Put(':id')
-  @Roles('teacher', 'admin')
+  @Roles('admin')
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateQuestionBody, @Request() req: any) {
     return this.questionsService.update(id, dto, req.user);
   }
 
   @Delete(':id')
-  @Roles('teacher', 'admin')
+  @Roles('admin')
   delete(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
     return this.questionsService.delete(id, req.user);
   }

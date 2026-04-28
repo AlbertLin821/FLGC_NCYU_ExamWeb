@@ -145,48 +145,53 @@ export class StudentsService {
   ) {
     await ensureClassAccess(this.prisma, actor, classId);
     const results = { created: 0, updated: 0, errors: [] as string[] };
-    const chunkSize = 40;
+    for (const s of students) {
+      const data = {
+        studentId: String(s.studentId || '').trim(),
+        name: String(s.name || '').trim(),
+        schoolName: String(s.schoolName || '').trim(),
+      };
+      if (!data.studentId || !data.name || !data.schoolName) {
+        results.errors.push(`${s.studentId || '（空白學號）'}: 校名、學號、姓名不可空白`);
+        continue;
+      }
 
-    for (let i = 0; i < students.length; i += chunkSize) {
-      const chunk = students.slice(i, i + chunkSize);
-      const outcomes = await Promise.all(
-        chunk.map(async (s) => {
-          const data = {
-            studentId: s.studentId.trim(),
-            name: s.name.trim(),
-            schoolName: s.schoolName.trim(),
-          };
-          try {
-            await this.prisma.$transaction(async (tx) => {
-              const student = await tx.student.upsert({
-                where: { studentId: data.studentId },
-                update: { name: data.name, schoolName: data.schoolName },
-                create: data,
-              });
-              await tx.studentClass.upsert({
-                where: {
-                  studentId_classId: {
-                    studentId: student.id,
-                    classId,
-                  },
-                },
-                update: {},
-                create: {
-                  studentId: student.id,
-                  classId,
-                },
-              });
-            });
-            return { ok: true as const, studentId: data.studentId, created: true };
-          } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : String(err);
-            return { ok: false as const, studentId: s.studentId, message };
+      try {
+        await this.prisma.$transaction(async (tx) => {
+          const existing = await tx.student.findUnique({
+            where: { studentId: data.studentId },
+            select: { id: true },
+          });
+          const student = existing
+            ? await tx.student.update({
+                where: { id: existing.id },
+                data: { name: data.name, schoolName: data.schoolName },
+              })
+            : await tx.student.create({ data });
+
+          await tx.studentClass.upsert({
+            where: {
+              studentId_classId: {
+                studentId: student.id,
+                classId,
+              },
+            },
+            update: {},
+            create: {
+              studentId: student.id,
+              classId,
+            },
+          });
+
+          if (existing) {
+            results.updated++;
+          } else {
+            results.created++;
           }
-        }),
-      );
-      for (const o of outcomes) {
-        if (o.ok) results.created++;
-        else results.errors.push(`${o.studentId}: ${o.message}`);
+        });
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        results.errors.push(`${data.studentId}: ${message}`);
       }
     }
 

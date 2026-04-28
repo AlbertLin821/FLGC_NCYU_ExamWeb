@@ -20,7 +20,7 @@ export class ClassesController {
   constructor(private classesService: ClassesService) {}
 
   @Get()
-  @Roles('teacher', 'admin', 'viewer')
+  @Roles('admin', 'viewer')
   findAll(
     @Request() req: any,
     @Query('page') page?: string,
@@ -34,43 +34,43 @@ export class ClassesController {
   }
 
   @Get(':id')
-  @Roles('teacher', 'admin', 'viewer')
+  @Roles('admin', 'viewer')
   findOne(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
     return this.classesService.findById(id, req.user);
   }
 
   @Get(':id/stats')
-  @Roles('teacher', 'admin', 'viewer')
+  @Roles('admin', 'viewer')
   getStats(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
     return this.classesService.getClassStats(id, req.user);
   }
 
   @Post()
-  @Roles('teacher', 'admin')
+  @Roles('admin')
   create(@Body() dto: CreateClassDto, @Request() req: any) {
     return this.classesService.create(dto, req.user.id);
   }
 
   @Put(':id')
-  @Roles('teacher', 'admin')
+  @Roles('admin')
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: CreateClassDto, @Request() req: any) {
     return this.classesService.update(id, dto, req.user);
   }
 
   @Delete(':id')
-  @Roles('teacher', 'admin')
+  @Roles('admin')
   delete(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
     return this.classesService.delete(id, req.user);
   }
 
   @Post(':id/teachers')
-  @Roles('teacher', 'admin')
+  @Roles('admin')
   addTeacher(@Param('id', ParseIntPipe) id: number, @Body() dto: AddTeacherDto, @Request() req: any) {
     return this.classesService.addTeacher(id, dto.teacherId, req.user);
   }
 
   @Delete(':id/teachers/:teacherId')
-  @Roles('teacher', 'admin')
+  @Roles('admin')
   removeTeacher(
     @Param('id', ParseIntPipe) id: number,
     @Param('teacherId', ParseIntPipe) teacherId: number,

@@ -15,7 +15,9 @@ export class AuthService {
   ) {}
 
   async validateTeacher(email: string, password: string) {
-    const teacher = await this.prisma.teacher.findUnique({ where: { email } });
+    const teacher = await this.prisma.teacher.findUnique({
+      where: { email: String(email || '').trim().toLowerCase() },
+    });
     if (!teacher) {
       throw new UnauthorizedException('帳號或密碼錯誤');
     }

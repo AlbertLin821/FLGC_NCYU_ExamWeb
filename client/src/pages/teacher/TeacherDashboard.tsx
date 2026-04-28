@@ -20,13 +20,17 @@ import {
   Menu,
   X,
 } from 'lucide-react';
-import { dashboardApi, warmTeacherData } from '../../api';
+import { dashboardApi, teachersApi, warmTeacherData } from '../../api';
 import { getTeacherRole } from '../../utils/teacherRole';
 
 const DashboardOverview = () => {
   const navigate = useNavigate();
   const [stats, setStats] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
+  const [currentPassword, setCurrentPassword] = React.useState('');
+  const [newPassword, setNewPassword] = React.useState('');
+  const [confirmPassword, setConfirmPassword] = React.useState('');
+  const [savingPassword, setSavingPassword] = React.useState(false);
 
   React.useEffect(() => {
     const fetchStats = () => {
@@ -45,6 +49,31 @@ const DashboardOverview = () => {
   }, []);
 
   if (loading) return <div className="spinner"></div>;
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword.trim().length < 8) {
+      alert('新密碼至少須 8 個字元');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      alert('兩次輸入的新密碼不一致');
+      return;
+    }
+    setSavingPassword(true);
+    try {
+      await teachersApi.updateOwnPassword(currentPassword, newPassword);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      alert('密碼已更新');
+    } catch (err: any) {
+      const msg = err.response?.data?.message;
+      alert(Array.isArray(msg) ? msg.join('；') : msg || '密碼更新失敗');
+    } finally {
+      setSavingPassword(false);
+    }
+  };
 
   return (
   <div className="flex flex-col gap-lg">
@@ -85,6 +114,28 @@ const DashboardOverview = () => {
         <h3 className="mb-md">系統日誌</h3>
         <p className="text-sm text-secondary">暫無最新日誌</p>
       </div>
+      <div className="card">
+        <h3 className="mb-md">修改我的密碼</h3>
+        <form className="flex flex-col gap-md max-w-md" onSubmit={handleChangePassword}>
+          <div>
+            <label className="form-label">目前密碼</label>
+            <input className="form-input" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required />
+          </div>
+          <div>
+            <label className="form-label">新密碼</label>
+            <input className="form-input" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
+          </div>
+          <div>
+            <label className="form-label">確認新密碼</label>
+            <input className="form-input" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+          </div>
+          <div className="action-group">
+            <button type="submit" className="btn btn-primary" disabled={savingPassword}>
+              {savingPassword ? '更新中…' : '更新密碼'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };
@@ -120,9 +171,9 @@ const TeacherDashboard: React.FC = () => {
 
   const menuItems = [
     { path: '/teacher/overview', label: '儀表板', icon: <LayoutDashboard size={18} />, show: true },
-    { path: '/teacher/classes', label: '班級與學生', icon: <Users size={18} />, show: role === 'teacher' || role === 'admin' },
+    { path: '/teacher/classes', label: '班級與學生', icon: <Users size={18} />, show: role === 'admin' },
     { path: '/teacher/teachers', label: '教師帳號', icon: <UserCog size={18} />, show: role === 'admin' },
-    { path: '/teacher/exams', label: '考卷管理', icon: <ClipboardList size={18} />, show: role === 'teacher' || role === 'admin' },
+    { path: '/teacher/exams', label: '考卷管理', icon: <ClipboardList size={18} />, show: role === 'admin' },
     { path: '/teacher/results', label: '成績後台', icon: <Trophy size={18} />, show: role === 'admin' || role === 'viewer' },
     { path: '/teacher/cheat', label: '防弊監控', icon: <ShieldAlert size={18} />, show: role === 'teacher' || role === 'admin' || role === 'viewer' },
     { path: '/teacher/system', label: '系統管理', icon: <Settings size={18} />, show: role === 'admin' },
@@ -178,11 +229,11 @@ const TeacherDashboard: React.FC = () => {
           <Routes>
             <Route path="overview" element={<DashboardOverview />} />
             <Route path="dashboard" element={<DashboardOverview />} />
-            <Route path="classes" element={<ClassManagement />} />
-            <Route path="students" element={<ClassManagement />} />
+            <Route path="classes" element={role === 'admin' ? <ClassManagement /> : <DashboardOverview />} />
+            <Route path="students" element={role === 'admin' ? <ClassManagement /> : <DashboardOverview />} />
             <Route path="teachers" element={<TeacherAccounts />} />
-            <Route path="exams" element={<ExamManagement />} />
-            <Route path="questions" element={<QuestionManagement />} />
+            <Route path="exams" element={role === 'admin' ? <ExamManagement /> : <DashboardOverview />} />
+            <Route path="questions" element={role === 'admin' ? <QuestionManagement /> : <DashboardOverview />} />
             <Route path="results" element={<ResultsView />} />
             <Route path="result/:studentId" element={<StudentResultDetail />} />
             <Route path="cheat" element={<AntiCheatMonitor />} />

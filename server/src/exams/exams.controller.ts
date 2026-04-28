@@ -44,7 +44,7 @@ export class ExamsController {
   // === Teacher endpoints（須為教師／管理員 JWT）===
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('teacher', 'admin', 'viewer')
+  @Roles('admin', 'viewer')
   findAll(
     @Request() req: any,
     @Query('classId') classId?: string,
@@ -62,7 +62,7 @@ export class ExamsController {
   /** 須置於 :id 之前，避免 results 被當成數字 id */
   @Get('results/:classId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('teacher', 'admin', 'viewer')
+  @Roles('admin', 'viewer')
   getResults(
     @Request() req: any,
     @Param('classId', ParseIntPipe) classId: number,
@@ -81,42 +81,42 @@ export class ExamsController {
 
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('teacher', 'admin', 'viewer')
+  @Roles('admin', 'viewer')
   findOne(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
     return this.examsService.findById(id, req.user);
   }
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('teacher', 'admin')
+  @Roles('admin')
   create(@Body() dto: CreateExamDto, @Request() req: any) {
     return this.examsService.create({ ...dto, createdBy: req.user.id }, req.user);
   }
 
   @Put(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('teacher', 'admin')
+  @Roles('admin')
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateExamDto, @Request() req: any) {
     return this.examsService.update(id, dto, req.user);
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('teacher', 'admin')
+  @Roles('admin')
   delete(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
     return this.examsService.delete(id, req.user);
   }
 
   @Post(':id/publish')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('teacher', 'admin')
+  @Roles('admin')
   publish(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
     return this.examsService.publish(id, req.user);
   }
 
   @Post(':id/unpublish')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('teacher', 'admin')
+  @Roles('admin')
   unpublish(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
     return this.examsService.unpublish(id, req.user);
   }

@@ -250,7 +250,7 @@ const ClassManagement: React.FC = () => {
       }
       setShowStudentModal(false);
       fetchStudents(selectedClass.id);
-    } catch { alert('儲存失敗'); }
+    } catch (err: any) { alert(err.response?.data?.message || '儲存失敗'); }
   };
 
   const deleteStudent = async (id: number) => {
@@ -357,8 +357,9 @@ const ClassManagement: React.FC = () => {
       alert(`成功匯入 ${importPreview.length} 位學生`);
       closeImportModal();
       fetchStudents(selectedClass.id);
-    } catch {
-      alert('匯入失敗');
+    } catch (err: any) {
+      const msg = err.response?.data?.message;
+      alert(Array.isArray(msg) ? msg.join('；') : msg || '匯入失敗');
     } finally {
       setImportSubmitting(false);
     }

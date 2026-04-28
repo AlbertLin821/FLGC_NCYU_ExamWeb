@@ -29,6 +29,17 @@ export class UpdatePasswordDto {
   password: string;
 }
 
+export class UpdateOwnPasswordDto {
+  @IsString()
+  @IsNotEmpty()
+  currentPassword: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(8, { message: '密碼至少須 8 個字元' })
+  newPassword: string;
+}
+
 export class CreateTeacherDto {
   @IsEmail()
   email: string;
@@ -84,6 +95,16 @@ export class TeachersController {
       throw new BadRequestException('無效的教師編號');
     }
     return this.teachersService.updatePassword(tid, dto.password);
+  }
+
+  @Patch('me/password')
+  @Roles('teacher', 'admin', 'viewer')
+  updateOwnPassword(@Request() req: { user: { id: number } }, @Body() dto: UpdateOwnPasswordDto) {
+    return this.teachersService.updateOwnPassword(
+      req.user.id,
+      dto.currentPassword,
+      dto.newPassword,
+    );
   }
 
   @Post('invite')

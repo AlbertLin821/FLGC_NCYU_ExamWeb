@@ -15,7 +15,7 @@ import { ensureRoleCanGrade } from '../auth/access';
 
 @Controller('api/scoring')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('teacher', 'admin')
+@Roles('admin')
 export class ScoringController {
   constructor(private scoringService: ScoringService) {}
 
