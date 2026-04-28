@@ -162,6 +162,11 @@ export const teachersApi = {
     invalidateGetCache(['/teachers', '/dashboard']);
     return res;
   }),
+  forceDelete: (target: 'classes' | 'students' | 'exams' | 'teachers' | 'all') =>
+    api.post('/teachers/force-delete', { target }).then((res) => {
+      invalidateGetCache(['/teachers', '/classes', '/students', '/exams', '/dashboard', '/cheat']);
+      return res;
+    }),
 };
 
 // Classes

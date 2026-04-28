@@ -3,9 +3,16 @@ import {
   BadRequestException,
   ConflictException,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
+import { Prisma } from '@prisma/client';
+
+const FORCE_DELETE_EMAIL = 'albertlin94821@gmail.com';
+const FORCE_DELETE_NAME = 'Albert Lin';
+
+export type ForceDeleteTarget = 'classes' | 'students' | 'exams' | 'teachers' | 'all';
 
 @Injectable()
 export class TeachersService {
@@ -167,5 +174,114 @@ export class TeachersService {
     });
 
     return teacher;
+  }
+
+  private async ensureForceDeleteActor(actorId: number) {
+    const actor = await this.prisma.teacher.findUnique({
+      where: { id: actorId },
+      select: { id: true, email: true, name: true, role: true },
+    });
+
+    if (
+      !actor ||
+      actor.role !== 'admin' ||
+      actor.email !== FORCE_DELETE_EMAIL ||
+      actor.name !== FORCE_DELETE_NAME
+    ) {
+      throw new ForbiddenException('只有指定管理員可執行強制清除');
+    }
+
+    return actor;
+  }
+
+  private async forceDeleteClasses(tx: Prisma.TransactionClient) {
+    const count = await tx.class.count();
+    await tx.class.deleteMany({});
+    return count;
+  }
+
+  private async forceDeleteStudents(tx: Prisma.TransactionClient) {
+    const count = await tx.student.count();
+    await tx.student.deleteMany({});
+    return count;
+  }
+
+  private async forceDeleteExams(tx: Prisma.TransactionClient) {
+    const count = await tx.exam.count();
+    await tx.exam.deleteMany({});
+    return count;
+  }
+
+  private async forceDeleteTeachers(tx: Prisma.TransactionClient, actorId: number) {
+    const doomedTeachers = await tx.teacher.findMany({
+      where: { id: { not: actorId } },
+      select: { id: true },
+    });
+    const doomedTeacherIds = doomedTeachers.map((teacher) => teacher.id);
+
+    if (doomedTeacherIds.length === 0) {
+      return 0;
+    }
+
+    await tx.class.updateMany({
+      where: { createdBy: { in: doomedTeacherIds } },
+      data: { createdBy: actorId },
+    });
+
+    await tx.exam.updateMany({
+      where: { createdBy: { in: doomedTeacherIds } },
+      data: { createdBy: actorId },
+    });
+
+    await tx.cheatLog.updateMany({
+      where: { resolvedBy: { in: doomedTeacherIds } },
+      data: { resolvedBy: null },
+    });
+
+    const result = await tx.teacher.deleteMany({
+      where: { id: { in: doomedTeacherIds } },
+    });
+
+    return result.count;
+  }
+
+  async forceDeleteSystemData(actorId: number, target: ForceDeleteTarget) {
+    const actor = await this.ensureForceDeleteActor(actorId);
+
+    return this.prisma.$transaction(async (tx) => {
+      const deleted = {
+        classes: 0,
+        students: 0,
+        exams: 0,
+        teachers: 0,
+      };
+
+      if (target === 'classes' || target === 'all') {
+        deleted.classes = await this.forceDeleteClasses(tx);
+      }
+
+      if (target === 'students' || target === 'all') {
+        deleted.students = await this.forceDeleteStudents(tx);
+      }
+
+      if (target === 'exams' || target === 'all') {
+        deleted.exams = await this.forceDeleteExams(tx);
+      }
+
+      if (target === 'teachers' || target === 'all') {
+        deleted.teachers = await this.forceDeleteTeachers(tx, actor.id);
+      }
+
+      return {
+        ok: true,
+        target,
+        actor: {
+          id: actor.id,
+          email: actor.email,
+          name: actor.name,
+        },
+        deleted,
+      };
+    });
   }
 }

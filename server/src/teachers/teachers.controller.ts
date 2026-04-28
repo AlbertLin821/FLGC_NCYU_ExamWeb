@@ -14,11 +14,13 @@ import { TeachersService } from './teachers.service';
 import { JwtAuthGuard, RolesGuard, Roles } from '../auth/guards';
 import {
   IsEmail,
+  IsIn,
   IsNotEmpty,
   IsString,
   IsOptional,
   MinLength,
 } from 'class-validator';
+import type { ForceDeleteTarget } from './teachers.service';
 
 export class UpdatePasswordDto {
   @IsString()
@@ -43,6 +45,12 @@ export class CreateTeacherDto {
   @IsOptional()
   @IsString()
   role?: string;
+}
+
+export class ForceDeleteDto {
+  @IsString()
+  @IsIn(['classes', 'students', 'exams', 'teachers', 'all'])
+  target: ForceDeleteTarget;
 }
 
 @Controller('api/teachers')
@@ -88,5 +96,11 @@ export class TeachersController {
   @Roles('admin')
   remove(@Request() req: { user: { id: number } }, @Param('id') id: string) {
     return this.teachersService.deleteTeacher(req.user.id, +id);
+  }
+
+  @Post('force-delete')
+  @Roles('admin')
+  forceDelete(@Request() req: { user: { id: number } }, @Body() dto: ForceDeleteDto) {
+    return this.teachersService.forceDeleteSystemData(req.user.id, dto.target);
   }
 }
