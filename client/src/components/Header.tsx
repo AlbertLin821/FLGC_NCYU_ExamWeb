@@ -41,8 +41,8 @@ const Header: React.FC = () => {
               </li>
               {teacher ? (
                 <>
-                  <li><Link to="/teacher/dashboard">管理端</Link></li>
-                  <li><button onClick={handleLogout} className="btn btn-sm btn-secondary">登出</button></li>
+                  <li><Link to="/teacher/dashboard">{navI18n ? t('header.teacherPortal') : '管理端'}</Link></li>
+                  <li><button onClick={handleLogout} className="btn btn-sm btn-secondary">{navI18n ? t('header.logout') : '登出'}</button></li>
                 </>
               ) : (
                 <li>

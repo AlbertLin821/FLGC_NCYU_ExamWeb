@@ -7,6 +7,8 @@ export const studentMessages = {
     header: {
       home: '首頁',
       teacherLogin: '老師登入',
+      teacherPortal: '管理端',
+      logout: '登出',
     },
     home: {
       chooseRole: '選擇身分類別進入平台。',
@@ -115,7 +117,9 @@ export const studentMessages = {
   en: {
     header: {
       home: 'Home',
-      teacherLogin: 'Teacher login',
+      teacherLogin: 'Teacher Login',
+      teacherPortal: 'Dashboard',
+      logout: 'Sign Out',
     },
     home: {
       chooseRole: 'Choose your role to enter the platform.',

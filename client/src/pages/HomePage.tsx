@@ -31,17 +31,17 @@ const HomePage: React.FC = () => {
               <GraduationCap size={56} className="home-role-icon" />
             </div>
             {locale === 'en' ? (
-              <h3 className="mb-sm">
-                {t('home.studentTitle')}
+              <h3 className="mb-sm" lang="en">
+                STUDENT
                 <span className="text-secondary text-base font-normal" lang="zh-Hant" style={{ display: 'block', marginTop: 'var(--space-xs)' }}>
                   學生
                 </span>
               </h3>
             ) : (
-              <h3 className="mb-sm">
+              <h3 className="mb-sm" lang="zh-Hant">
                 學生
                 <span className="text-secondary text-base font-normal" lang="en" style={{ display: 'block', marginTop: 'var(--space-xs)' }}>
-                  {t('home.studentTitleEn')}
+                  STUDENT
                 </span>
               </h3>
             )}
@@ -56,14 +56,14 @@ const HomePage: React.FC = () => {
               <Users size={56} className="home-role-icon" />
             </div>
             {locale === 'en' ? (
-              <h3 className="mb-sm">
-                {t('home.teacherTitle')}
+              <h3 className="mb-sm" lang="en">
+                TEACHER / ADMIN
                 <span className="text-secondary text-base font-normal" lang="zh-Hant" style={{ display: 'block', marginTop: 'var(--space-xs)' }}>
                   老師 / 管理端
                 </span>
               </h3>
             ) : (
-              <h3 className="mb-sm">
+              <h3 className="mb-sm" lang="zh-Hant">
                 老師
                 <span className="text-secondary text-base font-normal" lang="en" style={{ display: 'block', marginTop: 'var(--space-xs)' }}>
                   TEACHER / ADMIN

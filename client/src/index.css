@@ -26,6 +26,8 @@
 
   /* Typography */
   --font-family: 'Noto Sans TC', 'Microsoft JhengHei', 'Inter', -apple-system, sans-serif;
+  --font-family-zh: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+  --font-family-en: 'Inter', 'Noto Sans TC', 'Microsoft JhengHei', -apple-system, sans-serif;
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
   --font-size-base: 1rem;
@@ -83,6 +85,19 @@ body {
   -moz-osx-font-smoothing: grayscale;
   width: 100%;
   overflow-x: clip;
+}
+
+html:lang(en) body,
+:lang(en) {
+  font-family: var(--font-family-en);
+}
+
+html:lang(zh-Hant) body,
+html:lang(zh-TW) body,
+:lang(zh),
+:lang(zh-Hant),
+:lang(zh-TW) {
+  font-family: var(--font-family-zh);
 }
 
 #root {
