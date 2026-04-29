@@ -62,8 +62,6 @@ const ExamRoom: React.FC = () => {
   const initExamStartedRef = useRef(false);
   /** 進入考場後短暫忽略 visibility/blur，避免重新整理或分頁還原時誤判作弊而暫停 */
   const cheatGuardReadyRef = useRef(false);
-  /** 僅在「曾進入全螢幕後又退出」時通報，避免載入時預設非全螢幕誤判 */
-  const hadFullscreenRef = useRef(false);
   /** 重新整理／關閉分頁時會觸發 blur，不應記為作弊（否則 reload 後 session 被後端設為 paused） */
   const pageLeaveRef = useRef(false);
   /** 問答題週期性自動儲存：不早於 45 秒重複寫入同一草稿 */
@@ -102,7 +100,7 @@ const ExamRoom: React.FC = () => {
     applyExamState(response.data);
   }, [applyExamState, examId, student.id]);
 
-  // Anti-cheat: Fullscreen, Visibility, Blur
+  // Anti-cheat: Visibility, Blur
   const reportCheat = useCallback((type: string, details?: any) => {
     if (!session || cheatReportedRef.current) return;
     cheatReportedRef.current = true;
@@ -155,7 +153,7 @@ const ExamRoom: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Anti-cheat: Fullscreen & Disable shortcuts
+    // Anti-cheat: Disable shortcuts
     const handleContext = (e: MouseEvent) => e.preventDefault();
     const handleCopy = (e: ClipboardEvent) => e.preventDefault();
     const handleKey = (e: KeyboardEvent) => {
@@ -167,26 +165,11 @@ const ExamRoom: React.FC = () => {
     document.addEventListener('contextmenu', handleContext);
     document.addEventListener('copy', handleCopy);
     document.addEventListener('keydown', handleKey);
-
-    // Prompt for fullscreen if not already
-    if (!document.fullscreenElement) {
-        // Most browsers require user interaction for this, so we add a listener to the first click
-        const reqFS = () => {
-            if (document.documentElement.requestFullscreen) {
-                document.documentElement.requestFullscreen().catch(() => {});
-            }
-            document.removeEventListener('click', reqFS);
-        };
-        document.addEventListener('click', reqFS);
-    }
     
     return () => {
       document.removeEventListener('contextmenu', handleContext);
       document.removeEventListener('copy', handleCopy);
       document.removeEventListener('keydown', handleKey);
-      if (document.fullscreenElement) {
-        document.exitFullscreen().catch(() => {});
-      }
     };
   }, []);
 
@@ -322,16 +305,6 @@ const ExamRoom: React.FC = () => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [reportCheat, session]);
 
-  const handleFullscreenChange = useCallback(() => {
-    const nowFs = !!document.fullscreenElement;
-    const wasFs = hadFullscreenRef.current;
-    hadFullscreenRef.current = nowFs;
-    if (!cheatGuardReadyRef.current) return;
-    if (wasFs && !nowFs && session && !isPaused) {
-      reportCheat('exit_fullscreen');
-    }
-  }, [session, isPaused, reportCheat]);
-
   useEffect(() => {
     if (!session) {
       cheatGuardReadyRef.current = false;
@@ -349,14 +322,12 @@ const ExamRoom: React.FC = () => {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('blur', handleBlur);
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('blur', handleBlur);
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
     };
-  }, [session, isPaused, handleVisibilityChange, handleBlur, handleFullscreenChange]);
+  }, [session, isPaused, handleVisibilityChange, handleBlur]);
 
   useEffect(() => {
     lastEssaySavedContentRef.current = '';

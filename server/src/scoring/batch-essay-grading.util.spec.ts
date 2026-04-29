@@ -27,6 +27,9 @@ describe('batch-essay-grading.util', () => {
     expect(p).toContain('questionId=10');
     expect(p).toContain('questionId=11');
     expect(p).toContain('(blank');
+    expect(p).toContain('Zero Marks (0/20): nonsensical, missing target words, or more than one sentence.');
+    expect(p).toContain('Rule of One: multiple errors in the same category only cause one -5 deduction.');
+    expect(p).toContain('Correction: [Fixed sentence]');
   });
 
   it('parseBatchEssayGradingResponse accepts valid JSON', () => {

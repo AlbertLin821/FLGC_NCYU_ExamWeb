@@ -385,6 +385,7 @@ export class ScoringService {
           `Item ${index + 1}`,
           `answerId: ${item.answerId}`,
           `questionId: ${item.questionId}`,
+          `orderNum: ${item.orderNum}`,
           `questionType: ${item.type}`,
           `maxPoints: ${item.maxPoints}`,
           `targetWords: ${targetWords}`,
@@ -408,21 +409,29 @@ General rules:
 - Evaluate each student independently. Never compare one student with another.
 - Within each student, evaluate each item independently.
 - Do not include analysis, revision samples, headings, or extra explanation.
-- For type "essay", treat it as a Two-Word Sentence Writing quiz item:
-  - Role: You are a professional English teacher grading a Two-Word Sentence Writing quiz.
-  - Objective: the student must use the two target words to write one coherent sentence.
-  - Flexibility: word forms may change and the target words may appear in any order.
-  - Automatic zero if the answer is meaningless, misses one or both target words, or contains more than one sentence.
-  - Score each essay item with a raw 20-point scale.
-  - Full marks 20/20 if the sentence is meaningful and grammatically correct, even if it is simple.
-  - Deduct 5 points per unique error type only once each: grammar, spelling, punctuation, capitalization.
+- For type "essay", use this exact grading policy for a "Two-Word Sentence Writing" quiz item:
+  - Role: Professional English Teacher grading a "Two-Word Sentence Writing" quiz.
+  - Objective: the student must use the target words to write exactly one coherent sentence.
+  - Flexibility: target words may change form and may appear in any order.
+  - Zero Marks (0/20): nonsensical, missing target words, or more than one sentence.
+  - Scoring Logic: base 20 points per question.
+  - Deductions: deduct 5 marks per unique error category only once each: Grammar, Spelling, Punctuation, Capitalization.
+  - Rule of One: multiple errors in the same category only cause one -5 deduction.
   - Minimum raw score is 0.
   - Convert the final raw score to aiScore on a 0-100 scale.
-  - Essay aiFeedback must be bilingual and specific:
-    - Include a brief error analysis or confirmation.
-    - Include one corrected sentence or one improved example sentence.
-    - Include both English and Chinese in one short line.
-    - Keep it concise, within about 30 English words total.
+  - For essay items, aiFeedback must be bilingual and use this exact plain-text template:
+    Q[<orderNum>]: [Target Words]
+    Original: [Student's Sentence]
+    Error Analysis: [Category] - [Specific Detail]
+    Score: [rawScore]/20
+    Feedback:
+    Correction: [Fixed sentence]
+    Explanation: [Brief EN/ZH explanation]
+    Example: [One model sentence]
+  - If the sentence is correct, use "Error Analysis: None - Sentence is correct."
+  - The Feedback section must include a correction, a brief explanation, and one model sentence.
+  - Keep the Feedback section concise at about 30-50 words total in combined EN/ZH.
+  - Do not omit any template line.
 - For type "paragraph_writing", use the Academic Writing Specialist rubric below.
 - For type "paragraph_writing", return writingScore on a 0-5 scale, CEFR level, and aiScore converted to percentage by writingScore / 5 * 100.
 - For type "paragraph_writing", aiFeedback must be bilingual in this exact inline format:
@@ -448,8 +457,8 @@ Scoring & CEFR Reference:
     - exactly one short English sentence and one short Traditional Chinese sentence
     - use the exact format "EN: ... ZH: ..."
     - strengths first, then weakness or actionable suggestion
-  - overallFeedbackEn: 1 concise sentence
-  - overallFeedbackZh: 1 concise professional sentence
+  - overallFeedbackEn: 1-2 concise English sentences
+  - overallFeedbackZh: 1-2 concise Traditional Chinese sentences
 - Do not include markdown headings, diagnostic sections, or exemplary revision text in the JSON values.
 
 Output JSON shape:
