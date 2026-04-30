@@ -206,7 +206,8 @@ const ClassManagement: React.FC = () => {
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [teachersLoading, setTeachersLoading] = useState(false);
   const [allTeachers, setAllTeachers] = useState<any[]>([]);
-  const [selectedTeacherId, setSelectedTeacherId] = useState('');
+  const [showTeacherManageModal, setShowTeacherManageModal] = useState(false);
+  const [selectedTeacherIds, setSelectedTeacherIds] = useState<number[]>([]);
   const [selectedTeacherRole, setSelectedTeacherRole] = useState<'owner' | 'member'>('member');
   const [assigningTeacher, setAssigningTeacher] = useState(false);
   const [showStudentModal, setShowStudentModal] = useState(false);
@@ -312,16 +313,47 @@ const ClassManagement: React.FC = () => {
     }
   };
 
+  const openTeacherManageModal = async () => {
+    if (!selectedClass) return;
+    setShowTeacherManageModal(true);
+    setSelectedTeacherIds([]);
+    setSelectedTeacherRole('member');
+    await fetchClassDetails(selectedClass.id);
+  };
+
+  const closeTeacherManageModal = () => {
+    setShowTeacherManageModal(false);
+    setSelectedTeacherIds([]);
+    setSelectedTeacherRole('member');
+  };
+
+  const toggleTeacherSelection = (teacherId: number) => {
+    setSelectedTeacherIds((current) =>
+      current.includes(teacherId)
+        ? current.filter((id) => id !== teacherId)
+        : [...current, teacherId],
+    );
+  };
+
   const handleAssignTeacher = async () => {
-    if (!selectedClass || !selectedTeacherId || assigningTeacher) return;
+    if (!selectedClass || selectedTeacherIds.length === 0 || assigningTeacher) return;
     setAssigningTeacher(true);
     try {
-      await classesApi.addTeacher(selectedClass.id, Number(selectedTeacherId), selectedTeacherRole);
-      setSelectedTeacherId('');
+      await Promise.all(
+        selectedTeacherIds.map((teacherId) =>
+          classesApi.addTeacher(selectedClass.id, teacherId, selectedTeacherRole),
+        ),
+      );
+      setSelectedTeacherIds([]);
       setSelectedTeacherRole('member');
       await fetchClassDetails(selectedClass.id);
       await fetchClasses();
-      alert(selectedTeacherRole === 'owner' ? '已交付班級給該老師' : '已邀請老師共同管理班級');
+      alert(
+        selectedTeacherRole === 'owner'
+          ? `已交付班級給 ${selectedTeacherIds.length} 位老師`
+          : `已邀請 ${selectedTeacherIds.length} 位老師共同管理班級`,
+      );
+      closeTeacherManageModal();
     } catch (err: any) {
       const msg = err.response?.data?.message;
       alert(Array.isArray(msg) ? msg.join('；') : msg || '指派教師失敗');
@@ -582,6 +614,9 @@ const ClassManagement: React.FC = () => {
             <h3>{selectedClass.name} - 學生管理</h3>
           </div>
           <div className="toolbar">
+            <button className="btn btn-secondary" onClick={openTeacherManageModal}>
+              管理
+            </button>
             <button className="btn btn-primary flex items-center gap-xs" onClick={openImportModal}>
               <FileSpreadsheet size={16} /> 匯入
             </button>
@@ -592,103 +627,6 @@ const ClassManagement: React.FC = () => {
               清空全班學生
             </button>
           </div>
-        </div>
-
-        <div className="card mb-lg">
-          <div className="flex justify-between items-center flex-wrap gap-md mb-md">
-            <div>
-              <h4 className="mb-xs">班級管理老師</h4>
-              <p className="text-sm text-secondary">
-                可邀請老師共同管理班級，或將班級交付給該老師；被加入的老師即可監控學生考試狀況。
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-2 gap-md mb-lg">
-            <div>
-              <label className="form-label">選擇教師帳號</label>
-              <select
-                className="form-input w-full"
-                value={selectedTeacherId}
-                onChange={(e) => setSelectedTeacherId(e.target.value)}
-                disabled={assigningTeacher || teachersLoading}
-              >
-                <option value="">請選擇教師</option>
-                {unassignedTeachers.map((teacher) => (
-                  <option key={teacher.id} value={teacher.id}>
-                    {teacher.name}（{teacher.email}）
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="form-label">管理方式</label>
-              <select
-                className="form-input w-full"
-                value={selectedTeacherRole}
-                onChange={(e) => setSelectedTeacherRole((e.target.value === 'owner' ? 'owner' : 'member'))}
-                disabled={assigningTeacher}
-              >
-                <option value="member">共同管理</option>
-                <option value="owner">交付班級</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="action-group mb-lg">
-            <button
-              type="button"
-              className="btn btn-primary"
-              disabled={!selectedTeacherId || assigningTeacher || teachersLoading}
-              onClick={handleAssignTeacher}
-            >
-              {assigningTeacher ? '處理中…' : selectedTeacherRole === 'owner' ? '交付給老師' : '邀請老師管理'}
-            </button>
-          </div>
-
-          {teachersLoading ? (
-            <div className="spinner" />
-          ) : (
-            <ResizableTableContainer className="scroll-region-y" storageKey="class-management-teachers">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>姓名</th>
-                    <th>電子郵件</th>
-                    <th>系統角色</th>
-                    <th>班級權限</th>
-                    <th>操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(selectedClass.teachers ?? []).map((row: any) => (
-                    <tr key={`${row.teacherId}-${row.classId}`}>
-                      <td className="cell-nowrap">{row.teacher?.name ?? '—'}</td>
-                      <td className="cell-nowrap">{row.teacher?.email ?? '—'}</td>
-                      <td className="cell-nowrap">{row.teacher?.role ?? 'teacher'}</td>
-                      <td className="cell-nowrap">{row.role === 'owner' ? '班級負責老師' : '共同管理老師'}</td>
-                      <td>
-                        <button
-                          type="button"
-                          className="btn btn-xs btn-danger"
-                          onClick={() => handleRemoveTeacher(Number(row.teacher?.id ?? row.teacherId))}
-                        >
-                          移除
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {(selectedClass.teachers ?? []).length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="text-center text-secondary">
-                        尚未指派班級管理老師
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </ResizableTableContainer>
-          )}
         </div>
 
         <div className="card table-card">
@@ -919,6 +857,115 @@ const ClassManagement: React.FC = () => {
                   </div>
                 </>
               )}
+            </div>
+          </div>
+        )}
+
+        {showTeacherManageModal && (
+          <div className="modal-overlay">
+            <div className="card modal-card modal-card--lg">
+              <h3 className="mb-md">管理班級老師</h3>
+              <p className="text-sm text-secondary mb-md">
+                可複選老師後邀請共同管理班級，或交付班級給所選老師；被加入的老師即可監控學生考試狀況。
+              </p>
+
+              <div className="form-group mb-md">
+                <label className="form-label">管理方式</label>
+                <select
+                  className="form-input w-full"
+                  value={selectedTeacherRole}
+                  onChange={(e) => setSelectedTeacherRole((e.target.value === 'owner' ? 'owner' : 'member'))}
+                  disabled={assigningTeacher}
+                >
+                  <option value="member">共同管理</option>
+                  <option value="owner">交付班級</option>
+                </select>
+              </div>
+
+              <div className="card mb-md" style={{ padding: '0.875rem' }}>
+                <h4 className="mb-sm">可邀請教師</h4>
+                {teachersLoading ? (
+                  <div className="spinner" />
+                ) : unassignedTeachers.length === 0 ? (
+                  <p className="text-sm text-secondary">目前沒有可新增的教師。</p>
+                ) : (
+                  <div className="grid grid-2 gap-sm">
+                    {unassignedTeachers.map((teacher) => (
+                      <label
+                        key={teacher.id}
+                        className="flex items-start gap-sm"
+                        style={{ padding: '0.5rem 0.25rem', cursor: 'pointer' }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedTeacherIds.includes(teacher.id)}
+                          onChange={() => toggleTeacherSelection(teacher.id)}
+                          disabled={assigningTeacher}
+                        />
+                        <span className="text-sm">
+                          <strong>{teacher.name}</strong>
+                          <br />
+                          <span className="text-secondary">{teacher.email}</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <ResizableTableContainer className="modal-scroll mb-lg" storageKey="class-management-teachers">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>姓名</th>
+                      <th>電子郵件</th>
+                      <th>系統角色</th>
+                      <th>班級權限</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(selectedClass.teachers ?? []).map((row: any) => (
+                      <tr key={`${row.teacherId}-${row.classId}`}>
+                        <td className="cell-nowrap">{row.teacher?.name ?? '—'}</td>
+                        <td className="cell-nowrap">{row.teacher?.email ?? '—'}</td>
+                        <td className="cell-nowrap">{row.teacher?.role ?? 'teacher'}</td>
+                        <td className="cell-nowrap">{row.role === 'owner' ? '班級負責老師' : '共同管理老師'}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="btn btn-xs btn-danger"
+                            onClick={() => handleRemoveTeacher(Number(row.teacher?.id ?? row.teacherId))}
+                          >
+                            移除
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {(selectedClass.teachers ?? []).length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="text-center text-secondary">
+                          尚未指派班級管理老師
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </ResizableTableContainer>
+
+              <div className="modal-actions">
+                <button type="button" className="btn btn-secondary" disabled={assigningTeacher} onClick={closeTeacherManageModal}>
+                  取消
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={selectedTeacherIds.length === 0 || assigningTeacher || teachersLoading}
+                  onClick={handleAssignTeacher}
+                >
+                  {assigningTeacher ? '處理中…' : '邀請'}
+                </button>
+              </div>
             </div>
           </div>
         )}
