@@ -63,6 +63,15 @@ export class ClassesService {
     return this.prisma.class.findUnique({
       where: { id },
       include: {
+        teachers: {
+          include: {
+            teacher: { select: { id: true, name: true, email: true, role: true } },
+          },
+          orderBy: [
+            { role: 'asc' },
+            { teacherId: 'asc' },
+          ],
+        },
         students: {
           include: {
             student: true,
@@ -131,8 +140,19 @@ export class ClassesService {
 
   async addTeacher(classId: number, teacherId: number, actor: TeacherActor) {
     await ensureClassAccess(this.prisma, actor, classId);
-    return this.prisma.teacherClass.create({
-      data: { classId, teacherId, role: 'member' },
+    return this.prisma.teacherClass.upsert({
+      where: { teacherId_classId: { teacherId, classId } },
+      update: { role: 'member' },
+      create: { classId, teacherId, role: 'member' },
+    });
+  }
+
+  async assignTeacher(classId: number, teacherId: number, role: 'owner' | 'member', actor: TeacherActor) {
+    await ensureClassAccess(this.prisma, actor, classId);
+    return this.prisma.teacherClass.upsert({
+      where: { teacherId_classId: { teacherId, classId } },
+      update: { role },
+      create: { classId, teacherId, role },
     });
   }
 

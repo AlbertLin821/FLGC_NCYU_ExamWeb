@@ -3,6 +3,17 @@ import { Navigate } from 'react-router-dom';
 import { teachersApi } from '../../api';
 import { getTeacherRole } from '../../utils/teacherRole';
 import ResizableTableContainer from '../../components/ResizableTableContainer';
+import * as XLSX from 'xlsx';
+import { FileSpreadsheet, Type } from 'lucide-react';
+
+type TeacherImportRow = {
+  email: string;
+  name: string;
+  password: string;
+  role: string;
+};
+
+type ImportMode = 'text' | 'excel';
 
 function roleLabel(role: string): string {
   switch (role) {
@@ -15,6 +26,89 @@ function roleLabel(role: string): string {
     default:
       return role;
   }
+}
+
+function normalizeCell(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  return String(value).trim();
+}
+
+function detectTeacherImportColumn(value: string): keyof TeacherImportRow | null {
+  const normalized = value.toLowerCase().replace(/[\s_-]+/g, '');
+  if (/email|mail|電子郵件/.test(normalized)) return 'email';
+  if (/name|姓名|名字/.test(normalized)) return 'name';
+  if (/password|密碼|passwd|pwd/.test(normalized)) return 'password';
+  if (/role|角色/.test(normalized)) return 'role';
+  return null;
+}
+
+function normalizeRole(value: string): string {
+  const normalized = value.trim().toLowerCase();
+  if (['admin', '管理員'].includes(normalized)) return 'admin';
+  if (['viewer', '檢視', '檢視者'].includes(normalized)) return 'viewer';
+  return 'teacher';
+}
+
+function parseTeacherImportRows(rows: unknown[][]): TeacherImportRow[] {
+  const normalizedRows = rows
+    .map((row) => row.map(normalizeCell))
+    .filter((row) => row.some(Boolean));
+
+  if (normalizedRows.length === 0) return [];
+
+  const headerMap: Partial<Record<keyof TeacherImportRow, number>> = {};
+  normalizedRows[0]?.forEach((cell, index) => {
+    const column = detectTeacherImportColumn(cell);
+    if (column && headerMap[column] === undefined) {
+      headerMap[column] = index;
+    }
+  });
+
+  const hasHeader =
+    headerMap.email !== undefined &&
+    headerMap.name !== undefined &&
+    headerMap.password !== undefined;
+
+  const sourceRows = hasHeader ? normalizedRows.slice(1) : normalizedRows;
+
+  return sourceRows
+    .map((row) => {
+      const email = hasHeader
+        ? row[headerMap.email ?? -1] ?? ''
+        : row[0] ?? '';
+      const name = hasHeader
+        ? row[headerMap.name ?? -1] ?? ''
+        : row[1] ?? '';
+      const password = hasHeader
+        ? row[headerMap.password ?? -1] ?? ''
+        : row[2] ?? '';
+      const roleRaw = hasHeader
+        ? row[headerMap.role ?? -1] ?? ''
+        : row[3] ?? '';
+
+      if (!email || !name || !password) return null;
+      return {
+        email: email.toLowerCase(),
+        name,
+        password,
+        role: normalizeRole(roleRaw || 'teacher'),
+      };
+    })
+    .filter((row): row is TeacherImportRow => row !== null);
+}
+
+function parseTeacherImportText(text: string): TeacherImportRow[] {
+  const rows = text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) =>
+      line
+        .split(/\t|,|\s{2,}/)
+        .map((part) => part.trim())
+        .filter(Boolean),
+    );
+  return parseTeacherImportRows(rows);
 }
 
 const TeacherAccounts: React.FC = () => {
@@ -30,6 +124,14 @@ const TeacherAccounts: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [resetId, setResetId] = useState<number | null>(null);
   const [resetPass, setResetPass] = useState('');
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importMode, setImportMode] = useState<ImportMode | null>(null);
+  const [importText, setImportText] = useState('');
+  const [importPreview, setImportPreview] = useState<TeacherImportRow[]>([]);
+  const [importError, setImportError] = useState('');
+  const [importParsing, setImportParsing] = useState(false);
+  const [importSubmitting, setImportSubmitting] = useState(false);
+  const [importFileName, setImportFileName] = useState('');
 
   const loadTeachers = () => {
     setLoading(true);
@@ -63,6 +165,45 @@ const TeacherAccounts: React.FC = () => {
     setShowCreateModal(false);
   };
 
+  const resetImportState = () => {
+    setImportMode(null);
+    setImportText('');
+    setImportPreview([]);
+    setImportError('');
+    setImportParsing(false);
+    setImportSubmitting(false);
+    setImportFileName('');
+  };
+
+  const closeImportModal = () => {
+    resetImportState();
+    setShowImportModal(false);
+  };
+
+  const setImportPreviewOrError = (rows: TeacherImportRow[]) => {
+    if (rows.length === 0) {
+      setImportPreview([]);
+      setImportError('無法辨識資料，請確認至少包含電子郵件、姓名、密碼。');
+      return;
+    }
+    const emails = new Set<string>();
+    const duplicates = new Set<string>();
+    for (const row of rows) {
+      if (emails.has(row.email)) {
+        duplicates.add(row.email);
+      }
+      emails.add(row.email);
+    }
+    setImportPreview(
+      [...rows].sort((a, b) => a.email.localeCompare(b.email, 'en', { sensitivity: 'base' })),
+    );
+    setImportError(
+      duplicates.size > 0
+        ? `發現重複電子郵件：${[...duplicates].join('、')}`
+        : '',
+    );
+  };
+
   const handleCreateTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTeacher.email || !newTeacher.password || !newTeacher.name) return;
@@ -77,6 +218,77 @@ const TeacherAccounts: React.FC = () => {
       const msg = ax.response?.data?.message;
       const text = Array.isArray(msg) ? msg.join('；') : msg || '新增失敗';
       alert(text);
+    }
+  };
+
+  const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const input = e.target;
+    if (!file) return;
+    setImportParsing(true);
+    setImportError('');
+    setImportFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      window.setTimeout(() => {
+        try {
+          const wb = XLSX.read(evt.target?.result, { type: 'binary' });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as unknown[][];
+          setImportPreviewOrError(parseTeacherImportRows(data));
+        } catch {
+          setImportError('Excel 解析失敗，請確認檔案格式。');
+        } finally {
+          setImportParsing(false);
+          input.value = '';
+        }
+      }, 0);
+    };
+    reader.onerror = () => {
+      setImportParsing(false);
+      setImportError('讀取檔案失敗。');
+      input.value = '';
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  const handleTextPreview = () => {
+    if (importParsing) return;
+    setImportParsing(true);
+    setImportError('');
+    window.setTimeout(() => {
+      try {
+        setImportPreviewOrError(parseTeacherImportText(importText));
+      } finally {
+        setImportParsing(false);
+      }
+    }, 0);
+  };
+
+  const handleConfirmImport = async () => {
+    if (importSubmitting || importPreview.length === 0 || importError) return;
+    setImportSubmitting(true);
+    try {
+      const res = await teachersApi.bulkImport(importPreview);
+      const { created = 0, updated = 0, errors = [] } = res.data ?? {};
+      if (Array.isArray(errors) && errors.length > 0) {
+        alert(
+          `匯入完成：新增 ${created} 位、更新 ${updated} 位。\n失敗 ${errors.length} 筆。\n前 10 筆錯誤：\n${errors
+            .slice(0, 10)
+            .join('\n')}`,
+        );
+      } else {
+        alert(`匯入完成：新增 ${created} 位、更新 ${updated} 位。`);
+      }
+      closeImportModal();
+      loadTeachers();
+    } catch (err: unknown) {
+      const ax = err as { response?: { data?: { message?: string | string[] } } };
+      const msg = ax.response?.data?.message;
+      const text = Array.isArray(msg) ? msg.join('；') : msg || '匯入失敗';
+      alert(text);
+    } finally {
+      setImportSubmitting(false);
     }
   };
 
@@ -125,13 +337,25 @@ const TeacherAccounts: React.FC = () => {
       <div className="card">
         <div className="flex justify-between items-center flex-wrap gap-md mb-md">
           <h4>目前教師列表</h4>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => setShowCreateModal(true)}
-          >
-            + 新增教師
-          </button>
+          <div className="action-group">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => {
+                resetImportState();
+                setShowImportModal(true);
+              }}
+            >
+              匯入教師
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => setShowCreateModal(true)}
+            >
+              + 新增教師
+            </button>
+          </div>
         </div>
         {loading ? (
           <div className="spinner" />
@@ -250,6 +474,7 @@ const TeacherAccounts: React.FC = () => {
                 >
                   <option value="teacher">教師</option>
                   <option value="admin">管理員</option>
+                  <option value="viewer">檢視</option>
                 </select>
               </div>
               <div className="modal-actions">
@@ -261,6 +486,129 @@ const TeacherAccounts: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showImportModal && (
+        <div className="modal-overlay">
+          <div className={`card modal-card modal-card--relative ${importPreview.length > 0 ? 'modal-card--lg' : 'modal-card--sm'}`}>
+            {importPreview.length > 0 ? (
+              <>
+                <h3 className="mb-md">檢視即將匯入的教師帳號</h3>
+                <p className="text-sm text-secondary mb-md">
+                  即將匯入 {importPreview.length} 筆教師帳號；相同電子郵件會直接更新姓名、角色與密碼。
+                </p>
+                <ResizableTableContainer className="modal-scroll mb-lg" storageKey="teacher-import-preview">
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>電子郵件</th>
+                        <th>姓名</th>
+                        <th>角色</th>
+                        <th>密碼</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {importPreview.map((row, index) => (
+                        <tr key={`${row.email}-${index}`}>
+                          <td>{row.email}</td>
+                          <td>{row.name}</td>
+                          <td>{roleLabel(row.role)}</td>
+                          <td>{row.password}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </ResizableTableContainer>
+                {importError && <div className="alert alert-danger mb-md">{importError}</div>}
+                <div className="modal-actions">
+                  <button type="button" className="btn btn-secondary" disabled={importSubmitting} onClick={() => setImportPreview([])}>
+                    返回修改
+                  </button>
+                  <button type="button" className="btn btn-secondary" disabled={importSubmitting} onClick={closeImportModal}>
+                    取消
+                  </button>
+                  <button type="button" className="btn btn-primary" disabled={importSubmitting || !!importError} onClick={handleConfirmImport}>
+                    {importSubmitting ? '匯入中…' : '確認匯入'}
+                  </button>
+                </div>
+              </>
+            ) : importMode === null ? (
+              <>
+                <h3 className="mb-md">匯入教師帳號</h3>
+                <p className="text-sm text-secondary mb-lg">
+                  可批次新增或更新教師帳號。欄位建議為：電子郵件、姓名、密碼、角色。
+                </p>
+                <div className="action-group mb-lg">
+                  <button className="btn btn-secondary btn-sm" onClick={() => setImportMode('excel')}>
+                    <FileSpreadsheet size={16} /> Excel 匯入
+                  </button>
+                  <button className="btn btn-secondary btn-sm" onClick={() => setImportMode('text')}>
+                    <Type size={16} /> 文字匯入
+                  </button>
+                </div>
+                <div className="modal-actions">
+                  <button type="button" className="btn btn-secondary" onClick={closeImportModal}>
+                    取消
+                  </button>
+                </div>
+              </>
+            ) : importMode === 'excel' ? (
+              <>
+                <h3 className="mb-md">Excel 匯入教師帳號</h3>
+                <p className="text-sm text-secondary mb-md">
+                  建議欄位順序：<b>電子郵件、姓名、密碼、角色</b>；角色可填 <b>teacher / admin / viewer</b>。
+                </p>
+                <div className="form-group">
+                  <label className="form-label">選擇 Excel 檔案</label>
+                  <input type="file" className="form-input" accept=".xlsx,.xls" disabled={importParsing} onChange={handleExcelUpload} />
+                </div>
+                {importFileName && <p className="text-sm text-secondary mb-md">已選擇：{importFileName}</p>}
+                {importError && <div className="alert alert-danger mb-md">{importError}</div>}
+                <div className="modal-actions">
+                  <button type="button" className="btn btn-secondary" onClick={() => setImportMode('text')}>
+                    改用文字匯入
+                  </button>
+                  <button type="button" className="btn btn-secondary" onClick={() => setImportMode(null)}>
+                    返回
+                  </button>
+                  <button type="button" className="btn btn-secondary" onClick={closeImportModal}>
+                    取消
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 className="mb-md">文字匯入教師帳號</h3>
+                <p className="text-sm text-secondary mb-md">
+                  一行一筆，建議格式：<b>電子郵件,姓名,密碼,角色</b>。角色未填時預設為 teacher。
+                </p>
+                <textarea
+                  className="form-input mb-md"
+                  style={{ minHeight: '220px' }}
+                  value={importText}
+                  onChange={(e) => setImportText(e.target.value)}
+                  disabled={importParsing}
+                  placeholder={'teacher1@example.com,王老師,Password123,teacher\nadmin@example.com,管理員,Password123,admin'}
+                />
+                {importError && <div className="alert alert-danger mb-md">{importError}</div>}
+                <div className="modal-actions">
+                  <button type="button" className="btn btn-secondary" onClick={() => setImportMode('excel')}>
+                    改用 Excel 匯入
+                  </button>
+                  <button type="button" className="btn btn-secondary" onClick={() => setImportMode(null)}>
+                    返回
+                  </button>
+                  <button type="button" className="btn btn-secondary" onClick={closeImportModal}>
+                    取消
+                  </button>
+                  <button type="button" className="btn btn-primary" disabled={importParsing} onClick={handleTextPreview}>
+                    {importParsing ? '解析中…' : '檢視資料'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

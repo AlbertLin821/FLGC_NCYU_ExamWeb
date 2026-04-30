@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { classesApi, studentsApi } from '../../api';
+import { classesApi, studentsApi, teachersApi } from '../../api';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
 import { FileSpreadsheet, Type, ClipboardList } from 'lucide-react';
@@ -204,6 +204,11 @@ const ClassManagement: React.FC = () => {
   const [selectedClass, setSelectedClass] = useState<any>(null);
   const [students, setStudents] = useState<any[]>([]);
   const [studentsLoading, setStudentsLoading] = useState(false);
+  const [teachersLoading, setTeachersLoading] = useState(false);
+  const [allTeachers, setAllTeachers] = useState<any[]>([]);
+  const [selectedTeacherId, setSelectedTeacherId] = useState('');
+  const [selectedTeacherRole, setSelectedTeacherRole] = useState<'owner' | 'member'>('member');
+  const [assigningTeacher, setAssigningTeacher] = useState(false);
   const [showStudentModal, setShowStudentModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState<any>(null);
   const [showImport, setShowImport] = useState(false);
@@ -237,13 +242,33 @@ const ClassManagement: React.FC = () => {
     finally { setStudentsLoading(false); }
   };
 
+  const fetchClassDetails = async (classId: number) => {
+    setTeachersLoading(true);
+    try {
+      const [classRes, teachersRes] = await Promise.all([
+        classesApi.getById(classId),
+        teachersApi.getAll(),
+      ]);
+      setSelectedClass(classRes.data);
+      setAllTeachers(teachersRes.data);
+    } catch (err) {
+      console.error(err);
+      alert('讀取班級教師資料失敗');
+    } finally {
+      setTeachersLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchClasses();
   }, []);
 
   useEffect(() => {
-    if (selectedClass) fetchStudents(selectedClass.id);
-  }, [selectedClass]);
+    if (selectedClass?.id) {
+      fetchStudents(selectedClass.id);
+      fetchClassDetails(selectedClass.id);
+    }
+  }, [selectedClass?.id]);
 
   // Class Actions
   const handleClassSave = async (e: React.FormEvent) => {
@@ -286,6 +311,43 @@ const ClassManagement: React.FC = () => {
       alert('清空學生失敗');
     }
   };
+
+  const handleAssignTeacher = async () => {
+    if (!selectedClass || !selectedTeacherId || assigningTeacher) return;
+    setAssigningTeacher(true);
+    try {
+      await classesApi.addTeacher(selectedClass.id, Number(selectedTeacherId), selectedTeacherRole);
+      setSelectedTeacherId('');
+      setSelectedTeacherRole('member');
+      await fetchClassDetails(selectedClass.id);
+      await fetchClasses();
+      alert(selectedTeacherRole === 'owner' ? '已交付班級給該老師' : '已邀請老師共同管理班級');
+    } catch (err: any) {
+      const msg = err.response?.data?.message;
+      alert(Array.isArray(msg) ? msg.join('；') : msg || '指派教師失敗');
+    } finally {
+      setAssigningTeacher(false);
+    }
+  };
+
+  const handleRemoveTeacher = async (teacherId: number) => {
+    if (!selectedClass) return;
+    if (!confirm('確認移除此老師的班級管理權限？移除後該老師將無法監控本班考試。')) return;
+    try {
+      await classesApi.removeTeacher(selectedClass.id, teacherId);
+      await fetchClassDetails(selectedClass.id);
+      await fetchClasses();
+      alert('已移除班級管理老師');
+    } catch (err: any) {
+      const msg = err.response?.data?.message;
+      alert(Array.isArray(msg) ? msg.join('；') : msg || '移除失敗');
+    }
+  };
+
+  const assignedTeacherIds = new Set(
+    (selectedClass?.teachers ?? []).map((row: any) => Number(row.teacher?.id ?? row.teacherId)),
+  );
+  const unassignedTeachers = allTeachers.filter((teacher) => !assignedTeacherIds.has(teacher.id));
 
   // Student Actions
   const handleStudentSave = async (e: React.FormEvent) => {
@@ -530,6 +592,103 @@ const ClassManagement: React.FC = () => {
               清空全班學生
             </button>
           </div>
+        </div>
+
+        <div className="card mb-lg">
+          <div className="flex justify-between items-center flex-wrap gap-md mb-md">
+            <div>
+              <h4 className="mb-xs">班級管理老師</h4>
+              <p className="text-sm text-secondary">
+                可邀請老師共同管理班級，或將班級交付給該老師；被加入的老師即可監控學生考試狀況。
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-2 gap-md mb-lg">
+            <div>
+              <label className="form-label">選擇教師帳號</label>
+              <select
+                className="form-input w-full"
+                value={selectedTeacherId}
+                onChange={(e) => setSelectedTeacherId(e.target.value)}
+                disabled={assigningTeacher || teachersLoading}
+              >
+                <option value="">請選擇教師</option>
+                {unassignedTeachers.map((teacher) => (
+                  <option key={teacher.id} value={teacher.id}>
+                    {teacher.name}（{teacher.email}）
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="form-label">管理方式</label>
+              <select
+                className="form-input w-full"
+                value={selectedTeacherRole}
+                onChange={(e) => setSelectedTeacherRole((e.target.value === 'owner' ? 'owner' : 'member'))}
+                disabled={assigningTeacher}
+              >
+                <option value="member">共同管理</option>
+                <option value="owner">交付班級</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="action-group mb-lg">
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={!selectedTeacherId || assigningTeacher || teachersLoading}
+              onClick={handleAssignTeacher}
+            >
+              {assigningTeacher ? '處理中…' : selectedTeacherRole === 'owner' ? '交付給老師' : '邀請老師管理'}
+            </button>
+          </div>
+
+          {teachersLoading ? (
+            <div className="spinner" />
+          ) : (
+            <ResizableTableContainer className="scroll-region-y" storageKey="class-management-teachers">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>姓名</th>
+                    <th>電子郵件</th>
+                    <th>系統角色</th>
+                    <th>班級權限</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(selectedClass.teachers ?? []).map((row: any) => (
+                    <tr key={`${row.teacherId}-${row.classId}`}>
+                      <td className="cell-nowrap">{row.teacher?.name ?? '—'}</td>
+                      <td className="cell-nowrap">{row.teacher?.email ?? '—'}</td>
+                      <td className="cell-nowrap">{row.teacher?.role ?? 'teacher'}</td>
+                      <td className="cell-nowrap">{row.role === 'owner' ? '班級負責老師' : '共同管理老師'}</td>
+                      <td>
+                        <button
+                          type="button"
+                          className="btn btn-xs btn-danger"
+                          onClick={() => handleRemoveTeacher(Number(row.teacher?.id ?? row.teacherId))}
+                        >
+                          移除
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {(selectedClass.teachers ?? []).length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="text-center text-secondary">
+                        尚未指派班級管理老師
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </ResizableTableContainer>
+          )}
         </div>
 
         <div className="card table-card">
@@ -781,7 +940,7 @@ const ClassManagement: React.FC = () => {
             <div 
               key={c.id} 
               className="card class-card hover-trigger" 
-              onClick={() => setSelectedClass(c)}
+              onClick={() => setSelectedClass({ id: c.id, name: c.name, description: c.description })}
             >
               <div className="class-card__header">
                 <div className="class-card__body">

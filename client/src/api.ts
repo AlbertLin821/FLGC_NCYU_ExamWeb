@@ -156,6 +156,11 @@ export const teachersApi = {
       invalidateGetCache(['/teachers', '/dashboard']);
       return res;
     }),
+  bulkImport: (teachers: { email: string; password: string; name: string; role?: string }[]) =>
+    api.post('/teachers/import', { teachers }).then((res) => {
+      invalidateGetCache(['/teachers', '/dashboard']);
+      return res;
+    }),
   updatePassword: (id: number, password: string) =>
     api.patch(`/teachers/${id}/password`, { password }),
   updateOwnPassword: (currentPassword: string, newPassword: string) =>
@@ -193,8 +198,13 @@ export const classesApi = {
       invalidateGetCache(['/classes', '/students', '/dashboard']);
       return res;
     }),
-  addTeacher: (classId: number, teacherId: number) =>
-    api.post(`/classes/${classId}/teachers`, { teacherId }).then((res) => {
+  addTeacher: (classId: number, teacherId: number, role: 'owner' | 'member' = 'member') =>
+    api.post(`/classes/${classId}/teachers`, { teacherId, role }).then((res) => {
+      invalidateGetCache(['/classes', '/teachers']);
+      return res;
+    }),
+  removeTeacher: (classId: number, teacherId: number) =>
+    api.delete(`/classes/${classId}/teachers/${teacherId}`).then((res) => {
       invalidateGetCache(['/classes', '/teachers']);
       return res;
     }),

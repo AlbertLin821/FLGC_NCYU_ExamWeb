@@ -12,6 +12,10 @@ export class CreateClassDto {
 
 export class AddTeacherDto {
   @IsInt() teacherId: number;
+
+  @IsOptional()
+  @IsString()
+  role?: string;
 }
 
 export class ClearStudentsDto {
@@ -86,7 +90,8 @@ export class ClassesController {
   @Post(':id/teachers')
   @Roles('admin')
   addTeacher(@Param('id', ParseIntPipe) id: number, @Body() dto: AddTeacherDto, @Request() req: any) {
-    return this.classesService.addTeacher(id, dto.teacherId, req.user);
+    const role = dto.role === 'owner' ? 'owner' : 'member';
+    return this.classesService.assignTeacher(id, dto.teacherId, role, req.user);
   }
 
   @Delete(':id/teachers/:teacherId')

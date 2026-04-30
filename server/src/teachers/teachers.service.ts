@@ -14,6 +14,12 @@ const FORCE_DELETE_EMAIL = 'albertlin94821@gmail.com';
 const FORCE_DELETE_NAME = 'Albert Lin';
 
 export type ForceDeleteTarget = 'classes' | 'students' | 'exams' | 'teachers' | 'all';
+export type BulkImportTeacherRow = {
+  email: string;
+  password: string;
+  name: string;
+  role?: string;
+};
 
 @Injectable()
 export class TeachersService {
@@ -70,6 +76,81 @@ export class TeachersService {
       },
       select: { id: true, email: true, name: true, role: true, createdAt: true },
     });
+  }
+
+  async bulkImport(rows: BulkImportTeacherRow[]) {
+    const results = { created: 0, updated: 0, errors: [] as string[] };
+    const dedupedRows = new Map<string, BulkImportTeacherRow>();
+    const duplicateEmails = new Set<string>();
+
+    for (const row of rows) {
+      const email = String(row.email || '').trim().toLowerCase();
+      const name = String(row.name || '').trim();
+      const password = String(row.password || '').trim();
+      const role = String(row.role || 'teacher').trim().toLowerCase();
+
+      if (!email || !name || !password) {
+        results.errors.push(`${row.email || '（空白電子郵件）'}: 電子郵件、姓名與密碼不可空白`);
+        continue;
+      }
+      if (!['teacher', 'admin', 'viewer'].includes(role)) {
+        results.errors.push(`${email}: 角色無效（僅允許 teacher/admin/viewer）`);
+        continue;
+      }
+      if (password.length < 8) {
+        results.errors.push(`${email}: 密碼至少須 8 個字元`);
+        continue;
+      }
+      if (dedupedRows.has(email)) {
+        duplicateEmails.add(email);
+        continue;
+      }
+      dedupedRows.set(email, { email, name, password, role });
+    }
+
+    if (duplicateEmails.size > 0) {
+      results.errors.push(`重複電子郵件: ${[...duplicateEmails].sort().join('、')}`);
+      return results;
+    }
+
+    const validRows = [...dedupedRows.values()];
+    if (validRows.length === 0) {
+      return results;
+    }
+
+    const existingTeachers = await this.prisma.teacher.findMany({
+      where: { email: { in: validRows.map((row) => row.email) } },
+      select: { id: true, email: true, name: true, role: true },
+    });
+    const existingByEmail = new Map(existingTeachers.map((teacher) => [teacher.email, teacher] as const));
+
+    for (const row of validRows) {
+      const passwordHash = await bcrypt.hash(row.password, 12);
+      const existing = existingByEmail.get(row.email);
+      if (existing) {
+        await this.prisma.teacher.update({
+          where: { id: existing.id },
+          data: {
+            name: row.name,
+            role: row.role || 'teacher',
+            passwordHash,
+          },
+        });
+        results.updated += 1;
+      } else {
+        await this.prisma.teacher.create({
+          data: {
+            email: row.email,
+            name: row.name,
+            role: row.role || 'teacher',
+            passwordHash,
+          },
+        });
+        results.created += 1;
+      }
+    }
+
+    return results;
   }
 
   async updatePassword(id: number, newPassword: string) {

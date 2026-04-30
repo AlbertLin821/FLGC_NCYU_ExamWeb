@@ -19,7 +19,10 @@ import {
   IsString,
   IsOptional,
   MinLength,
+  IsArray,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import type { ForceDeleteTarget } from './teachers.service';
 
 export class UpdatePasswordDto {
@@ -64,6 +67,32 @@ export class ForceDeleteDto {
   target: ForceDeleteTarget;
 }
 
+export class BulkImportTeacherRowDto {
+  @IsEmail()
+  email: string;
+
+  @IsNotEmpty()
+  @IsString()
+  @MinLength(8, { message: '密碼至少須 8 個字元' })
+  password: string;
+
+  @IsNotEmpty()
+  @IsString()
+  name: string;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['teacher', 'admin', 'viewer'])
+  role?: string;
+}
+
+export class BulkImportTeachersDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => BulkImportTeacherRowDto)
+  teachers: BulkImportTeacherRowDto[];
+}
+
 @Controller('api/teachers')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class TeachersController {
@@ -85,6 +114,12 @@ export class TeachersController {
   @Roles('admin')
   create(@Body() dto: CreateTeacherDto) {
     return this.teachersService.create(dto);
+  }
+
+  @Post('import')
+  @Roles('admin')
+  bulkImport(@Body() dto: BulkImportTeachersDto) {
+    return this.teachersService.bulkImport(dto.teachers);
   }
 
   @Patch(':id/password')
