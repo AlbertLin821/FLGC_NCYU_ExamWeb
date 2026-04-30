@@ -1,7 +1,12 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { ensureClassAccess, isAdminRole, type TeacherActor } from '../auth/access';
+import {
+  ensureClassAccess,
+  ensureClassManageAccess,
+  isAdminRole,
+  type TeacherActor,
+} from '../auth/access';
 
 @Injectable()
 export class ClassesService {
@@ -96,12 +101,12 @@ export class ClassesService {
   }
 
   async update(id: number, data: { name?: string; description?: string }, actor: TeacherActor) {
-    await ensureClassAccess(this.prisma, actor, id);
+    await ensureClassManageAccess(this.prisma, actor, id);
     return this.prisma.class.update({ where: { id }, data });
   }
 
   async delete(id: number, actor: TeacherActor, deleteStudents = true) {
-    await ensureClassAccess(this.prisma, actor, id);
+    await ensureClassManageAccess(this.prisma, actor, id);
     return this.prisma.$transaction(async (tx) => {
       const linkedStudents = await tx.studentClass.findMany({
         where: { classId: id },
@@ -119,7 +124,7 @@ export class ClassesService {
   }
 
   async clearStudents(id: number, actor: TeacherActor, deleteStudentRecords = true) {
-    await ensureClassAccess(this.prisma, actor, id);
+    await ensureClassManageAccess(this.prisma, actor, id);
     return this.prisma.$transaction(async (tx) => {
       const linkedStudents = await tx.studentClass.findMany({
         where: { classId: id },
@@ -139,7 +144,7 @@ export class ClassesService {
   }
 
   async addTeacher(classId: number, teacherId: number, actor: TeacherActor) {
-    await ensureClassAccess(this.prisma, actor, classId);
+    await ensureClassManageAccess(this.prisma, actor, classId);
     return this.prisma.teacherClass.upsert({
       where: { teacherId_classId: { teacherId, classId } },
       update: { role: 'member' },
@@ -148,7 +153,7 @@ export class ClassesService {
   }
 
   async assignTeacher(classId: number, teacherId: number, role: 'owner' | 'member', actor: TeacherActor) {
-    await ensureClassAccess(this.prisma, actor, classId);
+    await ensureClassManageAccess(this.prisma, actor, classId);
     if (actor.id === teacherId) {
       throw new BadRequestException('不可邀請自己管理班級');
     }
@@ -160,7 +165,7 @@ export class ClassesService {
   }
 
   async removeTeacher(classId: number, teacherId: number, actor: TeacherActor) {
-    await ensureClassAccess(this.prisma, actor, classId);
+    await ensureClassManageAccess(this.prisma, actor, classId);
     return this.prisma.teacherClass.delete({
       where: { teacherId_classId: { teacherId, classId } },
     });

@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ensureClassAccess, ensureStudentAccess, type TeacherActor } from '../auth/access';
+import {
+  ensureClassAccess,
+  ensureClassManageAccess,
+  ensureStudentAccess,
+  ensureStudentManageAccess,
+  type TeacherActor,
+} from '../auth/access';
 import { ScoringService } from '../scoring/scoring.service';
 
 @Injectable()
@@ -162,7 +168,7 @@ export class StudentsService {
     actor: TeacherActor,
     importSessionId?: string,
   ) {
-    await ensureClassAccess(this.prisma, actor, classId);
+    await ensureClassManageAccess(this.prisma, actor, classId);
     const results = { created: 0, updated: 0, errors: [] as string[] };
     const normalizedImportSessionId = String(importSessionId || '').trim();
     const isCancelled = () =>
@@ -282,7 +288,7 @@ export class StudentsService {
     data: { studentId: string; name: string; schoolName: string; classId: number },
     actor: TeacherActor,
   ) {
-    await ensureClassAccess(this.prisma, actor, data.classId);
+    await ensureClassManageAccess(this.prisma, actor, data.classId);
     return this.prisma.$transaction(async (tx) => {
       const student = await tx.student.upsert({
         where: { studentId: data.studentId.trim() },
@@ -324,7 +330,7 @@ export class StudentsService {
   }
 
   async update(id: number, data: { name?: string; schoolName?: string }, actor: TeacherActor) {
-    await ensureStudentAccess(this.prisma, actor, id);
+    await ensureStudentManageAccess(this.prisma, actor, id);
     return this.prisma.student.update({
       where: { id },
       data: {
@@ -335,12 +341,12 @@ export class StudentsService {
   }
 
   async delete(id: number, actor: TeacherActor, classId?: number) {
-    const classIds = await ensureStudentAccess(this.prisma, actor, id);
+    const classIds = await ensureStudentManageAccess(this.prisma, actor, id);
     if (classId !== undefined) {
       if (!classIds.includes(classId)) {
         return { ok: true, removedClassId: classId, deletedStudent: false };
       }
-      await ensureClassAccess(this.prisma, actor, classId);
+      await ensureClassManageAccess(this.prisma, actor, classId);
       await this.prisma.studentClass.delete({
         where: {
           studentId_classId: {

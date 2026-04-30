@@ -52,6 +52,35 @@ export async function ensureClassAccess(
   }
 }
 
+export async function ensureClassManageAccess(
+  prisma: PrismaService,
+  actor: TeacherActor,
+  classId: number,
+): Promise<void> {
+  const classRow = await prisma.class.findUnique({
+    where: { id: classId },
+    select: { id: true },
+  });
+  if (!classRow) {
+    throw new NotFoundException('班級不存在');
+  }
+  if (isAdminRole(actor.role)) {
+    return;
+  }
+  const membership = await prisma.teacherClass.findUnique({
+    where: {
+      teacherId_classId: {
+        teacherId: actor.id,
+        classId,
+      },
+    },
+    select: { role: true },
+  });
+  if (!membership || membership.role !== 'owner') {
+    throw new ForbiddenException('僅班級負責老師或管理員可管理此班級');
+  }
+}
+
 export async function ensureStudentAccess(
   prisma: PrismaService,
   actor: TeacherActor,
@@ -83,6 +112,42 @@ export async function ensureStudentAccess(
   });
   if (!membership) {
     throw new ForbiddenException('無權存取此學生');
+  }
+  return classIds;
+}
+
+export async function ensureStudentManageAccess(
+  prisma: PrismaService,
+  actor: TeacherActor,
+  studentId: number,
+): Promise<number[]> {
+  const student = await prisma.student.findUnique({
+    where: { id: studentId },
+    select: { id: true, classes: { select: { classId: true } } },
+  });
+  if (!student) {
+    throw new NotFoundException('學生不存在');
+  }
+  const classIds = student.classes.map((row) => row.classId);
+  if (classIds.length === 0) {
+    if (isAdminRole(actor.role)) {
+      return [];
+    }
+    throw new ForbiddenException('此學生尚未加入任何班級');
+  }
+  if (isAdminRole(actor.role)) {
+    return classIds;
+  }
+  const membership = await prisma.teacherClass.findFirst({
+    where: {
+      teacherId: actor.id,
+      role: 'owner',
+      classId: { in: classIds },
+    },
+    select: { teacherId: true },
+  });
+  if (!membership) {
+    throw new ForbiddenException('僅班級負責老師或管理員可管理此學生');
   }
   return classIds;
 }
