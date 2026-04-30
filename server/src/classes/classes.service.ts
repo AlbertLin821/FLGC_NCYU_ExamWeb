@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ensureClassAccess, isAdminRole, type TeacherActor } from '../auth/access';
@@ -149,6 +149,9 @@ export class ClassesService {
 
   async assignTeacher(classId: number, teacherId: number, role: 'owner' | 'member', actor: TeacherActor) {
     await ensureClassAccess(this.prisma, actor, classId);
+    if (actor.id === teacherId) {
+      throw new BadRequestException('不可邀請自己管理班級');
+    }
     return this.prisma.teacherClass.upsert({
       where: { teacherId_classId: { teacherId, classId } },
       update: { role },

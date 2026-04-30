@@ -206,6 +206,7 @@ const ClassManagement: React.FC = () => {
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [teachersLoading, setTeachersLoading] = useState(false);
   const [allTeachers, setAllTeachers] = useState<any[]>([]);
+  const [myTeacherId, setMyTeacherId] = useState<number | null>(null);
   const [showTeacherManageModal, setShowTeacherManageModal] = useState(false);
   const [selectedTeacherIds, setSelectedTeacherIds] = useState<number[]>([]);
   const [selectedTeacherRole, setSelectedTeacherRole] = useState<'owner' | 'member'>('member');
@@ -262,6 +263,10 @@ const ClassManagement: React.FC = () => {
 
   useEffect(() => {
     fetchClasses();
+    teachersApi
+      .getProfile()
+      .then((res) => setMyTeacherId(res.data?.id ?? null))
+      .catch(() => setMyTeacherId(null));
   }, []);
 
   useEffect(() => {
@@ -379,7 +384,9 @@ const ClassManagement: React.FC = () => {
   const assignedTeacherIds = new Set(
     (selectedClass?.teachers ?? []).map((row: any) => Number(row.teacher?.id ?? row.teacherId)),
   );
-  const unassignedTeachers = allTeachers.filter((teacher) => !assignedTeacherIds.has(teacher.id));
+  const unassignedTeachers = allTeachers.filter(
+    (teacher) => !assignedTeacherIds.has(teacher.id) && teacher.id !== myTeacherId,
+  );
 
   // Student Actions
   const handleStudentSave = async (e: React.FormEvent) => {
